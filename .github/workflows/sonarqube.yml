@@ -1,4 +1,4 @@
-﻿name: SonarQube
+name: SonarQube
 
 on:
   push:
@@ -44,14 +44,12 @@ jobs:
         id: check_php
         shell: bash
         run: |
-          count=$(find InlaneWeb/web/src -type f -name "*.php" 2>/dev/null | wc -l || echo 0)
-          echo "php_count=$count" >> "$GITHUB_OUTPUT"
-          if [ "$count" -eq 0 ]; then
+          if python3 -c "import glob, sys; sys.exit(0 if glob.glob('InlaneWeb/web/src/**/*.php', recursive=True) else 1)"; then
+            echo "has_php=true" >> "$GITHUB_OUTPUT"
+          else
             echo "has_php=false" >> "$GITHUB_OUTPUT"
             echo "## ℹ️ SonarQube SAST - Khung CI/CD sẵn sàng" >> "$GITHUB_STEP_SUMMARY"
-            echo "Khung CI/CD đã được cấu hình hoàn chỉnh. Hiện chưa có tệp PHP nào trong \InlaneWeb/web/src\. Pipeline sẽ tự động quét toàn diện ngay khi mã nguồn được commit và push." >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "has_php=true" >> "$GITHUB_OUTPUT"
+            echo "Khung CI/CD đã được cấu hình hoàn chỉnh. Hiện chưa có tệp PHP nào trong \`InlaneWeb/web/src\`. Pipeline sẽ tự động quét toàn diện ngay khi mã nguồn được commit và push." >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Lint PHP 8.2
@@ -150,14 +148,12 @@ jobs:
         id: check_php
         shell: bash
         run: |
-          count=$(find InlaneWeb/web/src -type f -name "*.php" 2>/dev/null | wc -l || echo 0)
-          echo "php_count=$count" >> "$GITHUB_OUTPUT"
-          if [ "$count" -eq 0 ]; then
+          if python3 -c "import glob, sys; sys.exit(0 if glob.glob('InlaneWeb/web/src/**/*.php', recursive=True) else 1)"; then
+            echo "has_php=true" >> "$GITHUB_OUTPUT"
+          else
             echo "has_php=false" >> "$GITHUB_OUTPUT"
             echo "## 🛡️ Semgrep Security SAST - Sẵn sàng" >> "$GITHUB_STEP_SUMMARY"
             echo "Chưa phát hiện mã nguồn PHP để quét bảo mật. Pipeline sẽ tự động quét chi tiết Source & Sink khi các thành viên commit mã nguồn." >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "has_php=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Run Semgrep SAST
