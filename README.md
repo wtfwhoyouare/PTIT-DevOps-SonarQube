@@ -6,7 +6,7 @@
 > - **Nam** (`namng`) - *Nhóm trưởng / DevOps & Database*
 > - **Hải** (`haind`) - *Core Web & Architecture*
 > - **Mạnh** (`manhdx`) - *User Authentication & Community*
-> - **Đức Anh** (`anhnd`) - *Admin Portal & Reporting*
+> - **Đức Anh** (`anhld`) - *Admin Portal & Reporting*
 > - **Mai** (`mainp`) - *Logistics Services & Tracking*
 
 ---
@@ -30,7 +30,7 @@ Dự án áp dụng mô hình phân nhánh chuẩn (Git Feature Branch Workflow)
 | `namng` | Nhánh làm việc cá nhân của thành viên **Nam** |
 | `haind` | Nhánh làm việc cá nhân của thành viên **Hải** |
 | `manhdx` | Nhánh làm việc cá nhân của thành viên **Mạnh** |
-| `anhnd` | Nhánh làm việc cá nhân của thành viên **Đức Anh** |
+| `anhld` | Nhánh làm việc cá nhân của thành viên **Đức Anh** |
 | `mainp` | Nhánh làm việc cá nhân của thành viên **Mai** |
 
 ---
