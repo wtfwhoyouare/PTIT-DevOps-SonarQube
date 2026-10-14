@@ -3,11 +3,11 @@
 > **Học phần:** Thực hành DevOps / DevSecOps  
 > **Ứng dụng mục tiêu:** InlaneWeb Logistics Portal (PHP 8.2 & MariaDB)  
 > **Nhóm sinh viên thực hiện:**
-> - **Nguyễn Anh Nam** (`namng`) - *Nhóm trưởng / DevOps & Database*
-> - **Dương Anh Hải** (`haind`) - *Core Web & Architecture*
-> - **Trần Đức Mạnh** (`manhdx`) - *User Authentication & Community*
-> - **Lê Đức Anh** (`anhnd`) - *Admin Portal & Reporting*
-> - **Nguyễn Thị Mai** (`mainp`) - *Logistics Services & Tracking*
+> - **Nam** (`namng`) - *Nhóm trưởng / DevOps & Database*
+> - **Hải** (`haind`) - *Core Web & Architecture*
+> - **Mạnh** (`manhdx`) - *User Authentication & Community*
+> - **Đức Anh** (`anhnd`) - *Admin Portal & Reporting*
+> - **Mai** (`mainp`) - *Logistics Services & Tracking*
 
 ---
 
@@ -27,11 +27,11 @@ Dự án áp dụng mô hình phân nhánh chuẩn (Git Feature Branch Workflow)
 | :--- | :--- |
 | `main` | **Nhánh Production (Stable Release):** Chứa mã nguồn ổn định nhất. **Nghiêm cấm commit và push trực tiếp lên nhánh này.** Chỉ nhận mã nguồn khi Admin chủ động tạo Pull Request và duyệt merge từ nhánh `dev`. |
 | `dev` | **Nhánh Integration / Development:** Nơi tích hợp toàn bộ tính năng đang phát triển từ các thành viên trong nhóm. |
-| `namng` | Nhánh làm việc cá nhân của thành viên **Nguyễn Anh Nam** |
-| `haind` | Nhánh làm việc cá nhân của thành viên **Dương Anh Hải** |
-| `manhdx` | Nhánh làm việc cá nhân của thành viên **Trần Đức Mạnh** |
-| `anhnd` | Nhánh làm việc cá nhân của thành viên **Lê Đức Anh** |
-| `mainp` | Nhánh làm việc cá nhân của thành viên **Nguyễn Thị Mai** |
+| `namng` | Nhánh làm việc cá nhân của thành viên **Nam** |
+| `haind` | Nhánh làm việc cá nhân của thành viên **Hải** |
+| `manhdx` | Nhánh làm việc cá nhân của thành viên **Mạnh** |
+| `anhnd` | Nhánh làm việc cá nhân của thành viên **Đức Anh** |
+| `mainp` | Nhánh làm việc cá nhân của thành viên **Mai** |
 
 ---
 
