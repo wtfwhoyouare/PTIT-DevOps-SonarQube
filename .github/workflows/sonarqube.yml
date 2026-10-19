@@ -2,7 +2,7 @@ name: SonarQube
 
 on:
   push:
-    branches: [main]
+    branches: [dev, main]
   workflow_dispatch:
     inputs:
       enforce_quality_gate:
@@ -21,7 +21,7 @@ concurrency:
 jobs:
   analyze:
     name: SonarQube SAST & Quality Gate
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
@@ -137,7 +137,7 @@ jobs:
 
   semgrep:
     name: Semgrep Security SAST
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:

@@ -42,14 +42,14 @@ Dự án áp dụng mô hình phân nhánh chuẩn (Git Feature Branch Workflow)
                                │
                                ├── commit + push lên nhánh cá nhân
                                └── Pull Request ──> dev ── Pull Request + merge ──> main
-                                                                      │
-                                                                      └── GitHub Actions: kiểm thử,
-                                                                          SonarQube, Semgrep
+                                                       │                              │
+                                                       └── GitHub Actions quét ──────┘
+                                                           và lưu báo cáo
 ```
 
 Thực hiện lệnh Git từ thư mục gốc `PTIT-DevOps-SonarQube` (nếu đang ở `InlaneWeb`, chạy `cd ..` trước). Ví dụ dùng nhánh `namng`; các thành viên khác thay bằng nhánh của mình (`haind`, `manhdx`, `anhld`, `mainp`). Không push trực tiếp lên `dev` hoặc `main` trong luồng làm việc này.
 
-**Trước vòng làm việc mới:** Nếu `main` có commit chưa nằm trên `dev`, Admin/Lead mở **Pull requests → New pull request** trên GitHub, chọn **base: `dev`**, **compare: `main`**, review rồi merge để cập nhật `dev`. Bước này không kích hoạt workflow SonarQube/Semgrep hiện tại.
+**Trước vòng làm việc mới:** Nếu `main` có commit chưa nằm trên `dev`, Admin/Lead mở **Pull requests → New pull request** trên GitHub, chọn **base: `dev`**, **compare: `main`**, review rồi merge để cập nhật `dev`. Mỗi lần merge tạo commit mới trên `dev` cũng sẽ chạy workflow và lưu báo cáo.
 
 1. **Lấy mã mới nhất từ `dev` vào nhánh cá nhân, trước khi sửa file:**
 
@@ -78,15 +78,15 @@ Thực hiện lệnh Git từ thư mục gốc `PTIT-DevOps-SonarQube` (nếu đ
 
    - Trên GitHub, mở **Pull requests → New pull request**, chọn **base: `dev`**, **compare: `namng`** (hoặc nhánh cá nhân tương ứng).
    - Kiểm tra danh sách file thay đổi, nhấn **Create pull request** và ghi rõ nội dung đã làm.
-   - Sau khi review, xử lý góp ý và xung đột (nếu có), người phụ trách nhấn **Merge pull request → Confirm merge**. Mã lúc này nằm trên `dev`; workflow SonarQube/Semgrep hiện tại chưa tự chạy.
+   - Sau khi review, xử lý góp ý và xung đột (nếu có), người phụ trách nhấn **Merge pull request → Confirm merge**. Commit mới trên `dev` sẽ kích hoạt SonarQube/Semgrep; kết quả được lưu ở tab **Actions → SonarQube → Job summary / Artifacts**. Phát hiện lỗi hoặc lỗ hổng không ngăn lần merge đã thực hiện.
 
 4. **Tạo PR từ `dev` vào `main` để chạy CI/CD:**
 
    - Khi các PR cần thiết đã vào `dev`, Admin/Lead mở **Pull requests → New pull request**, chọn **base: `main`**, **compare: `dev`**.
    - Kiểm tra các commit và file thay đổi, tạo PR, review rồi nhấn **Merge pull request → Confirm merge**.
-   - Commit mới trên `main` sẽ kích hoạt workflow trong `.github/workflows/sonarqube.yml`. Vào tab **Actions**, mở run mới nhất của workflow **SonarQube** để xem **Job summary** và **Artifacts**. Run màu xanh vẫn có thể chứa phát hiện bảo mật vì Quality Gate mặc định ở chế độ báo cáo.
+   - Commit mới trên `main` cũng kích hoạt workflow trong `.github/workflows/sonarqube.yml`. Xem kết quả tại **Actions → SonarQube → Job summary / Artifacts**. Run màu xanh vẫn có thể chứa phát hiện bảo mật vì Quality Gate mặc định ở chế độ báo cáo.
 
-Ở vòng làm việc tiếp theo, đồng bộ `main` vào `dev` nếu cần, rồi lặp lại từ bước 1. Workflow hiện tại chỉ tự chạy khi có commit mới trên `main` (sự kiện `push`); push lên nhánh cá nhân, push lên `dev` hoặc chỉ mở PR sẽ chưa chạy workflow này.
+Ở vòng làm việc tiếp theo, đồng bộ `main` vào `dev` nếu cần, rồi lặp lại từ bước 1. Workflow tự chạy khi có commit mới trên `dev` hoặc `main` (sự kiện `push`); push lên nhánh cá nhân hoặc chỉ mở PR sẽ chưa chạy workflow này. Quét sau merge nhằm thu báo cáo, không dùng phát hiện để chặn merge.
 
 ---
 
@@ -95,13 +95,13 @@ Thực hiện lệnh Git từ thư mục gốc `PTIT-DevOps-SonarQube` (nếu đ
 Hệ thống CI/CD được thiết lập tự động hóa 100% trên **GitHub Actions**:
 
 ```text
-Merge to main
+Merge to dev hoặc main
   ├── 1. Unit Tests & Tooling Validation (python3 -m unittest)
   ├── 2. SonarQube Community SAST & Quality Gate
   │      ├── Khởi tạo container SonarQube 26.9 tạm thời (Ephemeral instance)
   │      ├── Phân tích độ tin cậy, quy chuẩn lập trình, bugs và code smells
   │      ├── Tự động xuất báo cáo chi tiết vào GitHub Step Summary & Artifacts
-  │      └── Thực thi Quality Gate kiểm soát tiêu chuẩn chất lượng
+  │      └── Ghi nhận Quality Gate ở chế độ báo cáo (report-only)
   └── 3. Semgrep Security SAST
          ├── Bộ rulesets chính thức từ cộng đồng Semgrep Registry
          │   (p/owasp-top-ten, p/php, p/security-audit, p/cwe-top-25)
