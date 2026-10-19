@@ -1,4 +1,4 @@
-"""Generate an HTML report and GitHub Step Summary with explicit SOURCE and SINK traces."""
+"""Generate an HTML report and GitHub Step Summary for Semgrep findings."""
 
 from __future__ import annotations
 
@@ -62,10 +62,11 @@ def extract_source_and_sink(path_str: str, line_no: int, trace_data: dict | None
 
 def main():
     if not SEMGREP_JSON.exists():
-        print(f"Missing {SEMGREP_JSON}")
-        return
+        raise SystemExit(f"Missing {SEMGREP_JSON}")
 
     data = json.loads(SEMGREP_JSON.read_text(encoding="utf-8"))
+    if data.get("errors"):
+        raise SystemExit("Semgrep reported scan errors; refusing an incomplete report")
     results = data.get("results", [])
 
     errors = [r for r in results if r.get("extra", {}).get("severity") == "ERROR"]
@@ -91,6 +92,12 @@ def main():
         dataflow_trace = r.get("extra", {}).get("dataflow_trace")
         src, snk = extract_source_and_sink(path, line, dataflow_trace)
 
+        presentation = meta.get("presentation")
+        if not presentation:
+            presentation = "taint" if path.endswith(".php") and (
+                ".injection." in check_id or dataflow_trace
+            ) else "configuration"
+
         findings.append({
             "check_id": check_id,
             "severity": sev,
@@ -99,15 +106,16 @@ def main():
             "message": msg,
             "owasp": owasp,
             "cwe": cwe,
+            "presentation": presentation,
             "source": src,
             "sink": snk,
         })
 
     # 1. Generate GitHub Step Summary (Markdown)
     md_lines = [
-        "## 🛡️ Semgrep Community Security SAST Report (Chi Tiết SOURCE & SINK)",
+        "## 🛡️ Semgrep Community Security SAST Report",
         "",
-        "> Phân tích an toàn mã nguồn sử dụng bộ rulesets chuẩn của cộng đồng Semgrep Registry (`p/owasp-top-ten`, `p/php`, `p/security-audit`, `p/cwe-top-25`).",
+        "> Phân tích mã nguồn và cấu hình bằng Semgrep Community Registry (`p/owasp-top-ten`, `p/php`, `p/security-audit`, `p/cwe-top-25`) cùng rule nội bộ trong `ci/semgrep-local-rules.yml`.",
         "",
         f"**Tổng số phát hiện:** {len(findings)} | 🔴 **High/Critical (ERROR):** {len(errors)} | 🟡 **Medium (WARNING):** {len(warnings)}",
         "",
@@ -120,15 +128,18 @@ def main():
         md_lines.append(f"- **Phân loại:** **{f['owasp']}** | *{f['cwe']}*")
         md_lines.append(f"- **Mô tả:** {f['message']}")
         
-        # Source box
-        src_code = "\n".join(f"{l_num}: {code}" for l_num, code in f["source"]["lines"])
-        md_lines.append("- **🟡 SOURCE (Nguồn dữ liệu người dùng nhập):**")
-        md_lines.append(f"```php\n{src_code}\n```")
+        if f["presentation"] == "configuration":
+            evidence = "\n".join(f"{l_num}: {code}" for l_num, code in f["sink"]["lines"])
+            md_lines.append("- **Bằng chứng mã/cấu hình:**")
+            md_lines.append(f"```text\n{evidence}\n```")
+        else:
+            src_code = "\n".join(f"{l_num}: {code}" for l_num, code in f["source"]["lines"])
+            md_lines.append("- **🟡 SOURCE (Nguồn dữ liệu người dùng nhập):**")
+            md_lines.append(f"```php\n{src_code}\n```")
 
-        # Sink box
-        snk_code = "\n".join(f"{l_num}: {code}" for l_num, code in f["sink"]["lines"])
-        md_lines.append("- **🔴 SINK (Điểm kích hoạt / Thực thi câu lệnh SQL nguy hiểm):**")
-        md_lines.append(f"```php\n{snk_code}\n```")
+            snk_code = "\n".join(f"{l_num}: {code}" for l_num, code in f["sink"]["lines"])
+            md_lines.append("- **🔴 SINK (Điểm kích hoạt / Thực thi câu lệnh SQL nguy hiểm):**")
+            md_lines.append(f"```php\n{snk_code}\n```")
         md_lines.append("---")
 
     summary_content = "\n".join(md_lines)
@@ -146,21 +157,42 @@ def main():
         sev = f["severity"]
         sev_color = "#ef4444" if sev == "ERROR" else ("#f59e0b" if sev == "WARNING" else "#3b82f6")
         check_id = html.escape(f["check_id"])
+        rule_label = (f'<code style="font-family:monospace;font-size:15px;color:#38bdf8;">{check_id}</code>'
+                      if f["check_id"].startswith("ci.") else
+                      f'<a href="https://semgrep.dev/r/{check_id}" target="_blank" style="font-family:monospace;font-size:15px;color:#38bdf8;text-decoration:none;font-weight:bold;">{check_id}</a>')
         path = html.escape(f["path"])
         line = f["line"]
         owasp = html.escape(str(f["owasp"]))
         cwe = html.escape(str(f["cwe"]))
         msg = html.escape(f["message"])
 
-        src_lines_html = html.escape("\n".join(f"{l_num:3d} | {code}" for l_num, code in f["source"]["lines"]))
         snk_lines_html = html.escape("\n".join(f"{l_num:3d} | {code}" for l_num, code in f["sink"]["lines"]))
+        if f["presentation"] == "configuration":
+            detail_html = f"""
+            <div style="background:#1e293b;border:1px solid #334155;border-radius:6px;padding:12px;">
+                <strong style="color:#fca5a5;">Bằng chứng mã/cấu hình</strong>
+                <pre style="margin:10px 0 0;background:#0b0f19;padding:10px;border-radius:4px;color:#fca5a5;font-family:monospace;font-size:12px;overflow-x:auto;white-space:pre-wrap;"><code>{snk_lines_html}</code></pre>
+            </div>"""
+        else:
+            src_lines_html = html.escape("\n".join(f"{l_num:3d} | {code}" for l_num, code in f["source"]["lines"]))
+            detail_html = f"""
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div style="background:#1e293b;border:1px solid #334155;border-radius:6px;padding:12px;">
+                    <div style="display:flex;align-items:center;color:#facc15;font-size:13px;font-weight:bold;margin-bottom:8px;">🟡 SOURCE — Nguồn Dữ Liệu Ô Nhiễm (User Input)</div>
+                    <pre style="margin:0;background:#0b0f19;padding:10px;border-radius:4px;color:#fde047;font-family:monospace;font-size:12px;overflow-x:auto;white-space:pre-wrap;"><code>{src_lines_html}</code></pre>
+                </div>
+                <div style="background:#1e293b;border:1px solid #334155;border-radius:6px;padding:12px;">
+                    <div style="display:flex;align-items:center;color:#f87171;font-size:13px;font-weight:bold;margin-bottom:8px;">🔴 SINK — Điểm Thực Thi Nguy Hiểm (Execution Sink)</div>
+                    <pre style="margin:0;background:#0b0f19;padding:10px;border-radius:4px;color:#fca5a5;font-family:monospace;font-size:12px;overflow-x:auto;white-space:pre-wrap;"><code>{snk_lines_html}</code></pre>
+                </div>
+            </div>"""
 
         cards_html.append(f"""
         <div style="background: #131c2e; border: 1px solid #1e293b; border-radius: 8px; padding: 20px; margin-bottom: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);">
             <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 14px;">
                 <div>
                     <span style="background:{sev_color};color:#fff;padding:4px 10px;border-radius:4px;font-weight:bold;font-size:12px;margin-right:8px;">{sev}</span>
-                    <a href="https://semgrep.dev/r/{check_id}" target="_blank" style="font-family:monospace;font-size:15px;color:#38bdf8;text-decoration:none;font-weight:bold;">{check_id}</a>
+                    {rule_label}
                     <div style="margin-top:6px;font-size:13px;color:#94a3b8;">
                         📂 Tệp: <code>{path}:{line}</code> &nbsp;|&nbsp; 🏷️ Phân loại: <strong style="color:#f1f5f9;">{owasp}</strong> ({cwe})
                     </div>
@@ -172,23 +204,7 @@ def main():
                 <strong>Chi tiết:</strong> {msg}
             </p>
 
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                <!-- SOURCE BOX -->
-                <div style="background:#1e293b;border:1px solid #334155;border-radius:6px;padding:12px;">
-                    <div style="display:flex;align-items:center;color:#facc15;font-size:13px;font-weight:bold;margin-bottom:8px;">
-                        <span style="margin-right:6px;">🟡</span> SOURCE — Nguồn Dữ Liệu Ô Nhiễm (User Input)
-                    </div>
-                    <pre style="margin:0;background:#0b0f19;padding:10px;border-radius:4px;color:#fde047;font-family:monospace;font-size:12px;overflow-x:auto;white-space:pre-wrap;"><code>{src_lines_html}</code></pre>
-                </div>
-
-                <!-- SINK BOX -->
-                <div style="background:#1e293b;border:1px solid #334155;border-radius:6px;padding:12px;">
-                    <div style="display:flex;align-items:center;color:#f87171;font-size:13px;font-weight:bold;margin-bottom:8px;">
-                        <span style="margin-right:6px;">🔴</span> SINK — Điểm Thực Thi Nguy Hiểm (Execution Sink)
-                    </div>
-                    <pre style="margin:0;background:#0b0f19;padding:10px;border-radius:4px;color:#fca5a5;font-family:monospace;font-size:12px;overflow-x:auto;white-space:pre-wrap;"><code>{snk_lines_html}</code></pre>
-                </div>
-            </div>
+            {detail_html}
         </div>
         """)
 
@@ -196,7 +212,7 @@ def main():
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Semgrep Security SAST Report - Source & Sink Analysis</title>
+    <title>Semgrep Security SAST Report</title>
     <style>
         body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0b0f19; color: #f8fafc; margin: 0; padding: 24px; }}
         .container {{ max-width: 1200px; margin: 0 auto; }}
@@ -211,12 +227,12 @@ def main():
 <div class="container">
     <div class="header">
         <div>
-            <h1 style="margin:0 0 8px 0;font-size:24px;">🛡️ Báo Cáo Phân Tích Lỗ Hổng Bảo Mật (SOURCE & SINK)</h1>
-            <p style="margin:0;color:#94a3b8;font-size:14px;">Bộ quy chuẩn chính thức từ Semgrep Community Registry: OWASP Top 10, CWE Top 25, PHP Security Audit</p>
+            <h1 style="margin:0 0 8px 0;font-size:24px;">🛡️ Báo Cáo Phân Tích Bảo Mật</h1>
+            <p style="margin:0;color:#94a3b8;font-size:14px;">Semgrep Community Registry và các rule nội bộ cho mã nguồn, cấu hình</p>
         </div>
         <div>
             <span class="badge" style="background: {'#ef4444' if errors else '#22c55e'}; color: white;">
-                {'PHÁT HIỆN LỖ HỔNG NGUY HIỂM' if errors else 'AN TOÀN'}
+                {'PHÁT HIỆN LỖ HỔNG NGUY HIỂM' if errors else 'KHÔNG CÓ PHÁT HIỆN'}
             </span>
         </div>
     </div>
@@ -236,14 +252,14 @@ def main():
         </div>
     </div>
 
-    <h2 style="font-size:18px;margin:24px 0 16px 0;">Danh Sách Lỗ Hổng & Dấu Vết Dòng Dữ Liệu (Source ➔ Sink)</h2>
+    <h2 style="font-size:18px;margin:24px 0 16px 0;">Danh sách phát hiện và bằng chứng</h2>
     {''.join(cards_html)}
 </div>
 </body>
 </html>
 """
     REPORT_HTML.write_text(html_page, encoding="utf-8")
-    print(f"Generated Source-Sink Semgrep reports: {REPORT_HTML} and {REPORT_MD}")
+    print(f"Generated Semgrep reports: {REPORT_HTML} and {REPORT_MD}")
 
 
 if __name__ == "__main__":
