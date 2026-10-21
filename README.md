@@ -38,41 +38,55 @@ Dự án áp dụng mô hình phân nhánh chuẩn (Git Feature Branch Workflow)
 ### 2. Quy tắc phát triển & Đóng góp mã nguồn (Contribution Rules)
 
 ```text
-  [Nhánh cá nhân]             [Nhánh Tích hợp]             [Nhánh Production]
-   (namng, haind,                  (dev)                         (main)
-    manhdx, ...)
-         │                            │                             │
-         │─── Commit & Push ─────────>│                             │
-         │    (Chỉ push lên dev)      │                             │
-         │                            │                             │
-         │                            │─── Admin Review & Merge ───>│
-         │                            │    (Chỉ Admin thực hiện)    │
-         │                            │                             ├── [CI/CD Triggered]
-         │                            │                             ├── 1. Unit Tests
-         │                            │                             ├── 2. SonarQube SAST
-         │                            │                             └── 3. Semgrep SAST
+  dev ── cập nhật mã mới ──> nhánh cá nhân (namng, haind, ...)
+                               │
+                               ├── commit + push lên nhánh cá nhân
+                               └── Pull Request ──> dev ── Pull Request + merge ──> main
+                                                       │                              │
+                                                       └── GitHub Actions quét ──────┘
+                                                           và lưu báo cáo
 ```
 
-1. **Phát triển độc lập trên nhánh cá nhân:**
-   - Mỗi thành viên làm việc trên nhánh mang tên của mình (`namng`, `haind`, `manhdx`, `anhnd`, `mainp`).
-   - Thường xuyên cập nhật mã nguồn mới nhất từ `dev` về nhánh cá nhân:
-     ```bash
-     git checkout dev
-     git pull origin dev
-     git checkout <tên_nhánh_cá_nhân>
-     git merge dev
-     ```
+Thực hiện lệnh Git từ thư mục gốc `PTIT-DevOps-SonarQube` (nếu đang ở `InlaneWeb`, chạy `cd ..` trước). Ví dụ dùng nhánh `namng`; các thành viên khác thay bằng nhánh của mình (`haind`, `manhdx`, `anhld`, `mainp`). Không push trực tiếp lên `dev` hoặc `main` trong luồng làm việc này.
 
-2. **Chỉ commit & push lên nhánh `dev`:**
-   - Khi hoàn thành tính năng, thành viên commit và push lên nhánh cá nhân, sau đó tạo **Pull Request (PR) merge vào nhánh `dev`** (hoặc merge trực tiếp vào `dev` theo thỏa thuận nội bộ nhóm).
-   - **Tuyệt đối không push trực tiếp lên nhánh `main`**.
+**Trước vòng làm việc mới:** Nếu `main` có commit chưa nằm trên `dev`, Admin/Lead mở **Pull requests → New pull request** trên GitHub, chọn **base: `dev`**, **compare: `main`**, review rồi merge để cập nhật `dev`. Mỗi lần merge tạo commit mới trên `dev` cũng sẽ chạy workflow và lưu báo cáo.
 
-3. **Kích hoạt CI/CD khi Admin merge từ `dev` về `main`:**
-   - Khi phiên bản trên nhánh `dev` đã được cả nhóm kiểm thử nội bộ hoàn tất và hoạt động ổn định, **Admin/Lead sẽ chủ động tạo Pull Request và thực hiện merge từ `dev` vào `main`**.
-   - Thao tác merge vào `main` sẽ **tự động kích hoạt toàn bộ quy trình CI/CD DevSecOps** trên GitHub Actions:
-     - Chạy bộ kiểm thử tự động (Unit Tests tooling).
-     - Quét toàn diện chất lượng mã nguồn, bugs, code smells và kiểm soát Quality Gate qua **SonarQube SAST**.
-     - Phân tích an toàn thông tin, quét lỗ hổng SQL Injection và XSS qua **Semgrep SAST**.
+1. **Lấy mã mới nhất từ `dev` vào nhánh cá nhân, trước khi sửa file:**
+
+   ```bash
+   git fetch origin
+   git switch namng
+   git pull --ff-only origin namng
+   git merge origin/dev
+   ```
+
+   Nếu vừa clone và chưa có nhánh `namng` trên máy, dùng `git switch --track origin/namng` thay cho `git switch namng`. Nếu merge báo xung đột, sửa các file bị xung đột, chạy `git add <file-da-sua>` và `git commit` để hoàn tất merge; sau đó mới sửa phần việc của mình.
+
+2. **Commit và push lên nhánh cá nhân:**
+
+   ```bash
+   git status
+   git add <cac-file-duoc-phan-cong>
+   git diff --cached --stat
+   git commit -m "Mo ta thay doi"
+   git push origin namng
+   ```
+
+   Chỉ thêm các file thuộc phần việc cần gửi lên. Nếu Git báo `nothing to commit`, kiểm tra lại `git status` và các file đã sửa.
+
+3. **Tạo PR từ nhánh cá nhân vào `dev`:**
+
+   - Trên GitHub, mở **Pull requests → New pull request**, chọn **base: `dev`**, **compare: `namng`** (hoặc nhánh cá nhân tương ứng).
+   - Kiểm tra danh sách file thay đổi, nhấn **Create pull request** và ghi rõ nội dung đã làm.
+   - Sau khi review, xử lý góp ý và xung đột (nếu có), người phụ trách nhấn **Merge pull request → Confirm merge**. Commit mới trên `dev` sẽ kích hoạt SonarQube/Semgrep; kết quả được lưu ở tab **Actions → SonarQube → Job summary / Artifacts**. Phát hiện lỗi hoặc lỗ hổng không ngăn lần merge đã thực hiện.
+
+4. **Tạo PR từ `dev` vào `main` để chạy CI/CD:**
+
+   - Khi các PR cần thiết đã vào `dev`, Admin/Lead mở **Pull requests → New pull request**, chọn **base: `main`**, **compare: `dev`**.
+   - Kiểm tra các commit và file thay đổi, tạo PR, review rồi nhấn **Merge pull request → Confirm merge**.
+   - Commit mới trên `main` cũng kích hoạt workflow trong `.github/workflows/sonarqube.yml`. Xem kết quả tại **Actions → SonarQube → Job summary / Artifacts**. Run màu xanh vẫn có thể chứa phát hiện bảo mật vì Quality Gate mặc định ở chế độ báo cáo.
+
+Ở vòng làm việc tiếp theo, đồng bộ `main` vào `dev` nếu cần, rồi lặp lại từ bước 1. Workflow tự chạy khi có commit mới trên `dev` hoặc `main` (sự kiện `push`); push lên nhánh cá nhân hoặc chỉ mở PR sẽ chưa chạy workflow này. Quét sau merge nhằm thu báo cáo, không dùng phát hiện để chặn merge.
 
 ---
 
@@ -81,13 +95,13 @@ Dự án áp dụng mô hình phân nhánh chuẩn (Git Feature Branch Workflow)
 Hệ thống CI/CD được thiết lập tự động hóa 100% trên **GitHub Actions**:
 
 ```text
-Merge to main
+Merge to dev hoặc main
   ├── 1. Unit Tests & Tooling Validation (python3 -m unittest)
   ├── 2. SonarQube Community SAST & Quality Gate
   │      ├── Khởi tạo container SonarQube 26.9 tạm thời (Ephemeral instance)
   │      ├── Phân tích độ tin cậy, quy chuẩn lập trình, bugs và code smells
   │      ├── Tự động xuất báo cáo chi tiết vào GitHub Step Summary & Artifacts
-  │      └── Thực thi Quality Gate kiểm soát tiêu chuẩn chất lượng
+  │      └── Ghi nhận Quality Gate ở chế độ báo cáo (report-only)
   └── 3. Semgrep Security SAST
          ├── Bộ rulesets chính thức từ cộng đồng Semgrep Registry
          │   (p/owasp-top-ten, p/php, p/security-audit, p/cwe-top-25)
