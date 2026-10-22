@@ -210,7 +210,57 @@ Nhánh `main` đại diện cho sản phẩm thật chạy môi trường Produc
 
 ---
 
-### 6.3. Cơ chế tự động kiểm tra & Mẫu thông báo lỗi (Automated CI/CD Feedback)
+### 6.3. Sơ đồ cơ chế phòng thủ 2 tầng (Two-Tier Title Guard Architecture)
+
+Để đảm bảo không một commit hoặc Pull Request sai định dạng nào có thể lọt vào lịch sử dự án, hệ thống thiết lập cơ chế **phòng thủ 2 tầng (Defense-in-Depth)**:
+
+```text
+               [ THAO TÁC CỦA DEV ]
+                        │
+                        ▼
+            gõ `git commit -m "..."`
+                        │
+                        ▼
+          ┌───────────────────────────┐
+          │  TẦNG 1: LOCAL GIT HOOK   │
+          │   (.githooks/commit-msg)  │
+          └─────────────┬─────────────┘
+                        │
+             Đúng chuẩn Conventional?
+             ├── ❌ KHÔNG ───> [HỦY BỎ NGAY TẠI MÁY] (Không tạo commit)
+             │                 (In hướng dẫn sửa cú pháp)
+             │
+             └── ✅ ĐÚNG (hoặc cố tình vượt rào bằng `git commit --no-verify`)
+                        │
+                        ▼
+                 Tạo commit cục bộ
+                        │
+                        ▼
+             gõ `git push origin <nhánh>`
+                        │
+                        ▼
+         ┌─────────────────────────────┐
+         │  TẦNG 2: GITHUB ACTIONS CI  │
+         │     (branch_policy_guard)   │
+         └──────────────┬──────────────┘
+                        │
+                        ├── Khi PUSH code: Quét toàn bộ commit trong payload
+                        │   ├── ❌ Sai chuẩn ──> [FAIL PIPELINE (Exit 1)] (Báo đỏ rực)
+                        │   └── ✅ Đúng chuẩn ─> PASS kiểm tra
+                        │
+                        └── Khi MỞ PULL REQUEST:
+                            ├── PR vào `dev`: Bắt buộc `[<nhánh>] <type>(<scope>): <mô tả>`
+                            │   ├── ❌ Sai chuẩn ──> [FAIL PIPELINE] (Khóa merge PR)
+                            │   └── ✅ Đúng chuẩn ─> Kích hoạt SAST Scanner (SonarQube/Semgrep)
+                            │
+                            └── PR vào `main`: Bắt buộc `release: vX.Y.Z - <mô tả>` & Head là `dev`
+                                ├── ❌ Sai chuẩn ──> [FAIL PIPELINE] (Khóa nạp vào Production)
+                                └── ✅ Đúng chuẩn ─> Kích hoạt Production Smoke Test Gate
+```
+
+---
+
+### 6.4. Các kịch bản từ chối tự động & Mẫu thông báo lỗi (Automated CI/CD Feedback)
 
 Job `branch_policy_guard` trong pipeline GitHub Actions tự động kiểm tra nghiêm ngặt trong mọi tình huống. Nếu vi phạm, pipeline sẽ **lập tức REJECT (exit 1)** và hiển thị hộp thông báo kèm helper hướng dẫn chi tiết:
 
@@ -286,7 +336,7 @@ Nghiêm cấm tạo PR trực tiếp từ nhánh phát triển 'namng' lên 'mai
 
 ---
 
-### 6.4. Kích hoạt Git Hook chặn lỗi ngay từ máy cá nhân (Khuyên dùng)
+### 6.5. Kích hoạt Git Hook chặn lỗi ngay từ máy cá nhân (Khuyên dùng)
 
 Để bảo vệ lịch sử commit và không bị pipeline server từ chối sau khi push, mỗi thành viên được khuyến nghị kích hoạt hook kiểm tra cục bộ có sẵn trong repository:
 
@@ -297,6 +347,7 @@ git config core.hooksPath .githooks
 
 - **Nguyên lý hoạt động:** Hook `.githooks/commit-msg` sẽ tự động kích hoạt mỗi khi gõ lệnh `git commit`. 
 - Nếu tiêu đề commit vi phạm quy tắc Conventional Commits, tiến trình commit sẽ **lập tức bị hủy bỏ ngay trên máy của bạn**, yêu cầu đặt lại tên đúng chuẩn trước khi tệp được ghi vào lịch sử Git!
+
 
 
 

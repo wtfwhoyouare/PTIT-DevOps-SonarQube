@@ -30,7 +30,7 @@ concurrency:
 
 jobs:
   branch_policy_guard:
-    name: Verify Branch, Commit & PR Policy
+    name: "[STAGE 1] Policy Guard — Kiểm tra Nhánh, Commit & PR"
     runs-on: ubuntu-24.04
     timeout-minutes: 3
     steps:
@@ -45,9 +45,9 @@ jobs:
         run: python3 ci/policy_guard.py
 
   analyze:
-    name: SonarQube SAST & Quality Gate
+    name: "[STAGE 2: Dev Gate] SonarQube SAST & Code Quality"
     needs: [branch_policy_guard]
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
+    if: (github.event_name == 'pull_request' && github.base_ref == 'dev') || github.ref == 'refs/heads/dev'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
@@ -163,9 +163,9 @@ jobs:
         run: docker rm --force --volumes sonarqube-ci || true
 
   semgrep:
-    name: Semgrep Security SAST
+    name: "[STAGE 2: Dev Gate] Semgrep Security SAST"
     needs: [branch_policy_guard]
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
+    if: (github.event_name == 'pull_request' && github.base_ref == 'dev') || github.ref == 'refs/heads/dev'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -212,7 +212,7 @@ jobs:
           retention-days: 30
 
   production_smoke_test:
-    name: Production Readiness & Smoke Test Gate
+    name: "[STAGE 3: Production Gate] Docker Build & Smoke Test Healthcheck"
     needs: [branch_policy_guard]
     if: (github.event_name == 'pull_request' && github.base_ref == 'main') || github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04

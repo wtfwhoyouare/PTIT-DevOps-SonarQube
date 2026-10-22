@@ -23,7 +23,6 @@ Hệ thống tài liệu chi tiết được tổ chức trong thư mục [`docs
 
 - 📜 [**01. Hạ tầng triển khai (docs/01-hạ tầng triển khai.md)**](docs/01-hạ%20tầng%20triển%20khai.md): Kiến trúc Container, máy chủ Runner, cấu hình Docker Compose và mạng nội bộ.
 - 📜 [**02. Quy tắc triển khai & Quy ước Git (docs/02-Quy tắc triển khai.md)**](docs/02-Quy%20tắc%20triển%20khai.md): **(Bắt buộc đọc)** Toàn bộ chính sách phân nhánh, quy chuẩn đặt tên Commit (Conventional Commits), quy chuẩn PR 2 tầng, và cơ chế kỹ thuật tự động kiểm tra (CI/CD Guard & Git Hooks).
-- 📜 [**Phân công công việc (docs/phan-viec-manhdx.md)**](docs/phan-viec-manhdx.md): Chi tiết phân chia nhiệm vụ từng thành viên trong nhóm.
 
 ---
 
@@ -50,20 +49,25 @@ Dự án áp dụng mô hình phân nhánh nghiêm ngặt:
 
 ---
 
-## 🛡️ Kiến trúc DevSecOps Pipeline
+## 🛡️ Kiến trúc DevSecOps Pipeline (3 Giai đoạn kiểm soát)
 
-Hệ thống CI/CD được thiết lập tự động hóa 100% trên **GitHub Actions** với 5 chốt chặn chất lượng:
+Hệ thống CI/CD được thiết lập tự động hóa 100% trên **GitHub Actions** phân tách thành 3 giai đoạn rõ ràng:
 
 ```text
 GitHub Actions Pipeline:
-  ├── 1. Branch Policy Guard: Tự động kiểm tra cú pháp commit, định dạng PR và ngăn PR trái phép
-  ├── 2. Unit Tests & Tooling Validation: Chạy kiểm thử tự động với python3 -m unittest
-  ├── 3. SonarQube SAST: Quét chất lượng mã nguồn, bugs, code smells và lỗ hổng
-  ├── 4. Semgrep SAST: Phân tích taint-tracking bảo mật chuyên sâu (SQLi, XSS, Misconfigs)
-  └── 5. Production Smoke Test Gate: (Khi PR từ dev vào main)
-         ├── Build sạch toàn bộ Docker Images (Web & MariaDB)
-         ├── Khởi chạy cụm Preview tạm thời trong runner
-         └── Kiểm tra /health HTTP 200 + Database ping trước khi cho phép merge vào Production
+  ├── [STAGE 1] Policy Guard — Kiểm tra Nhánh, Commit & PR
+  │      └── Kích hoạt nhanh 3-5s: Chặn commit sai Conventional Commits & PR sai nhánh/tiêu đề
+  │
+  ├── [STAGE 2: Dev Gate] Shift-Left Security & Code Quality (Khi PR hoặc Merge vào DEV)
+  │      ├── SonarQube SAST & Code Quality: Quét bugs, code smells, lỗ hổng & chất lượng mã nguồn
+  │      └── Semgrep Security SAST: Phân tích luồng dữ liệu Source-to-Sink (SQLi, XSS, Misconfigs)
+  │
+  └── [STAGE 3: Production Gate] Docker Build & Smoke Test Healthcheck (Khi PR hoặc Merge vào MAIN)
+         ├── Build sạch toàn bộ Docker Images (PHP 8.2 & MariaDB)
+         ├── Khởi chạy cụm Preview tạm thời trong runner bằng Docker Compose
+         ├── Chờ MariaDB đạt trạng thái healthy
+         ├── Gọi API /health xác nhận HTTP 200 OK & kết nối DB thông suốt
+         └── Smoke Test tải Trang chủ trước khi cho phép nạp code vào Production
 ```
 
 ---
