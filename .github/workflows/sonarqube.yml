@@ -2,7 +2,15 @@ name: SonarQube
 
 on:
   push:
-    branches: [dev, main]
+    branches:
+      - main
+      - dev
+      - namng
+      - haind
+      - manhdx
+      - anhld
+      - mainp
+      - 'feature/**'
   pull_request:
     branches: [dev, main]
   workflow_dispatch:
@@ -22,50 +30,19 @@ concurrency:
 
 jobs:
   branch_policy_guard:
-    name: Verify Branch & PR Policy
+    name: Verify Branch, Commit & PR Policy
     runs-on: ubuntu-24.04
     timeout-minutes: 3
     steps:
-      - name: Validate PR Source & Target Branch Rules
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 10
+          persist-credentials: false
+
+      - name: Enforce Commit & Pull Request Naming Policy
         shell: bash
-        run: |
-          set -euo pipefail
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BASE_BRANCH="${{ github.base_ref }}"
-            HEAD_BRANCH="${{ github.head_ref }}"
-            echo "🔍 Kiểm tra chính sách phân nhánh cho Pull Request: [$HEAD_BRANCH] -> [$BASE_BRANCH]"
-
-            # Chính sách 1: Nhánh main chỉ được nhận PR từ nhánh dev
-            if [ "$BASE_BRANCH" = "main" ] && [ "$HEAD_BRANCH" != "dev" ]; then
-              echo "::error title=Vi phạm chính sách PR lên main::Chỉ được phép tạo Pull Request vào nhánh 'main' xuất phát từ nhánh 'dev'. Nghiêm cấm tạo PR trực tiếp từ nhánh phát triển '$HEAD_BRANCH' lên 'main'!"
-              exit 1
-            fi
-            echo "✅ Chính sách nhánh PR hợp lệ: Nhánh nguồn [$HEAD_BRANCH] -> Nhánh đích [$BASE_BRANCH]"
-
-            # Chính sách 2: Kiểm tra chuẩn hóa đặt tên Pull Request (Naming Conventions)
-            PR_TITLE="${{ github.event.pull_request.title }}"
-            echo "🏷️ Kiểm tra định dạng tiêu đề PR: \"$PR_TITLE\""
-
-            if [ "$BASE_BRANCH" = "dev" ]; then
-              DEV_PATTERN='^\[(namng|haind|manhdx|anhld|mainp)\]\s+(feat|fix|sec|ci|docs|refactor|test|chore)(\([a-zA-Z0-9_-]+\))?:\s.+'
-              if ! [[ "$PR_TITLE" =~ $DEV_PATTERN ]]; then
-                echo "::error title=Sai quy ước đặt tên PR vào dev::Tiêu đề PR vào nhánh 'dev' bắt buộc theo chuẩn: [<mã_nhánh>] <loại>(<phạm_vi>): <mô tả>. Ví dụ: [namng] feat(db): bổ sung endpoint /health. Mã nhánh hợp lệ: [namng], [haind], [manhdx], [anhld], [mainp]."
-                exit 1
-              fi
-              echo "✅ Tiêu đề PR vào dev đúng chuẩn quy ước thành viên."
-            fi
-
-            if [ "$BASE_BRANCH" = "main" ]; then
-              MAIN_PATTERN='^(release|RELEASE):\s+v[0-9]+\.[0-9]+\.[0-9]+(\s+-\s+.+|\s*:\s*.+)'
-              if ! [[ "$PR_TITLE" =~ $MAIN_PATTERN ]]; then
-                echo "::error title=Sai quy ước đặt tên PR vào main::Tiêu đề PR vào nhánh 'main' bắt buộc theo chuẩn phát hành: release: vX.Y.Z - <Mô tả phiên bản>. Ví dụ: release: v1.0.0 - Triển khai InlaneWeb lên Production."
-                exit 1
-              fi
-              echo "✅ Tiêu đề PR vào main đúng chuẩn Release SemVer."
-            fi
-          else
-            echo "✅ Sự kiện ${{ github.event_name }} trên ref: ${{ github.ref }}"
-          fi
+        run: python3 ci/policy_guard.py
 
   analyze:
     name: SonarQube SAST & Quality Gate
