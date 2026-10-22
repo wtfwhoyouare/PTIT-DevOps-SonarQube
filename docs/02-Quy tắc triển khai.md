@@ -186,8 +186,18 @@ Nhánh `main` đại diện cho sản phẩm thật chạy môi trường Produc
   - `release: v1.1.0 - Tích hợp hệ thống quản trị admin và kiểm thử tự động SAST`
   - `release: v1.1.1 - Vá lỗi bảo mật phân quyền tài khoản người dùng`
 
-### 6.3. Cơ chế tự động kiểm tra (Automated Title Validator trên CI/CD)
-Job `branch_policy_guard` trong pipeline GitHub Actions tự động kiểm tra tiêu đề của mọi Pull Request ngay khi được tạo:
-- PR vào `dev` nếu thiếu tiền tố `[user]` hoặc sai loại thay đổi ➔ **Tự động đánh dấu FAIL và chặn merge!**
-- PR vào `main` nếu không có định dạng `release: vX.Y.Z - ...` ➔ **Tự động đánh dấu FAIL và chặn merge!**
+### 6.3. Cơ chế tự động kiểm tra trên GitHub Actions (Automated Title Validator)
+Pipeline CI/CD tự động kích hoạt kiểm tra trong 2 tình huống:
+1. **Khi User push code lên nhánh cá nhân:** Job `branch_policy_guard` chạy nhanh trong 3-5 giây để quét toàn bộ commit được đẩy lên. Nếu phát hiện commit sai chuẩn Conventional Commits, pipeline sẽ **lập tức báo FAIL đỏ rực**, in rõ commit vi phạm kèm hướng dẫn sửa lại bằng lệnh `git commit --amend` hoặc `git rebase`.
+2. **Khi User tạo PR vào `dev`:** Kiểm tra tiêu đề PR theo mẫu `[tên_nhánh] loại(phạm_vi): mô tả`. Nếu sai, lập tức reject PR và hướng dẫn đổi tên trên giao diện GitHub.
+3. **Khi Admin tạo PR vào `main`:** Kiểm tra tiêu đề PR theo mẫu `release: vX.Y.Z - <mô tả>`. Nếu sai, lập tức reject PR.
+
+### 6.4. Kích hoạt Git Hook chặn lỗi ngay từ máy cá nhân (Khuyên dùng)
+Để không bị đẩy nhầm commit sai format lên server, thành viên có thể kích hoạt Git Hook cục bộ có sẵn trong repository:
+```bash
+# Chạy 1 lệnh duy nhất tại thư mục gốc dự án:
+git config core.hooksPath .githooks
+```
+Sau khi chạy lệnh trên, mỗi khi gõ `git commit`, hook `.githooks/commit-msg` sẽ tự động chạy trước. Nếu tiêu đề commit vi phạm quy tắc, lệnh commit sẽ **bị hủy bỏ ngay tại máy cá nhân** kèm thông báo lỗi hướng dẫn cụ thể!
+
 
