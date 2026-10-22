@@ -23,7 +23,6 @@ Hệ thống tài liệu chi tiết được tổ chức trong thư mục [`docs
 
 - 📜 [**01. Hạ tầng triển khai (docs/01-hạ tầng triển khai.md)**](docs/01-hạ%20tầng%20triển%20khai.md): Kiến trúc Container, máy chủ Runner, cấu hình Docker Compose và mạng nội bộ.
 - 📜 [**02. Quy tắc triển khai & Quy ước Git (docs/02-Quy tắc triển khai.md)**](docs/02-Quy%20tắc%20triển%20khai.md): **(Bắt buộc đọc)** Toàn bộ chính sách phân nhánh, quy chuẩn đặt tên Commit (Conventional Commits), quy chuẩn PR 2 tầng, và cơ chế kỹ thuật tự động kiểm tra (CI/CD Guard & Git Hooks).
-- 📜 [**Phân công công việc (docs/phan-viec-manhdx.md)**](docs/phan-viec-manhdx.md): Chi tiết phân chia nhiệm vụ từng thành viên trong nhóm.
 
 ---
 
