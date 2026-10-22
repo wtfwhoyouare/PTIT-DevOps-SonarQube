@@ -3,6 +3,8 @@ name: SonarQube
 on:
   push:
     branches: [dev, main]
+  pull_request:
+    branches: [dev, main]
   workflow_dispatch:
     inputs:
       enforce_quality_gate:
@@ -15,13 +17,38 @@ permissions:
 
 # Independent servers: a newer commit may replace an obsolete scan.
 concurrency:
-  group: sonarqube-${{ github.ref }}
+  group: sonarqube-${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
+  branch_policy_guard:
+    name: Verify Branch & PR Policy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Validate PR Source & Target Branch Rules
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_BRANCH="${{ github.base_ref }}"
+            HEAD_BRANCH="${{ github.head_ref }}"
+            echo "🔍 Kiểm tra chính sách phân nhánh cho Pull Request: [$HEAD_BRANCH] -> [$BASE_BRANCH]"
+
+            # Chính sách 1: Nhánh main chỉ được nhận PR từ nhánh dev
+            if [ "$BASE_BRANCH" = "main" ] && [ "$HEAD_BRANCH" != "dev" ]; then
+              echo "::error title=Vi phạm chính sách PR lên main::Chỉ được phép tạo Pull Request vào nhánh 'main' xuất phát từ nhánh 'dev'. Nghiêm cấm tạo PR trực tiếp từ nhánh phát triển '$HEAD_BRANCH' lên 'main'!"
+              exit 1
+            fi
+            echo "✅ Chính sách PR hợp lệ: Nhánh nguồn [$HEAD_BRANCH] -> Nhánh đích [$BASE_BRANCH]"
+          else
+            echo "✅ Sự kiện ${{ github.event_name }} trên ref: ${{ github.ref }}"
+          fi
+
   analyze:
     name: SonarQube SAST & Quality Gate
-    if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
+    needs: [branch_policy_guard]
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
@@ -94,7 +121,7 @@ jobs:
         with:
           scannerVersion: ${{ env.SONAR_SCANNER_VERSION }}
           args: >-
-            -Dsonar.scm.revision=${{ github.sha }}
+            -Dsonar.scm.revision=${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Export report and GitHub Summary
         id: report
@@ -103,6 +130,7 @@ jobs:
           LINT_OUTCOME: ${{ steps.lint.outcome }}
           SERVER_OUTCOME: ${{ steps.server.outcome }}
           SCAN_OUTCOME: ${{ steps.scan.outcome }}
+          GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: python3 ci/sonarqube.py report --timeout 600
 
       - name: Capture container diagnostics
@@ -117,7 +145,7 @@ jobs:
         if: steps.check_php.outputs.has_php == 'true' && always() && !cancelled()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: sonarqube-report-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: sonarqube-report-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: reports/sonarqube/
           if-no-files-found: error
           retention-days: 30
@@ -137,7 +165,8 @@ jobs:
 
   semgrep:
     name: Semgrep Security SAST
-    if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
+    needs: [branch_policy_guard]
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -178,7 +207,7 @@ jobs:
         if: steps.check_php.outputs.has_php == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: semgrep-security-report-${{ github.sha }}-${{ github.run_id }}
+          name: semgrep-security-report-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.run_id }}
           path: reports/semgrep/
           if-no-files-found: error
           retention-days: 30
