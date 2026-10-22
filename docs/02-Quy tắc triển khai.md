@@ -113,18 +113,13 @@ Trong pipeline `.github/workflows/sonarqube.yml`, quy trình kiểm soát đư�
   └────────────────────────────────────────────────────────┘
 ```
 
-1. **[STAGE 1] Policy Guard (`branch_policy_guard`):** 
-   - Kiểm tra định dạng Conventional Commits khi push code.
-   - Kiểm tra định dạng tiêu đề PR và bảo vệ nhánh: Nếu phát hiện PR hướng vào `main` nhưng nhánh nguồn không phải là `dev`, pipeline sẽ **lập tức ném mã lỗi (exit 1)** kèm cảnh báo đỏ rực:
-     > `❌ VI PHẠM CHÍNH SÁCH: Chỉ cho phép tạo Pull Request vào nhánh 'main' từ nhánh 'dev'. Nghiêm cấm tạo PR trực tiếp từ nhánh phát triển '<nhánh>' lên 'main'!`
-2. **[STAGE 2: Dev Gate] Shift-Left SAST Gate (`analyze`, `semgrep`):** 
-   - Dành riêng cho các PR vào `dev` hoặc commit tích hợp trên `dev`.
-   - Quét an toàn thông tin, lỗ hổng injection, code smells trước khi cho phép gộp code nhóm.
-3. **[STAGE 3: Production Gate] Production Readiness & Smoke Test Gate (`production_smoke_test`):** 
-   - Đứng ở cột độc lập tuần tự thứ 3, dành riêng cho PR từ `dev` vào `main`.
-   - **Docker Build Validation:** Tự động build sạch toàn bộ Dockerfile (Web & DB). Chặn đứng nếu build thất bại.
-   - **Ephemeral Preview & Healthcheck:** Khởi chạy cụm container tạm thời trong runner, ping `/health` xác nhận HTTP 200 OK và kết nối Database sống, tải thử Trang chủ.
-   - **Điều kiện nạp code vào `main`:** Chỉ khi CẢ HAI điều kiện (Build thành công + Healthcheck HTTP 200) đều PASS thì code mới được phép merge vào `main`.
+#### 📋 Bảng phân tích chi tiết nhiệm vụ của từng Stage:
+
+| Giai đoạn (Stage) | Tên Job trên GitHub Actions | Điều kiện kích hoạt | Nhiệm vụ kỹ thuật cốt lõi (Core Mission) | Hành động khi thất bại (Failure Action) |
+| :--- | :--- | :--- | :--- | :--- |
+| **STAGE 1: Policy Guard** | `[STAGE 1] Policy Guard — Kiểm tra Nhánh, Commit & PR` | **Mọi sự kiện Push** lên nhánh cá nhân & **Mọi PR** vào `dev`/`main` (Chạy siêu tốc 3-5s) | 1. **Kiểm tra Commit:** Quét toàn bộ commit trong payload đẩy lên, đối chiếu chuẩn Conventional Commits.<br>2. **Bảo vệ nhánh Main:** Ngăn chặn ngay lập tức nếu ai đó mở PR từ nhánh cá nhân vào `main`.<br>3. **Kiểm tra tiêu đề PR:** Xác thực cú pháp PR vào `dev` (`[<nhánh>] ...`) và PR vào `main` (`release: vX.Y.Z ...`). | ❌ **FAIL ngay lập tức (Exit 1)**.<br>Khóa lệnh commit/PR, in hộp hướng dẫn kèm câu lệnh sửa lỗi (`git commit --amend` hoặc đổi tên PR). |
+| **STAGE 2: Dev Gate** | `[STAGE 2: Dev Gate] SonarQube SAST & Code Quality`<br><br>`[STAGE 2: Dev Gate] Semgrep Security SAST` | **Chỉ kích hoạt khi:**<br>- Tạo Pull Request vào `dev`<br>- Merge/Push chính thức trên `dev` | 1. **SonarQube SAST:** Khởi tạo container SonarQube phân tích độ tin cậy, nợ kỹ thuật (Technical Debt), Code Smells, Bugs và tính chuẩn mực PSR-12 của PHP 8.2.<br>2. **Semgrep SAST:** Quét chuyên sâu bảo mật theo luồng dữ liệu Taint-Tracking (Source -> Sink), dò tìm các lỗ hổng Injection (SQLi, XSS), cấu hình sai bảo mật.<br>3. **Báo cáo:** Xuất Step Summary trực quan và đính kèm Artifacts báo cáo PDF/HTML/JSON. | ⚠️ **Cảnh báo chất lượng** trên giao diện PR.<br>Lead/Reviewer dựa vào kết quả kiểm tra để yêu cầu dev vá lỗ hổng trước khi phê duyệt merge vào nhánh `dev`. |
+| **STAGE 3: Production Gate** | `[STAGE 3: Production Gate] Docker Build & Smoke Test Healthcheck` | **Chỉ kích hoạt khi:**<br>- Tạo Pull Request từ `dev` vào `main`<br>- Merge/Push chính thức trên `main` | 1. **Docker Build Validation:** Tự động build sạch toàn bộ Dockerfile (Apache PHP 8.2 & MariaDB). Đảm bảo mã nguồn đóng gói thành container thành công 100%.<br>2. **Ephemeral Deployment:** Bung cụm container chạy thử nghiệm thật ngay trong GitHub Runner bằng `docker compose up -d`.<br>3. **Database Healthcheck:** Vòng lặp ping kiểm tra container `ilfreight_db` đạt trạng thái `healthy` (schema và dữ liệu khởi tạo xong).<br>4. **API Healthcheck:** Gọi `GET /health`, bắt buộc phản hồi HTTP 200 OK và xác nhận Database kết nối thông suốt.<br>5. **E2E Smoke Test:** Tải thử Trang chủ (`/`), kiểm tra nạp đủ nội dung thương hiệu IlFreight.<br>6. **Teardown:** Tự động dọn dẹp sạch sẽ cụm container trong runner sau khi kiểm thử xong. | ⛔ **CHẶN ĐỨNG MERGE VÀO MAIN**.<br>Nếu Docker build gãy hoặc `/health` không trả về 200, PR lập tức bị khóa, không cho phép nạp mã nguồn lỗi lên môi trường Production! |
 
 ### Tầng 2: Thiết lập Branch Protection Rules trên GitHub Repository
 Admin repository kích hoạt cấu hình bảo vệ trên GitHub Web (**Settings → Branches / Rulesets**):
