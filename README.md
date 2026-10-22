@@ -88,11 +88,16 @@ Thực hiện lệnh Git từ thư mục gốc `PTIT-DevOps-SonarQube` (nếu đ
    - **Tự động kích hoạt CI/CD (Shift-Left):** Ngay khi PR được mở hoặc có commit mới đẩy lên PR, workflow SonarQube & Semgrep sẽ tự động kích hoạt để phân tích mã nguồn ngay tại cửa trước của PR. Kết quả kiểm tra (Checks) và Job Summary được đính kèm trực tiếp vào giao diện PR để Lead/Reviewer đánh giá chất lượng trước khi gộp code.
    - Sau khi review, xử lý góp ý và xung đột (nếu có), người phụ trách nhấn **Merge pull request → Confirm merge**. Sau khi merge, sự kiện `push` trên `dev` tiếp tục chạy một lần quét chính thức để lưu trữ Artifacts của trạng thái nhánh tích hợp.
 
-4. **Tạo PR từ `dev` vào `main` để triển khai Production:**
+4. **Tạo PR từ `dev` vào `main` (Cổng kiểm thử sẵn sàng Production - Pre-Merge Gate):**
 
-   - Khi các PR cần thiết đã vào `dev`, Admin/Lead mở **Pull requests → New pull request**, chọn **base: `main`**, **compare: `dev`**.
-   - Pipeline tiếp tục tự động quét kiểm tra trên PR vào `main`. Review rồi nhấn **Merge pull request → Confirm merge**.
-   - Commit mới trên `main` kích hoạt workflow trong `.github/workflows/sonarqube.yml`. Xem kết quả tại **Actions → SonarQube → Job summary / Artifacts**. Run màu xanh vẫn có thể chứa phát hiện bảo mật vì Quality Gate mặc định ở chế độ báo cáo.
+   - Khi các PR tính năng đã tích hợp hoàn tất trên `dev`, Admin/Lead mở **Pull requests → New pull request**, chọn **base: `main`**, **compare: `dev`**.
+   - **Tự động kích hoạt Cổng kiểm thử Production (Production Readiness Gate):**
+     1. **Docker Build Test:** Tự động build sạch toàn bộ Docker Images (Web Apache PHP 8.2 & Database MariaDB). Nếu lỗi cú pháp Dockerfile hoặc thiếu package, chặn đứng ngay.
+     2. **Ephemeral Runner Deployment:** Tự động bung cụm container Preview tạm thời ngay trong GitHub Runner bằng `docker compose up -d`.
+     3. **Healthcheck & Smoke Test:** Đợi MariaDB container đạt trạng thái `healthy`, sau đó gọi API `/health` và kiểm tra phản hồi HTTP 200 kèm kết nối Database thông suốt, kiểm tra nạp thành công Trang chủ (`/`).
+     4. **Chỉ khi CẢ HAI điều kiện (Build thành công + Healthcheck HTTP 200) đều PASS**, hệ thống mới cho phép nạp code vào nhánh Production `main`.
+   - Review kết quả kiểm thử trên PR, người phụ trách nhấn **Merge pull request → Confirm merge**.
+   - Commit mới trên `main` kích hoạt workflow audit và đóng gói release. Xem kết quả tại **Actions → SonarQube → Job summary / Artifacts**.
 
 Workflow tự động kích hoạt trên cả sự kiện mở **Pull Request** (vào `dev`, `main`) nhằm phát hiện sớm lỗ hổng bảo mật trước khi gộp (Shift-Left), và trên sự kiện **Push / Merge** để lưu trữ báo cáo audit chính thức.
 
@@ -103,19 +108,25 @@ Workflow tự động kích hoạt trên cả sự kiện mở **Pull Request** 
 Hệ thống CI/CD được thiết lập tự động hóa 100% trên **GitHub Actions**:
 
 ```text
-Sự kiện: Pull Request (Shift-Left) hoặc Merge vào dev / main (Audit Scan)
-  ├── 1. Unit Tests & Tooling Validation (python3 -m unittest)
-  ├── 2. SonarQube Community SAST & Quality Gate
+Quy trình CI/CD tích hợp & triển khai Production:
+  ├── 1. Branch Policy Guard
+  │      └── Chặn tự động nếu phát hiện PR vào main không xuất phát từ dev
+  ├── 2. Unit Tests & Tooling Validation (python3 -m unittest)
+  ├── 3. SonarQube Community SAST & Quality Gate
   │      ├── Khởi tạo container SonarQube 26.9 tạm thời (Ephemeral instance)
   │      ├── Phân tích độ tin cậy, quy chuẩn lập trình, bugs và code smells
   │      ├── Tự động xuất báo cáo chi tiết vào GitHub Step Summary & Artifacts
   │      └── Ghi nhận Quality Gate ở chế độ báo cáo (report-only) hoặc chặn lỗi (enforce)
-  └── 3. Semgrep Security SAST
-         ├── Bộ rulesets chính thức từ cộng đồng Semgrep Registry
-         │   (p/owasp-top-ten, p/php, p/security-audit, p/cwe-top-25)
-         ├── Phân tích luồng dữ liệu chuyên sâu (Taint Tracking: Source -> Sink)
-         ├── Phát hiện các lỗ hổng Injection (CWE-89, CWE-79, Misconfiguration)
-         └── Xuất báo cáo trực quan kèm đoạn code vi phạm lên GitHub Summary & Artifacts
+  ├── 4. Semgrep Security SAST
+  │      ├── Bộ rulesets chính thức từ cộng đồng Semgrep Registry
+  │      ├── Phân tích luồng dữ liệu chuyên sâu (Taint Tracking: Source -> Sink)
+  │      ├── Phát hiện các lỗ hổng Injection (CWE-89, CWE-79, Misconfiguration)
+  │      └── Xuất báo cáo trực quan kèm đoạn code vi phạm lên GitHub Summary & Artifacts
+  └── 5. Production Readiness & Smoke Test Gate (Dành riêng cho PR vào main)
+         ├── Kiểm tra Build thành công toàn bộ Docker Images
+         ├── Triển khai cụm container tạm thời (Ephemeral Preview) trong Runner
+         ├── Kiểm tra nhịp tim ứng dụng qua endpoint /health (HTTP 200 OK + DB Connected)
+         └── Smoke Test tải giao diện Trang chủ trước khi cho phép merge vào Production
 ```
 
 ---

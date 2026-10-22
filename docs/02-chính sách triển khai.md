@@ -87,17 +87,22 @@ Tài liệu này quy định chi tiết và bắt buộc về chức năng, quy�
 Để chính sách không dừng lại ở mức "lời nói", dự án áp dụng 2 tầng bảo vệ tự động:
 
 ### Tầng 1: Tự động chặn bằng GitHub Actions CI/CD Guard
-Trong pipeline `.github/workflows/sonarqube.yml`, job `branch_policy_guard` tự động kiểm tra nhánh nguồn và nhánh đích của mọi Pull Request:
-- Nếu phát hiện PR hướng vào `main` nhưng nhánh nguồn không phải là `dev`, pipeline sẽ **lập tức ném mã lỗi (exit 1)** kèm cảnh báo đỏ rực:
-  > `❌ VI PHẠM CHÍNH SÁCH: Chỉ cho phép tạo Pull Request vào nhánh 'main' từ nhánh 'dev'. Nghiêm cấm tạo PR trực tiếp từ nhánh phát triển '<nhánh>' lên 'main'!`
-- Thao tác merge sẽ bị khóa lại trên GitHub.
+Trong pipeline `.github/workflows/sonarqube.yml`, hai tầng kiểm soát tự động được thực thi:
+1. **Branch Policy Guard (`branch_policy_guard`):** Tự động kiểm tra nhánh nguồn và nhánh đích của mọi Pull Request.
+   - Nếu phát hiện PR hướng vào `main` nhưng nhánh nguồn không phải là `dev`, pipeline sẽ **lập tức ném mã lỗi (exit 1)** kèm cảnh báo đỏ rực:
+     > `❌ VI PHẠM CHÍNH SÁCH: Chỉ cho phép tạo Pull Request vào nhánh 'main' từ nhánh 'dev'. Nghiêm cấm tạo PR trực tiếp từ nhánh phát triển '<nhánh>' lên 'main'!`
+   - Thao tác merge sẽ bị khóa lại trên GitHub.
+2. **Production Readiness & Smoke Test Gate (`production_smoke_test`):** Dành riêng cho PR từ `dev` vào `main`.
+   - **Docker Build Validation:** Tự động build sạch toàn bộ Dockerfile (Web & DB). Chặn đứng nếu build thất bại.
+   - **Ephemeral Preview & Healthcheck:** Khởi chạy cụm container tạm thời trong runner, ping `/health` xác nhận HTTP 200 OK và kết nối Database sống, tải thử Trang chủ.
+   - **Điều kiện nạp code vào `main`:** Chỉ khi CẢ HAI điều kiện (Build thành công + Healthcheck HTTP 200) đều PASS thì code mới được phép merge vào `main`.
 
 ### Tầng 2: Thiết lập Branch Protection Rules trên GitHub Repository
 Admin repository kích hoạt cấu hình bảo vệ trên GitHub Web (**Settings → Branches / Rulesets**):
 1. **Áp dụng cho nhánh `main` và `dev`:**
    - [x] **Require a pull request before merging:** Bắt buộc phải thông qua PR, chặn đứng hoàn toàn `git push origin main` hoặc `git push origin dev`.
    - [x] **Require approvals:** Yêu cầu tối thiểu 1 người phê duyệt trước khi merge.
-   - [x] **Require status checks to pass before merging:** Bắt buộc job `branch_policy_guard` phải báo xanh (Success).
+   - [x] **Require status checks to pass before merging:** Bắt buộc các job `Verify Branch & PR Policy` và `Production Readiness & Smoke Test Gate` phải báo xanh (Success).
    - [x] **Do not allow bypassing the above settings:** Áp dụng cho cả Administrators.
 
 ---
