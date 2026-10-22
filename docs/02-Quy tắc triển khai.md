@@ -1,4 +1,4 @@
-# 📜 CHÍNH SÁCH PHÂN NHÁNH VÀ TRIỂN KHAI MÃ NGUỒN (GIT BRANCHING & DEPLOYMENT POLICY)
+# CHÍNH SÁCH PHÂN NHÁNH VÀ TRIỂN KHAI MÃ NGUỒN (GIT BRANCHING & DEPLOYMENT POLICY)
 
 > **Dự án:** InlaneWeb Logistics Portal — Hệ thống CI/CD DevSecOps  
 > **Cơ quan áp dụng:** Nhóm phát triển PTIT-DevOps-SonarQube  
@@ -135,36 +135,52 @@ git push origin namng
 
 ## 6. Quy tắc chuẩn hóa đặt tên Commit & Pull Request (Naming Conventions)
 
-Để đảm bảo lịch sử Git rõ ràng, chuyên nghiệp và phục vụ tự động hóa kiểm soát CI/CD, toàn bộ thành viên bắt buộc tuân thủ quy ước đặt tên sau:
+Để đảm bảo lịch sử Git trong sạch, chuyên nghiệp theo tiêu chuẩn công nghiệp và phục vụ tự động hóa kiểm soát CI/CD, toàn bộ thành viên bắt buộc tuân thủ quy ước đặt tên sau:
 
 ### 6.1. Quy tắc đặt tên Commit (Toàn bộ Repository)
+
 Áp dụng tiêu chuẩn quốc tế **Conventional Commits**:
 ```text
 <loại_thay_đổi>(<phạm_vi>): <mô tả ngắn bằng tiếng Việt hoặc tiếng Anh>
 ```
-- **Các loại thay đổi (Types) hợp lệ:**
-  - `feat`: Thêm tính năng mới (Feature)
-  - `fix`: Sửa lỗi logic / chức năng (Bugfix)
-  - `sec`: Vá lỗ hổng bảo mật / SAST
-  - `ci`: Cấu hình Pipeline, GitHub Actions, Docker Compose
-  - `docs`: Viết tài liệu hướng dẫn, báo cáo đồ án
-  - `refactor`: Tái cấu trúc mã nguồn không làm thay đổi logic
-  - `test`: Viết thêm unit tests, kịch bản kiểm thử
-- **Ví dụ:**
-  - `feat(db): tối ưu hóa kết nối mariadb và thêm route /health`
-  - `fix(auth): khắc phục lỗi kiểm tra quyền hạn tài khoản`
-  - `ci(docker): bổ sung cổng smoke test kiểm tra healthcheck`
+
+#### 📋 Bảng tra cứu các tiền tố (Types) bắt buộc:
+
+| Tiền tố (Type) | Ý nghĩa nghiệp vụ | Ví dụ thực tế trong dự án |
+| :--- | :--- | :--- |
+| `feat` | Thêm tính năng mới (Feature) | `feat(auth): thêm cơ chế đăng nhập và phân quyền người dùng` |
+| `fix` | Sửa lỗi chức năng (Bugfix / Hotfix) | `fix(db): xử lý timeout và fallback mật khẩu khi kết nối mariadb` |
+| `sec` / `fix(sec)` | Vá lỗ hổng bảo mật SAST (SQLi, XSS, etc.) | `sec(sqli): chuyển đổi câu lệnh sang prepared statement` |
+| `ci` | Cấu hình Pipeline, GitHub Actions, Docker | `ci(docker): thêm healthcheck và smoke test preview` |
+| `docs` | Viết tài liệu (README, Docs, Báo cáo đồ án) | `docs(policy): quy định quy tắc phân nhánh và đặt tên commit/PR` |
+| `refactor` | Tối ưu, cơ cấu lại code không đổi logic | `refactor(layout): gom nhóm css và tách header dùng chung` |
+| `test` | Viết thêm unit tests hoặc kịch bản kiểm thử | `test(ci): bổ sung test case cho parser báo cáo sonarqube` |
+| `perf` | Tối ưu hóa hiệu năng thực thi (Performance) | `perf(query): thêm chỉ mục index cho bảng tra cứu vận đơn` |
+| `style` | Định dạng mã nguồn (khoảng trắng, dấu ngoặc) | `style: định dạng lại thụt lề file index.php theo chuẩn PSR-12` |
+| `chore` | Tác vụ bảo trì linh tinh, dọn dẹp phụ trợ | `chore: dọn dẹp các tệp tạm và cập nhật danh sách .gitignore` |
+
+> 💡 **Quy tắc về Phạm vi (`scope`):** Đặt trong ngoặc đơn ngay sau Type, mô tả phân hệ bị ảnh hưởng: `auth`, `db`, `ports`, `logistics`, `admin`, `docker`, `policy`, `layout`.  
+> 💡 **Quy tắc về Mô tả (`subject`):** Viết ngắn gọn súc tích, không kết thúc bằng dấu chấm câu.
+
+---
 
 ### 6.2. Quy tắc đặt tên Pull Request (PR) theo 2 tầng riêng biệt
 
+Quy trình đóng góp phân biệt rõ ràng giữa hai tầng: **Tầng phát triển cá nhân** và **Tầng phát hành hệ thống**. Do đó, tiêu đề PR bắt buộc tuân theo 2 mẫu khác nhau:
+
 #### 🔹 Tầng 1: PR từ nhánh cá nhân vào `dev` (Tính năng & Đóng góp thành viên)
 Mỗi PR từ nhánh thành viên vào `dev` đại diện cho một phần việc cá nhân được phân công, bắt buộc phải có định danh người thực hiện và loại công việc:
+
 - **Cú pháp bắt buộc:**
   ```text
-  [<mã_nhánh_cá_nhân>] <loại>(<phạm_vi>): <mô tả ngắn>
+  [<mã_nhánh_cá_nhân>] <loại>(<phạm_vi>): <mô tả ngắn gọn>
   ```
-- **Danh sách mã nhánh hợp lệ:** `[namng]`, `[haind]`, `[manhdx]`, `[anhld]`, `[mainp]`.
-- **Ví dụ thực tế:**
+- **Danh sách mã nhánh cá nhân hợp lệ:** `[namng]`, `[haind]`, `[manhdx]`, `[anhld]`, `[mainp]`.
+- **Biểu thức chính quy (Regex) kiểm tra:**
+  ```regex
+  ^\[(namng|haind|manhdx|anhld|mainp)\]\s+(feat|fix|sec|ci|docs|refactor|test|chore|style|perf|revert)(\([a-zA-Z0-9_\-\.\/]+\))?:\s.+
+  ```
+- **Ví dụ thực tế theo từng thành viên:**
   - `[namng] feat(db): bổ sung endpoint healthcheck phục vụ docker preview`
   - `[manhdx] feat(auth): xây dựng trang đăng nhập và bảng tin thảo luận`
   - `[haind] fix(ui): sửa lỗi hiển thị header trên giao diện mobile`
@@ -172,32 +188,115 @@ Mỗi PR từ nhánh thành viên vào `dev` đại diện cho một phần vi�
   - `[anhld] feat(admin): xây dựng bảng điều khiển quản trị và xuất báo cáo`
 
 #### 🔹 Tầng 2: PR từ nhánh `dev` vào `main` (Phát hành chính thức lên Production)
-Nhánh `main` đại diện cho sản phẩm thật chạy môi trường Production. Do đó, PR từ `dev` vào `main` mang tính chất của một **phiên bản phát hành (Release Milestone / SemVer)**:
+Nhánh `main` đại diện cho sản phẩm thật chạy môi trường Production. Do đó, PR từ `dev` vào `main` mang tính chất của một **phiên bản phát hành (Release Milestone / SemVer)**, không gắn tên cá nhân:
+
 - **Cú pháp bắt buộc:**
   ```text
   release: v<Major>.<Minor>.<Patch> - <Mô tả tổng quát phiên bản phát hành>
   ```
-- **Quy tắc phiên bản Semantic Versioning (SemVer):**
-  - **`v1.0.0`**: Bản phát hành chính thức đầu tiên (Production Launch).
-  - **`v1.1.0`**: Cập nhật cụm tính năng mới lớn (Minor update).
-  - **`v1.0.1`**: Bản vá lỗi khẩn cấp, vá lỗ hổng bảo mật (Patch/Hotfix).
+  *(Chấp nhận tiền tố `release:` hoặc `RELEASE:`)*
+- **Biểu thức chính quy (Regex) kiểm tra:**
+  ```regex
+  ^(release|RELEASE):\s+v[0-9]+\.[0-9]+\.[0-9]+(\s+-\s+.+|\s*:\s*.+)
+  ```
+- **Quy tắc tăng số phiên bản Semantic Versioning (SemVer):**
+  - **`vX.0.0` (Major):** Phát hành phiên bản chính thức ban đầu hoặc có thay đổi lớn phá vỡ tính tương thích ngược.
+  - **`v1.X.0` (Minor):** Bổ sung cụm tính năng mới lớn tích hợp từ các thành viên.
+  - **`v1.0.X` (Patch):** Bản vá lỗi khẩn cấp, vá lỗ hổng an ninh mạng (Hotfix).
 - **Ví dụ thực tế:**
   - `release: v1.0.0 - Triển khai cổng thông tin Logistics InlaneWeb lên Production`
   - `release: v1.1.0 - Tích hợp hệ thống quản trị admin và kiểm thử tự động SAST`
-  - `release: v1.1.1 - Vá lỗi bảo mật phân quyền tài khoản người dùng`
+  - `release: v1.1.1 - Vá lỗ hổng SQL Injection và phân quyền tài khoản`
 
-### 6.3. Cơ chế tự động kiểm tra trên GitHub Actions (Automated Title Validator)
-Pipeline CI/CD tự động kích hoạt kiểm tra trong 2 tình huống:
-1. **Khi User push code lên nhánh cá nhân:** Job `branch_policy_guard` chạy nhanh trong 3-5 giây để quét toàn bộ commit được đẩy lên. Nếu phát hiện commit sai chuẩn Conventional Commits, pipeline sẽ **lập tức báo FAIL đỏ rực**, in rõ commit vi phạm kèm hướng dẫn sửa lại bằng lệnh `git commit --amend` hoặc `git rebase`.
-2. **Khi User tạo PR vào `dev`:** Kiểm tra tiêu đề PR theo mẫu `[tên_nhánh] loại(phạm_vi): mô tả`. Nếu sai, lập tức reject PR và hướng dẫn đổi tên trên giao diện GitHub.
-3. **Khi Admin tạo PR vào `main`:** Kiểm tra tiêu đề PR theo mẫu `release: vX.Y.Z - <mô tả>`. Nếu sai, lập tức reject PR.
+---
+
+### 6.3. Cơ chế tự động kiểm tra & Mẫu thông báo lỗi (Automated CI/CD Feedback)
+
+Job `branch_policy_guard` trong pipeline GitHub Actions tự động kiểm tra nghiêm ngặt trong mọi tình huống. Nếu vi phạm, pipeline sẽ **lập tức REJECT (exit 1)** và hiển thị hộp thông báo kèm helper hướng dẫn chi tiết:
+
+#### ❌ Case A: Khi User push commit sai format lên nhánh cá nhân
+```text
+======================================================================
+❌ LỖI VI PHẠM CHÍNH SÁCH ĐẶT TÊN COMMIT (CONVENTIONAL COMMITS)
+======================================================================
+🚫 Commit [def7890]: "update code"
+👉 Lý do: Tiêu đề commit 'update code' vi phạm chuẩn Conventional Commits.
+Cú pháp bắt buộc: <loại>(<phạm_vi>): <mô tả>
+Các loại (types) hợp lệ: feat, fix, sec, ci, docs, refactor, test, chore, style, perf.
+Ví dụ chuẩn: feat(auth): thêm chức năng xác thực token JWT
+             fix(db): khắc phục timeout khi truy vấn mariadb
+             ci(docker): bổ sung cổng smoke test kiểm tra healthcheck
+
+----------------------------------------------------------------------
+🛠️ HƯỚNG DẪN KHẮC PHỤC NHANH TRÊN MÁY CỦA BẠN:
+1. Nếu commit vi phạm là commit gần nhất:
+   git commit --amend -m "feat(<phạm_vi>): <mô tả lại cho đúng>"
+   git push --force origin <tên_nhánh_của_bạn>
+2. Nếu có nhiều commit vi phạm:
+   git rebase -i HEAD~<số_lượng_commit>
+   Đổi chữ 'pick' thành 'reword' ở các commit sai, sửa lại tên rồi push --force.
+======================================================================
+```
+
+#### ❌ Case B: Khi User tạo PR vào `dev` sai format tiêu đề
+```text
+======================================================================
+❌ SAI QUY ƯỚC ĐẶT TÊN PULL REQUEST VÀO NHÁNH DEV
+======================================================================
+Tiêu đề PR "feat(db): missing username prefix" không đúng quy ước đóng góp vào nhánh 'dev'.
+Cú pháp bắt buộc: [<mã_nhánh>] <loại>(<phạm_vi>): <mô tả>
+Các mã nhánh hợp lệ: [namng], [haind], [manhdx], [anhld], [mainp]
+Các loại hợp lệ: feat, fix, sec, ci, docs, refactor, test, chore, style, perf
+Ví dụ chuẩn: [namng] feat(db): bổ sung endpoint healthcheck phục vụ preview
+----------------------------------------------------------------------
+🛠️ CÁCH SỬA NHANH TRÊN GIAO DIỆN GITHUB:
+1. Tại trang Pull Request này trên GitHub, bấm nút 'Edit' ở cạnh tiêu đề.
+2. Đổi lại tiêu đề theo đúng mẫu: [tên_nhánh] loại(phạm_vi): mô tả
+3. Nhấn 'Save'. Pipeline sẽ tự động kiểm tra lại và bật xanh!
+======================================================================
+```
+
+#### ❌ Case C: Khi Admin tạo PR vào `main` sai format phiên bản
+```text
+======================================================================
+❌ SAI QUY ƯỚC ĐẶT TÊN PULL REQUEST RELEASE VÀO NHÁNH MAIN
+======================================================================
+Tiêu đề PR "merge dev to main" không đúng chuẩn Release SemVer vào nhánh 'main'.
+Cú pháp bắt buộc: release: v<Major>.<Minor>.<Patch> - <Mô tả phiên bản>
+Ví dụ chuẩn: release: v1.0.0 - Triển khai cổng thông tin InlaneWeb lên Production
+----------------------------------------------------------------------
+🛠️ CÁCH SỬA NHANH TRÊN GIAO DIỆN GITHUB:
+1. Bấm nút 'Edit' cạnh tiêu đề PR trên GitHub.
+2. Đổi tiêu đề thành: release: vX.Y.Z - <Mô tả phiên bản phát hành>
+3. Bấm 'Save' để kích hoạt lại kiểm tra.
+======================================================================
+```
+
+#### ❌ Case D: Khi có người cố tình mở PR vào `main` từ nhánh cá nhân
+```text
+======================================================================
+⛔ VI PHẠM CHÍNH SÁCH BẢO VỆ NHÁNH MAIN
+======================================================================
+Chỉ cho phép tạo Pull Request vào nhánh 'main' xuất phát từ nhánh 'dev'.
+Nghiêm cấm tạo PR trực tiếp từ nhánh phát triển 'namng' lên 'main'!
+----------------------------------------------------------------------
+🛠️ HƯỚNG DẪN: Hãy đóng PR này và mở PR mới hướng vào nhánh 'dev' trước.
+======================================================================
+```
+
+---
 
 ### 6.4. Kích hoạt Git Hook chặn lỗi ngay từ máy cá nhân (Khuyên dùng)
-Để không bị đẩy nhầm commit sai format lên server, thành viên có thể kích hoạt Git Hook cục bộ có sẵn trong repository:
+
+Để bảo vệ lịch sử commit và không bị pipeline server từ chối sau khi push, mỗi thành viên được khuyến nghị kích hoạt hook kiểm tra cục bộ có sẵn trong repository:
+
 ```bash
-# Chạy 1 lệnh duy nhất tại thư mục gốc dự án:
+# Chạy duy nhất 1 lệnh tại thư mục gốc dự án:
 git config core.hooksPath .githooks
 ```
-Sau khi chạy lệnh trên, mỗi khi gõ `git commit`, hook `.githooks/commit-msg` sẽ tự động chạy trước. Nếu tiêu đề commit vi phạm quy tắc, lệnh commit sẽ **bị hủy bỏ ngay tại máy cá nhân** kèm thông báo lỗi hướng dẫn cụ thể!
+
+- **Nguyên lý hoạt động:** Hook `.githooks/commit-msg` sẽ tự động kích hoạt mỗi khi gõ lệnh `git commit`. 
+- Nếu tiêu đề commit vi phạm quy tắc Conventional Commits, tiến trình commit sẽ **lập tức bị hủy bỏ ngay trên máy của bạn**, yêu cầu đặt lại tên đúng chuẩn trước khi tệp được ghi vào lịch sử Git!
+
 
 
