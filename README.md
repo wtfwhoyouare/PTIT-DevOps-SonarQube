@@ -33,7 +33,7 @@ Dự án áp dụng mô hình phân nhánh chuẩn (Git Feature Branch Workflow)
 | `anhld` | Nhánh làm việc cá nhân của thành viên **Đức Anh** |
 | `mainp` | Nhánh làm việc cá nhân của thành viên **Mai** |
 
-> 📌 **Chi tiết toàn bộ quy định:** Xem tài liệu đầy đủ tại [docs/02-chính sách triển khai.md](file:///d:/ThS/DevOpsSec/PTIT-DevOps-SonarQube/docs/02-ch%C3%ADnh%20s%C3%A1ch%20tri%E1%BB%83n%20khai.md).
+> 📌 **Chi tiết toàn bộ quy định:** Xem tài liệu đầy đủ tại [docs/02-Quy tắc triển khai.md](file:///d:/ThS/DevOpsSec/PTIT-DevOps-SonarQube/docs/02-Quy%20t%E1%BA%AFc%20tri%E1%BB%83n%20khai.md).
 
 ---
 

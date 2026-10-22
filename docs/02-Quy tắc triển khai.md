@@ -130,3 +130,64 @@ git push origin namng
 # Bước 4: Sau khi Lead duyệt và merge PR vào dev:
 # Lead sẽ là người mở PR từ dev vào main để đưa mã nguồn lên Production.
 ```
+
+---
+
+## 6. Quy tắc chuẩn hóa đặt tên Commit & Pull Request (Naming Conventions)
+
+Để đảm bảo lịch sử Git rõ ràng, chuyên nghiệp và phục vụ tự động hóa kiểm soát CI/CD, toàn bộ thành viên bắt buộc tuân thủ quy ước đặt tên sau:
+
+### 6.1. Quy tắc đặt tên Commit (Toàn bộ Repository)
+Áp dụng tiêu chuẩn quốc tế **Conventional Commits**:
+```text
+<loại_thay_đổi>(<phạm_vi>): <mô tả ngắn bằng tiếng Việt hoặc tiếng Anh>
+```
+- **Các loại thay đổi (Types) hợp lệ:**
+  - `feat`: Thêm tính năng mới (Feature)
+  - `fix`: Sửa lỗi logic / chức năng (Bugfix)
+  - `sec`: Vá lỗ hổng bảo mật / SAST
+  - `ci`: Cấu hình Pipeline, GitHub Actions, Docker Compose
+  - `docs`: Viết tài liệu hướng dẫn, báo cáo đồ án
+  - `refactor`: Tái cấu trúc mã nguồn không làm thay đổi logic
+  - `test`: Viết thêm unit tests, kịch bản kiểm thử
+- **Ví dụ:**
+  - `feat(db): tối ưu hóa kết nối mariadb và thêm route /health`
+  - `fix(auth): khắc phục lỗi kiểm tra quyền hạn tài khoản`
+  - `ci(docker): bổ sung cổng smoke test kiểm tra healthcheck`
+
+### 6.2. Quy tắc đặt tên Pull Request (PR) theo 2 tầng riêng biệt
+
+#### 🔹 Tầng 1: PR từ nhánh cá nhân vào `dev` (Tính năng & Đóng góp thành viên)
+Mỗi PR từ nhánh thành viên vào `dev` đại diện cho một phần việc cá nhân được phân công, bắt buộc phải có định danh người thực hiện và loại công việc:
+- **Cú pháp bắt buộc:**
+  ```text
+  [<mã_nhánh_cá_nhân>] <loại>(<phạm_vi>): <mô tả ngắn>
+  ```
+- **Danh sách mã nhánh hợp lệ:** `[namng]`, `[haind]`, `[manhdx]`, `[anhld]`, `[mainp]`.
+- **Ví dụ thực tế:**
+  - `[namng] feat(db): bổ sung endpoint healthcheck phục vụ docker preview`
+  - `[manhdx] feat(auth): xây dựng trang đăng nhập và bảng tin thảo luận`
+  - `[haind] fix(ui): sửa lỗi hiển thị header trên giao diện mobile`
+  - `[mainp] feat(logistics): hoàn thiện api tra cứu vận đơn /api/track`
+  - `[anhld] feat(admin): xây dựng bảng điều khiển quản trị và xuất báo cáo`
+
+#### 🔹 Tầng 2: PR từ nhánh `dev` vào `main` (Phát hành chính thức lên Production)
+Nhánh `main` đại diện cho sản phẩm thật chạy môi trường Production. Do đó, PR từ `dev` vào `main` mang tính chất của một **phiên bản phát hành (Release Milestone / SemVer)**:
+- **Cú pháp bắt buộc:**
+  ```text
+  release: v<Major>.<Minor>.<Patch> - <Mô tả tổng quát phiên bản phát hành>
+  ```
+- **Quy tắc phiên bản Semantic Versioning (SemVer):**
+  - **`v1.0.0`**: Bản phát hành chính thức đầu tiên (Production Launch).
+  - **`v1.1.0`**: Cập nhật cụm tính năng mới lớn (Minor update).
+  - **`v1.0.1`**: Bản vá lỗi khẩn cấp, vá lỗ hổng bảo mật (Patch/Hotfix).
+- **Ví dụ thực tế:**
+  - `release: v1.0.0 - Triển khai cổng thông tin Logistics InlaneWeb lên Production`
+  - `release: v1.1.0 - Tích hợp hệ thống quản trị admin và kiểm thử tự động SAST`
+  - `release: v1.1.1 - Vá lỗi bảo mật phân quyền tài khoản người dùng`
+
+### 6.3. Cơ chế tự động kiểm tra (Automated Title Validator trên CI/CD)
+Job `branch_policy_guard` trong pipeline GitHub Actions tự động kiểm tra tiêu đề của mọi Pull Request ngay khi được tạo:
+- PR vào `dev` nếu thiếu tiền tố `[user]` hoặc sai loại thay đổi ➔ **Tự động đánh dấu FAIL và chặn merge!**
+- PR vào `main` nếu không có định dạng `release: vX.Y.Z - ...` ➔ **Tự động đánh dấu FAIL và chặn merge!**
+
