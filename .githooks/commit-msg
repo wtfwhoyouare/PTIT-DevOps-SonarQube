@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Git commit-msg hook: Kiểm tra định dạng Conventional Commits cục bộ trước khi commit
+COMMIT_MSG_FILE="$1"
+COMMIT_MSG=$(head -n 1 "$COMMIT_MSG_FILE")
+
+python3 ci/policy_guard.py "$COMMIT_MSG"
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -ne 0 ]; then
+  echo ""
+  echo "❌ [Local Git Hook] Commit bị chặn do sai quy chuẩn đặt tên!"
+  echo "💡 Vui lòng đặt lại tiêu đề commit theo chuẩn: <loại>(<phạm_vi>): <mô tả>"
+  exit 1
+fi

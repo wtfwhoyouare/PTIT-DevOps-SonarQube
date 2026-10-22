@@ -2,7 +2,15 @@ name: SonarQube
 
 on:
   push:
-    branches: [dev, main]
+    branches:
+      - main
+      - dev
+      - namng
+      - haind
+      - manhdx
+      - anhld
+      - mainp
+      - 'feature/**'
   pull_request:
     branches: [dev, main]
   workflow_dispatch:
@@ -22,28 +30,19 @@ concurrency:
 
 jobs:
   branch_policy_guard:
-    name: Verify Branch & PR Policy
+    name: Verify Branch, Commit & PR Policy
     runs-on: ubuntu-24.04
     timeout-minutes: 3
     steps:
-      - name: Validate PR Source & Target Branch Rules
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BASE_BRANCH="${{ github.base_ref }}"
-            HEAD_BRANCH="${{ github.head_ref }}"
-            echo "🔍 Kiểm tra chính sách phân nhánh cho Pull Request: [$HEAD_BRANCH] -> [$BASE_BRANCH]"
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 10
+          persist-credentials: false
 
-            # Chính sách 1: Nhánh main chỉ được nhận PR từ nhánh dev
-            if [ "$BASE_BRANCH" = "main" ] && [ "$HEAD_BRANCH" != "dev" ]; then
-              echo "::error title=Vi phạm chính sách PR lên main::Chỉ được phép tạo Pull Request vào nhánh 'main' xuất phát từ nhánh 'dev'. Nghiêm cấm tạo PR trực tiếp từ nhánh phát triển '$HEAD_BRANCH' lên 'main'!"
-              exit 1
-            fi
-            echo "✅ Chính sách PR hợp lệ: Nhánh nguồn [$HEAD_BRANCH] -> Nhánh đích [$BASE_BRANCH]"
-          else
-            echo "✅ Sự kiện ${{ github.event_name }} trên ref: ${{ github.ref }}"
-          fi
+      - name: Enforce Commit & Pull Request Naming Policy
+        shell: bash
+        run: python3 ci/policy_guard.py
 
   analyze:
     name: SonarQube SAST & Quality Gate
