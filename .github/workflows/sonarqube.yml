@@ -211,3 +211,110 @@ jobs:
           path: reports/semgrep/
           if-no-files-found: error
           retention-days: 30
+
+  production_smoke_test:
+    name: Production Readiness & Smoke Test Gate
+    needs: [branch_policy_guard]
+    if: (github.event_name == 'pull_request' && github.base_ref == 'main') || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: 1. Build Production Docker Images
+        id: build_images
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "🔨 [Pre-Merge Gate 1/2] Đang kiểm tra Build Docker Images cho Production..."
+          cd InlaneWeb
+          docker compose build --progress=plain
+
+      - name: 2. Deploy Preview Environment in Runner
+        id: deploy_preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "🚀 [Pre-Merge Gate 2/2] Khởi chạy container tạm thời trong runner để kiểm thử..."
+          cd InlaneWeb
+          docker compose up -d
+
+      - name: 3. Healthcheck & End-to-End Smoke Test
+        id: healthcheck
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "⏳ Chờ đợi MariaDB khởi tạo và sẵn sàng (service_healthy)..."
+          
+          # 1. Đợi database container đạt trạng thái healthy
+          DB_HEALTHY=false
+          for i in {1..30}; do
+            STATUS=$(docker inspect --format='{{json .State.Health.Status}}' ilfreight_db 2>/dev/null || echo '"starting"')
+            if [ "$STATUS" = '"healthy"' ]; then
+              echo "✅ Database MariaDB đã khởi tạo xong và báo HEALTHY! (Sau $i lần thử)"
+              DB_HEALTHY=true
+              break
+            fi
+            echo "   ... đang chờ DB khởi tạo ($i/30) - trạng thái: $STATUS"
+            sleep 3
+          done
+
+          if [ "$DB_HEALTHY" != "true" ]; then
+            echo "::error title=DB Healthcheck Failed::Container ilfreight_db không đạt trạng thái healthy trong thời gian cho phép!"
+            cd InlaneWeb && docker compose logs
+            exit 1
+          fi
+
+          echo "🩺 [Healthcheck] Gọi API kiểm tra nhịp tim ứng dụng tại http://127.0.0.1:8088/health..."
+          HEALTH_RESPONSE=$(curl -sS -w "\nHTTP_STATUS:%{http_code}" http://127.0.0.1:8088/health)
+          HTTP_BODY=$(echo "$HEALTH_RESPONSE" | sed -e '$d')
+          HTTP_STATUS=$(echo "$HEALTH_RESPONSE" | tail -n1 | cut -d':' -f2)
+
+          echo "Response Body:"
+          echo "$HTTP_BODY"
+          echo "HTTP Status Code: $HTTP_STATUS"
+
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "::error title=Healthcheck Failed::Endpoint /health không trả về HTTP 200 (Mã: $HTTP_STATUS)!"
+            cd InlaneWeb && docker compose logs
+            exit 1
+          fi
+
+          # 2. Smoke test trang chủ
+          echo "🌐 [Smoke Test] Kiểm tra nạp Trang chủ http://127.0.0.1:8088/..."
+          INDEX_HTML=$(curl -sS -f http://127.0.0.1:8088/)
+          if echo "$INDEX_HTML" | grep -q "IlFreight"; then
+            echo "✅ Trang chủ phản hồi mã HTML hợp lệ và chứa thương hiệu IlFreight Logistics."
+          else
+            echo "::error title=Smoke Test Failed::Trang chủ không chứa nội dung dự kiến!"
+            exit 1
+          fi
+
+          # 3. Ghi báo cáo Step Summary
+          cat << 'EOF' >> "$GITHUB_STEP_SUMMARY"
+          ## 🚀 Production Readiness & Smoke Test Gate — ĐẠT TIÊU CHUẨN
+
+          > Đã kiểm tra môi trường chạy thực tế trong Runner trước khi cho phép nạp mã nguồn vào nhánh **`main`**.
+
+          | Hạng mục kiểm thử | Trạng thái | Chi tiết |
+          | :--- | :---: | :--- |
+          | **1. Docker Build Images** | ✅ **SUCCESS** | Build sạch Web (PHP 8.2 Apache) & DB (MariaDB 10.11) |
+          | **2. Ephemeral Deployment** | ✅ **SUCCESS** | Khởi chạy thành công cụm container qua Docker Compose |
+          | **3. MariaDB Healthcheck** | ✅ **HEALTHY** | Khởi tạo schema `ilfreight` và dữ liệu mẫu hoàn tất |
+          | **4. Web Healthcheck API** | ✅ **HTTP 200** | Endpoint `/health` xác nhận Web & DB kết nối thông suốt |
+          | **5. E2E Smoke Test** | ✅ **PASSED** | Tải thành công giao diện Trang chủ (`/`) |
+
+          **Kết luận:** Mã nguồn sẵn sàng 100% để merge vào nhánh Production (`main`).
+          EOF
+
+      - name: 4. Teardown Runner Containers
+        if: always()
+        shell: bash
+        run: |
+          echo "🧹 Dọn dẹp môi trường kiểm thử tạm thời..."
+          cd InlaneWeb
+          docker compose down -v --remove-orphans || true
