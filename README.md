@@ -13,125 +13,62 @@
 
 ## 📌 Giới thiệu dự án
 
-**InlaneWeb** là hệ thống cổng thông tin quản lý vận tải và logistics đường biển, được xây dựng trên nền tảng **PHP 8.2** và cơ sở dữ liệu **MariaDB**. Dự án được triển khai theo mô hình container hóa bằng **Docker & Docker Compose**, tích hợp quy trình **DevSecOps** tự động hóa kiểm thử tĩnh bảo mật (SAST) với **SonarQube Community** và **Semgrep**.
+**InlaneWeb** là hệ thống cổng thông tin quản lý vận tải và logistics đường biển, được xây dựng trên nền tảng **PHP 8.2** và cơ sở dữ liệu **MariaDB**. Toàn bộ hệ thống được container hóa bằng **Docker & Docker Compose**, vận hành quy trình **DevSecOps** tự động hóa kiểm thử tĩnh bảo mật (SAST) với **SonarQube Community** và **Semgrep**.
 
 ---
 
-## 🌳 Chiến lược phân nhánh & Quy trình làm việc nhóm (Git Branching Strategy)
+## 📚 Tài liệu dự án (Documentation)
 
-Dự án áp dụng mô hình phân nhánh chuẩn (Git Feature Branch Workflow) để đảm bảo chất lượng mã nguồn và tính an toàn khi tích hợp:
+Hệ thống tài liệu chi tiết được tổ chức trong thư mục [`docs/`](docs/):
 
-### 1. Hệ thống các nhánh trong Repository
-
-| Tên nhánh | Chức năng & Quyền hạn |
-| :--- | :--- |
-| `main` | **Nhánh Production (Chạy thực tế):** Nhánh này **chỉ sử dụng để lưu trữ mã nguồn chạy production**. Nghiêm cấm commit và push code trực tiếp lên `main`. Tuyệt đối không được tạo Pull Request từ các nhánh đang phát triển cá nhân lên `main`. Nhánh `main` chỉ nhận mã nguồn khi Admin/Lead tạo Pull Request và duyệt merge từ nhánh `dev`. |
-| `dev` | **Nhánh Integration (Tổng hợp):** Nhánh này **chỉ sử dụng để tổng hợp lại mã nguồn của toàn bộ thành viên trong nhóm**. Nghiêm cấm commit và push code trực tiếp lên `dev`. Toàn bộ thành viên chỉ được đóng góp mã nguồn bằng cách tạo Pull Request từ nhánh đang code của mình vào `dev`. |
-| `namng` | Nhánh làm việc cá nhân của thành viên **Nam** |
-| `haind` | Nhánh làm việc cá nhân của thành viên **Hải** |
-| `manhdx` | Nhánh làm việc cá nhân của thành viên **Mạnh** |
-| `anhld` | Nhánh làm việc cá nhân của thành viên **Đức Anh** |
-| `mainp` | Nhánh làm việc cá nhân của thành viên **Mai** |
-
-> 📌 **Chi tiết toàn bộ quy định:** Xem tài liệu đầy đủ tại [docs/02-Quy tắc triển khai.md](file:///d:/ThS/DevOpsSec/PTIT-DevOps-SonarQube/docs/02-Quy%20t%E1%BA%AFc%20tri%E1%BB%83n%20khai.md).
+- 📜 [**01. Hạ tầng triển khai (docs/01-hạ tầng triển khai.md)**](docs/01-hạ%20tầng%20triển%20khai.md): Kiến trúc Container, máy chủ Runner, cấu hình Docker Compose và mạng nội bộ.
+- 📜 [**02. Quy tắc triển khai & Quy ước Git (docs/02-Quy tắc triển khai.md)**](docs/02-Quy%20tắc%20triển%20khai.md): **(Bắt buộc đọc)** Toàn bộ chính sách phân nhánh, quy chuẩn đặt tên Commit (Conventional Commits), quy chuẩn PR 2 tầng, và cơ chế kỹ thuật tự động kiểm tra (CI/CD Guard & Git Hooks).
+- 📜 [**Phân công công việc (docs/phan-viec-manhdx.md)**](docs/phan-viec-manhdx.md): Chi tiết phân chia nhiệm vụ từng thành viên trong nhóm.
 
 ---
 
-### 2. Quy tắc phát triển & Đóng góp mã nguồn (Contribution Rules)
+## 🌳 Tổng quan luồng phát triển & Phân nhánh
+
+Dự án áp dụng mô hình phân nhánh nghiêm ngặt:
 
 ```text
-  dev ── cập nhật mã mới ──> nhánh cá nhân (namng, haind, ...)
-                               │
-                               ├── commit + push lên nhánh cá nhân
-                               └── Pull Request ──> dev ── Pull Request + merge ──> main
-                                       │               │           │                   │
-                                       └── CI/CD quét ─┴───────────┴── CI/CD quét ─────┘
-                                           (Shift-Left SAST)           (Post-merge Scan)
+  dev ── cập nhật mã mới ──> nhánh cá nhân (namng, haind, manhdx, anhld, mainp)
+                                │
+                                ├── commit + push lên nhánh cá nhân (theo Conventional Commits)
+                                └── Pull Request ──> dev ── Pull Request (Release) ──> main
+                                        │               │           │                   │
+                                        └── CI/CD Guard ┴───────────┴── Smoke Test ─────┘
+                                            (Shift-Left SAST)           (Docker Preview)
 ```
 
-**⚠️ BA NGUYÊN TẮC BẤT BIẾN (INVIOLABLE RULES):**
-1. **User không được commit và push code trực tiếp lên `main` và lên `dev`.**
-2. **Chỉ được tạo Pull Request (PR) từ nhánh đang code lên `dev`.**
-3. **Tuyệt đối không được tạo Pull Request từ nhánh đang phát triển cá nhân lên `main`.** (Hệ thống CI/CD Guard sẽ tự động chặn đứng nếu vi phạm).
+### Ba nguyên tắc cốt lõi:
+1. 🚫 **KHÔNG commit và push trực tiếp** lên `main` và `dev`.
+2. 🔀 **Pull Request của thành viên CHỈ hướng vào nhánh `dev`** với định dạng tiêu đề: `[<mã_nhánh>] <loại>(<phạm_vi>): <mô tả>`.
+3. ⛔ **TUYỆT ĐỐI CẤM tạo PR từ nhánh cá nhân lên `main`.** Nhánh `main` chỉ nhận PR từ `dev` với định dạng Release: `release: vX.Y.Z - <mô tả>`.
 
-Thực hiện lệnh Git từ thư mục gốc `PTIT-DevOps-SonarQube` (nếu đang ở `InlaneWeb`, chạy `cd ..` trước). Ví dụ dùng nhánh `namng`; các thành viên khác thay bằng nhánh của mình (`haind`, `manhdx`, `anhld`, `mainp`). Không push trực tiếp lên `dev` hoặc `main` trong luồng làm việc này.
-
-**Trước vòng làm việc mới:** Nếu `main` có commit chưa nằm trên `dev`, Admin/Lead mở **Pull requests → New pull request** trên GitHub, chọn **base: `dev`**, **compare: `main`**, review rồi merge để cập nhật `dev`. Mỗi lần merge tạo commit mới trên `dev` cũng sẽ chạy workflow và lưu báo cáo.
-
-1. **Lấy mã mới nhất từ `dev` vào nhánh cá nhân, trước khi sửa file:**
-
-   ```bash
-   git fetch origin
-   git switch namng
-   git pull --ff-only origin namng
-   git merge origin/dev
-   ```
-
-   Nếu vừa clone và chưa có nhánh `namng` trên máy, dùng `git switch --track origin/namng` thay cho `git switch namng`. Nếu merge báo xung đột, sửa các file bị xung đột, chạy `git add <file-da-sua>` và `git commit` để hoàn tất merge; sau đó mới sửa phần việc của mình.
-
-2. **Commit và push lên nhánh cá nhân:**
-
-   ```bash
-   git status
-   git add <cac-file-duoc-phan-cong>
-   git diff --cached --stat
-   git commit -m "Mo ta thay doi"
-   git push origin namng
-   ```
-
-   Chỉ thêm các file thuộc phần việc cần gửi lên. Nếu Git báo `nothing to commit`, kiểm tra lại `git status` và các file đã sửa.
-
-3. **Tạo PR từ nhánh cá nhân vào `dev` (Kiểm thử Shift-Left SAST):**
-
-   - Trên GitHub, mở **Pull requests → New pull request**, chọn **base: `dev`**, **compare: `namng`** (hoặc nhánh cá nhân tương ứng).
-   - Kiểm tra danh sách file thay đổi, nhấn **Create pull request** và ghi rõ nội dung đã làm.
-   - **Tự động kích hoạt CI/CD (Shift-Left):** Ngay khi PR được mở hoặc có commit mới đẩy lên PR, workflow SonarQube & Semgrep sẽ tự động kích hoạt để phân tích mã nguồn ngay tại cửa trước của PR. Kết quả kiểm tra (Checks) và Job Summary được đính kèm trực tiếp vào giao diện PR để Lead/Reviewer đánh giá chất lượng trước khi gộp code.
-   - Sau khi review, xử lý góp ý và xung đột (nếu có), người phụ trách nhấn **Merge pull request → Confirm merge**. Sau khi merge, sự kiện `push` trên `dev` tiếp tục chạy một lần quét chính thức để lưu trữ Artifacts của trạng thái nhánh tích hợp.
-
-4. **Tạo PR từ `dev` vào `main` (Cổng kiểm thử sẵn sàng Production - Pre-Merge Gate):**
-
-   - Khi các PR tính năng đã tích hợp hoàn tất trên `dev`, Admin/Lead mở **Pull requests → New pull request**, chọn **base: `main`**, **compare: `dev`**.
-   - **Tự động kích hoạt Cổng kiểm thử Production (Production Readiness Gate):**
-     1. **Docker Build Test:** Tự động build sạch toàn bộ Docker Images (Web Apache PHP 8.2 & Database MariaDB). Nếu lỗi cú pháp Dockerfile hoặc thiếu package, chặn đứng ngay.
-     2. **Ephemeral Runner Deployment:** Tự động bung cụm container Preview tạm thời ngay trong GitHub Runner bằng `docker compose up -d`.
-     3. **Healthcheck & Smoke Test:** Đợi MariaDB container đạt trạng thái `healthy`, sau đó gọi API `/health` và kiểm tra phản hồi HTTP 200 kèm kết nối Database thông suốt, kiểm tra nạp thành công Trang chủ (`/`).
-     4. **Chỉ khi CẢ HAI điều kiện (Build thành công + Healthcheck HTTP 200) đều PASS**, hệ thống mới cho phép nạp code vào nhánh Production `main`.
-   - Review kết quả kiểm thử trên PR, người phụ trách nhấn **Merge pull request → Confirm merge**.
-   - Commit mới trên `main` kích hoạt workflow audit và đóng gói release. Xem kết quả tại **Actions → SonarQube → Job summary / Artifacts**.
-
-Workflow tự động kích hoạt trên cả sự kiện mở **Pull Request** (vào `dev`, `main`) nhằm phát hiện sớm lỗ hổng bảo mật trước khi gộp (Shift-Left), và trên sự kiện **Push / Merge** để lưu trữ báo cáo audit chính thức.
+👉 *Xem chi tiết bảng tra cứu Types, biểu thức Regex, mẫu lỗi và cách kích hoạt Git Hook cục bộ tại [docs/02-Quy tắc triển khai.md](docs/02-Quy%20tắc%20triển%20khai.md).*
 
 ---
 
 ## 🛡️ Kiến trúc DevSecOps Pipeline
 
-Hệ thống CI/CD được thiết lập tự động hóa 100% trên **GitHub Actions**:
+Hệ thống CI/CD được thiết lập tự động hóa 100% trên **GitHub Actions** với 5 chốt chặn chất lượng:
 
 ```text
-Quy trình CI/CD tích hợp & triển khai Production:
-  ├── 1. Branch Policy Guard
-  │      └── Chặn tự động nếu phát hiện PR vào main không xuất phát từ dev
-  ├── 2. Unit Tests & Tooling Validation (python3 -m unittest)
-  ├── 3. SonarQube Community SAST & Quality Gate
-  │      ├── Khởi tạo container SonarQube 26.9 tạm thời (Ephemeral instance)
-  │      ├── Phân tích độ tin cậy, quy chuẩn lập trình, bugs và code smells
-  │      ├── Tự động xuất báo cáo chi tiết vào GitHub Step Summary & Artifacts
-  │      └── Ghi nhận Quality Gate ở chế độ báo cáo (report-only) hoặc chặn lỗi (enforce)
-  ├── 4. Semgrep Security SAST
-  │      ├── Bộ rulesets chính thức từ cộng đồng Semgrep Registry
-  │      ├── Phân tích luồng dữ liệu chuyên sâu (Taint Tracking: Source -> Sink)
-  │      ├── Phát hiện các lỗ hổng Injection (CWE-89, CWE-79, Misconfiguration)
-  │      └── Xuất báo cáo trực quan kèm đoạn code vi phạm lên GitHub Summary & Artifacts
-  └── 5. Production Readiness & Smoke Test Gate (Dành riêng cho PR vào main)
-         ├── Kiểm tra Build thành công toàn bộ Docker Images
-         ├── Triển khai cụm container tạm thời (Ephemeral Preview) trong Runner
-         ├── Kiểm tra nhịp tim ứng dụng qua endpoint /health (HTTP 200 OK + DB Connected)
-         └── Smoke Test tải giao diện Trang chủ trước khi cho phép merge vào Production
+GitHub Actions Pipeline:
+  ├── 1. Branch Policy Guard: Tự động kiểm tra cú pháp commit, định dạng PR và ngăn PR trái phép
+  ├── 2. Unit Tests & Tooling Validation: Chạy kiểm thử tự động với python3 -m unittest
+  ├── 3. SonarQube SAST: Quét chất lượng mã nguồn, bugs, code smells và lỗ hổng
+  ├── 4. Semgrep SAST: Phân tích taint-tracking bảo mật chuyên sâu (SQLi, XSS, Misconfigs)
+  └── 5. Production Smoke Test Gate: (Khi PR từ dev vào main)
+         ├── Build sạch toàn bộ Docker Images (Web & MariaDB)
+         ├── Khởi chạy cụm Preview tạm thời trong runner
+         └── Kiểm tra /health HTTP 200 + Database ping trước khi cho phép merge vào Production
 ```
 
 ---
 
-## 🚀 Hướng dẫn khởi chạy ứng dụng cục bộ
+## 🚀 Khởi chạy ứng dụng cục bộ (Local Development)
 
 Yêu cầu môi trường: **Docker** & **Docker Compose**.
 
@@ -141,12 +78,18 @@ Yêu cầu môi trường: **Docker** & **Docker Compose**.
    cd PTIT-DevOps-SonarQube
    ```
 
-2. **Khởi chạy container:**
+2. **Kích hoạt Git Hook kiểm tra commit cục bộ (Khuyên dùng):**
+   ```bash
+   git config core.hooksPath .githooks
+   ```
+
+3. **Khởi chạy cụm dịch vụ:**
    ```bash
    cd InlaneWeb
    docker compose up -d --build
    ```
 
-3. **Truy cập ứng dụng:**
-   - Cổng thông tin Web: `http://localhost:8080`
-   - Cơ sở dữ liệu MariaDB: Cổng nội bộ `3306` (Container `inlaneweb_db`)
+4. **Truy cập ứng dụng:**
+   - 🌐 **Web Portal:** `http://localhost:8080`
+   - 💓 **Healthcheck Endpoint:** `http://localhost:8080/health`
+   - 🗄️ **MariaDB Database:** Port nội bộ `3306` (Container `inlaneweb_db`)
