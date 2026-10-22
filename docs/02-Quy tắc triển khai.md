@@ -86,13 +86,42 @@ Tài liệu này quy định chi tiết và bắt buộc về chức năng, quy�
 
 Để chính sách không dừng lại ở mức "lời nói", dự án áp dụng 2 tầng bảo vệ tự động:
 
-### Tầng 1: Tự động chặn bằng GitHub Actions CI/CD Guard
-Trong pipeline `.github/workflows/sonarqube.yml`, hai tầng kiểm soát tự động được thực thi:
-1. **Branch Policy Guard (`branch_policy_guard`):** Tự động kiểm tra nhánh nguồn và nhánh đích của mọi Pull Request.
-   - Nếu phát hiện PR hướng vào `main` nhưng nhánh nguồn không phải là `dev`, pipeline sẽ **lập tức ném mã lỗi (exit 1)** kèm cảnh báo đỏ rực:
+### Tầng 1: Tự động chặn bằng GitHub Actions CI/CD Pipeline (Phân tách 3 Stage độc lập)
+
+Trong pipeline `.github/workflows/sonarqube.yml`, quy trình kiểm soát được phân tách thành **3 Giai đoạn (Stages)** riêng biệt theo mô hình DAG (Directed Acyclic Graph) tuần tự, không gộp chung khối gây hiểu nhầm:
+
+```text
+  ┌────────────────────────────────────────────────────────┐
+  │ [STAGE 1] Policy Guard — Kiểm tra Nhánh, Commit & PR   │  (Chạy nhanh 3-5s cho mọi Push & PR)
+  └───────────────────────────┬────────────────────────────┘
+                              │
+          ┌───────────────────┴───────────────────┐
+          ▼ (Khi PR hoặc Merge vào DEV)           ▼ (Khi PR hoặc Merge vào MAIN)
+  ┌────────────────────────────────────────┐      │
+  │ [STAGE 2: Dev Gate] Shift-Left SAST    │      │
+  │  ├── SonarQube SAST & Code Quality     │      │
+  │  └── Semgrep Security SAST (Taint Data)│      │
+  └───────────────────┬────────────────────┘      │
+                      │                           │
+                      ▼ (Sau khi hoàn tất Stage 2)▼
+  ┌────────────────────────────────────────────────────────┐
+  │ [STAGE 3: Production Gate] Docker Build & Smoke Test   │  (Chỉ mở cổng kiểm thử trước khi nạp vào MAIN)
+  │  ├── Build sạch toàn bộ Docker Images                  │
+  │  ├── Khởi chạy Preview trong Runner (Docker Compose)   │
+  │  ├── Healthcheck MariaDB đạt trạng thái healthy       │
+  │  └── Gọi API /health (HTTP 200) & Smoke Test Trang chủ │
+  └────────────────────────────────────────────────────────┘
+```
+
+1. **[STAGE 1] Policy Guard (`branch_policy_guard`):** 
+   - Kiểm tra định dạng Conventional Commits khi push code.
+   - Kiểm tra định dạng tiêu đề PR và bảo vệ nhánh: Nếu phát hiện PR hướng vào `main` nhưng nhánh nguồn không phải là `dev`, pipeline sẽ **lập tức ném mã lỗi (exit 1)** kèm cảnh báo đỏ rực:
      > `❌ VI PHẠM CHÍNH SÁCH: Chỉ cho phép tạo Pull Request vào nhánh 'main' từ nhánh 'dev'. Nghiêm cấm tạo PR trực tiếp từ nhánh phát triển '<nhánh>' lên 'main'!`
-   - Thao tác merge sẽ bị khóa lại trên GitHub.
-2. **Production Readiness & Smoke Test Gate (`production_smoke_test`):** Dành riêng cho PR từ `dev` vào `main`.
+2. **[STAGE 2: Dev Gate] Shift-Left SAST Gate (`analyze`, `semgrep`):** 
+   - Dành riêng cho các PR vào `dev` hoặc commit tích hợp trên `dev`.
+   - Quét an toàn thông tin, lỗ hổng injection, code smells trước khi cho phép gộp code nhóm.
+3. **[STAGE 3: Production Gate] Production Readiness & Smoke Test Gate (`production_smoke_test`):** 
+   - Đứng ở cột độc lập tuần tự thứ 3, dành riêng cho PR từ `dev` vào `main`.
    - **Docker Build Validation:** Tự động build sạch toàn bộ Dockerfile (Web & DB). Chặn đứng nếu build thất bại.
    - **Ephemeral Preview & Healthcheck:** Khởi chạy cụm container tạm thời trong runner, ping `/health` xác nhận HTTP 200 OK và kết nối Database sống, tải thử Trang chủ.
    - **Điều kiện nạp code vào `main`:** Chỉ khi CẢ HAI điều kiện (Build thành công + Healthcheck HTTP 200) đều PASS thì code mới được phép merge vào `main`.
@@ -102,7 +131,7 @@ Admin repository kích hoạt cấu hình bảo vệ trên GitHub Web (**Setting
 1. **Áp dụng cho nhánh `main` và `dev`:**
    - [x] **Require a pull request before merging:** Bắt buộc phải thông qua PR, chặn đứng hoàn toàn `git push origin main` hoặc `git push origin dev`.
    - [x] **Require approvals:** Yêu cầu tối thiểu 1 người phê duyệt trước khi merge.
-   - [x] **Require status checks to pass before merging:** Bắt buộc các job `Verify Branch & PR Policy` và `Production Readiness & Smoke Test Gate` phải báo xanh (Success).
+   - [x] **Require status checks to pass before merging:** Bắt buộc các job `[STAGE 1] Policy Guard` và `[STAGE 3: Production Gate]` phải báo xanh (Success).
    - [x] **Do not allow bypassing the above settings:** Áp dụng cho cả Administrators.
 
 ---
