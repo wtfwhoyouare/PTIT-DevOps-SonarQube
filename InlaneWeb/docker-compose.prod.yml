@@ -4,6 +4,8 @@
 #  - KHÔNG cần mã nguồn PHP trên máy chủ VPS (Self-contained Image).
 #  - Dữ liệu Database được bảo toàn 100% qua Docker Volume `db_data`.
 # ============================================================================
+name: inlaneweb-prod
+
 services:
   db:
     image: ${INLANEWEB_DB_IMAGE:-ghcr.io/wtfwhoyouare/inlaneweb-db:latest}
