@@ -1,16 +1,12 @@
-name: SonarQube
+name: DevSecOps Pipeline
+run-name: >-
+  ${{ github.event_name == 'pull_request' && (github.base_ref == 'main' && format('[PROD GATE - PR #{0}] {1}', github.event.pull_request.number, github.event.pull_request.title) || format('[DEV GATE - PR #{0}] {1}', github.event.pull_request.number, github.event.pull_request.title)) || (github.event_name == 'workflow_dispatch' && format('[MANUAL RUN] {0}', github.workflow) || (github.ref_name == 'main' && format('[PROD DEPLOY] {0}', github.event.head_commit.message) || format('[DEV INTEGRATION] {0}', github.event.head_commit.message))) }}
 
 on:
   push:
     branches:
       - main
       - dev
-      - namng
-      - haind
-      - manhdx
-      - anhld
-      - mainp
-      - 'feature/**'
   pull_request:
     branches: [dev, main]
   workflow_dispatch:
