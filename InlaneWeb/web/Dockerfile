@@ -12,5 +12,8 @@ COPY php.ini /usr/local/etc/php/conf.d/zz-lab.ini
 # Cho phep .htaccess ghi de (AllowOverride All)
 COPY apache/000-default.conf /etc/apache2/sites-available/000-default.conf
 
-# Source duoc mount qua volume trong docker-compose (read-only).
+# Dat thu muc lam viec
 WORKDIR /var/www/html
+
+# Dong goi toan bo ma nguon ung dung vao Docker image (Self-contained Image)
+COPY src/ /var/www/html/
