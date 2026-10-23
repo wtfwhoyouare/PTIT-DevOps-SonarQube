@@ -1,408 +1,239 @@
-# CHÍNH SÁCH PHÂN NHÁNH VÀ TRIỂN KHAI MÃ NGUỒN (GIT BRANCHING & DEPLOYMENT POLICY)
-
-> **Dự án:** InlaneWeb Logistics Portal — Hệ thống CI/CD DevSecOps  
-> **Cơ quan áp dụng:** Nhóm phát triển PTIT-DevOps-SonarQube  
-> **Phiên bản chính sách:** 2.0 (Siết chặt kiểm soát luồng tích hợp & Shift-Left SAST)
+# QUY CHUẨN PHÂN NHÁNH VÀ TRIỂN KHAI MÃ NGUỒN (GIT BRANCHING & DEPLOYMENT POLICY)
+**HỆ THỐNG CỔNG THÔNG TIN VẬN TẢI INLANEWEB**
 
 ---
 
-## 1. Mục đích & Nguyên tắc cốt lõi
-
-Tài liệu này quy định chi tiết và bắt buộc về chức năng, quyền hạn của từng nhánh trong kho mã nguồn (Repository) nhằm bảo vệ tính toàn vẹn của mã nguồn Production, ngăn chặn mã lỗi / lỗ hổng an ninh xâm nhập vào nhánh chính, và chuẩn hóa quy trình phối hợp làm việc nhóm.
-
-### Ba nguyên tắc bất biến (Inviolable Rules):
-1. 🚫 **KHÔNG commit và push trực tiếp** lên nhánh `main` và `dev`.
-2. 🔀 **Pull Request của thành viên CHỈ hướng vào nhánh `dev`** với định dạng tiêu đề: `[<mã_nhánh>] <loại>(<phạm_vi>): <mô tả>`.
-3. ⛔ **TUYỆT ĐỐI CẤM tạo PR từ nhánh cá nhân lên `main`.** Nhánh `main` **CHỈ DUY NHẤT** nhận mã nguồn từ `dev` với định dạng Release: `release: vX.Y.Z - <mô tả>`.
+| Thuộc tính | Chi tiết |
+| :--- | :--- |
+| **Mã tài liệu:** | POL-DEVOPS-02 |
+| **Dự án:** | InlaneWeb Logistics Portal |
+| **Phân loại:** | Quy định kỹ thuật bắt buộc (Standard Operating Procedure - SOP) |
+| **Phiên bản:** | 2.1.0 |
+| **Ngày cập nhật:** | 23/10/2026 |
+| **Trạng thái:** | Đã phê duyệt |
 
 ---
 
-## 2. Định nghĩa chức năng & Quyền hạn của các nhánh
+## 1. MỤC ĐÍCH VÀ PHẠM VI ÁP DỤNG
+
+Quy chuẩn này quy định chi tiết cấu trúc phân nhánh mã nguồn, tiêu chuẩn thông điệp commit, quy trình tích hợp và các cơ chế kiểm soát kỹ thuật tự động (Automated Governance Gates).
+
+Mục tiêu chính:
+* Bảo vệ tính ổn định và an ninh của mã nguồn môi trường Production.
+* Thực hiện nguyên lý kiểm thử an ninh sớm (Shift-Left Security) đối với mọi đóng góp mã nguồn.
+* Đảm bảo tính nhất quán của lịch sử phát triển thông qua tiêu chuẩn Conventional Commits.
+* Tự động hóa kiểm soát và phản hồi lỗi kỹ thuật qua hệ thống CI/CD.
+
+---
+
+## 2. NGUYÊN TẮC CỐT LÕI (INVIOLABLE RULES)
+
+Mọi kỹ sư tham gia dự án phải tuân thủ nghiêm ngặt 3 nguyên tắc sau:
+1. **Tuyệt đối không commit hoặc push trực tiếp** lên hai nhánh chính: `main` và `dev`.
+2. **Mọi Pull Request của thành viên chỉ được hướng vào nhánh `dev`** với định dạng tiêu đề bắt buộc: `[<mã_nhánh>] <loại>(<phạm_vi>): <mô tả>`.
+3. **Tuyệt đối cấm tạo Pull Request từ các nhánh cá nhân vào `main`.** Nhánh `main` chỉ nhận mã nguồn thông qua Pull Request xuất phát từ nhánh `dev` với định dạng phát hành: `release: vX.Y.Z - <mô tả>`.
+
+---
+
+## 3. CƠ CẤU PHÂN CẤP NHÁNH VÀ PHÂN QUYỀN (RACI MATRIX)
+
+### 3.1. Sơ đồ luồng phân cấp nhánh
 
 ```text
  ┌──────────────────────────────────────────────────────────────────┐
- │                  SO DO PHAN CAP NHANH & CI/CD LUONG              │
+ │               SƠ ĐỒ PHÂN CẤP NHÁNH VÀ LUỒNG PHÁT TRIỂN           │
  └──────────────────────────────────────────────────────────────────┘
 
-     [1. NHANH CA NHAN / TINH NANG]
+     [1. NHÁNH TÍNH NĂNG / CÁ NHÂN]
       namng, haind, manhdx, anhld, mainp
          │
-         │  • git commit (Theo chuan Conventional Commits)
-         │  • git push origin <ten_nhanh_ca_nhan>
+         │  - Thực hiện commit theo chuẩn Conventional Commits
+         │  - Push lên remote nhánh cá nhân
          │
-         ▼  (1) Mo PR vao dev: [<ma_nhanh>] <loai>(<pham_vi>): <mo ta>
+         ▼  (1) Mở PR vào dev: [<mã_nhánh>] <loại>(<phạm_vi>): <mô tả>
      ┌──────────────────────────────────────────────────────────────┐
-     │ [CI/CD Shift-Left Gate] Kiem tra tu dong chat luong ma nguon:│
-     │   ├── [Stage 1] Policy Guard (Commit format & PR Title)      │
-     │   └── [Stage 2] SonarQube & Semgrep SAST Scanner             │
+     │ CỔNG KIỂM SOÁT SHIFT-LEFT GATE (Tự động):                    │
+     │  - Stage 1: Policy Guard (Xác thực Commit & Tiêu đề PR)      │
+     │  - Stage 2: SonarQube & Semgrep SAST Scanner                 │
      └──────────────────────────────┬───────────────────────────────┘
                                     │
-                                    │  [PASS SAST & Lead phe duyet]
+                                    │  (Đạt tiêu chuẩn và Lead duyệt)
                                     ▼
-     [2. NHANH TICH HOP CHUNG - DEV]
-      dev (Tong hop, ket noi va kiem thu toan bo tinh nang)
+     [2. NHÁNH TÍCH HỢP CHUNG - DEV]
+      dev (Tổng hợp, kiểm thử tích hợp các phân hệ)
          │
-         ▼  (2) Mo PR vao main: release: vX.Y.Z - <mo ta phat hanh>
+         ▼  (2) Mở PR vào main: release: vX.Y.Z - <mô tả phát hành>
      ┌──────────────────────────────────────────────────────────────┐
-     │ [CI/CD Production Gate] Kiem thu thuc te truoc release:      │
-     │   └── [Stage 3] Dual-Track CD & Smoke Test Healthcheck       │
+     │ CỔNG KIỂM SOÁT PRODUCTION GATE (Tự động):                    │
+     │  - Stage 3: Dual-Track CD & Smoke Test Healthcheck           │
      └──────────────────────────────┬───────────────────────────────┘
                                     │
-                                    │  [PASS Smoke Test & Lead merge]
+                                    │  (Đạt Smoke Test và Lead duyệt)
                                     ▼
-     [3. NHANH PRODUCTION - ON DINH TUYET DOI]
-      main (San sang trien khai phuc vu nguoi dung)
+     [3. NHÁNH MÔI TRƯỜNG THỰC TẾ - MAIN]
+      main (Trạng thái ổn định tuyệt đối, sẵn sàng triển khai)
 ```
 
-### 2.1. Nhánh `main` — Nhánh Production (Phát hành chính thức)
-- **Chức năng duy nhất:** Lưu trữ mã nguồn đã qua kiểm thử, đạt chuẩn an toàn thông tin và sẵn sàng triển khai chạy trên môi trường **Production**.
-- **Chính sách siết chặt:**
-  - ❌ **Cấm tuyệt đối mọi thành viên (kể cả Admin) commit và push code trực tiếp.**
-  - ❌ **Cấm mọi Pull Request đến từ các nhánh cá nhân/feature.**
-  - ✅ **Chỉ nhận mã nguồn thông qua Pull Request xuất phát từ duy nhất nhánh `dev`** do Admin/Tech Lead chủ động mở và phê duyệt sau khi đã kiểm thử toàn diện trên nhánh `dev`.
+### 3.2. Ma trận quyền hạn trên các nhánh
 
-### 2.2. Nhánh `dev` — Nhánh Integration (Tích hợp & Kiểm thử nhóm)
-- **Chức năng duy nhất:** Tổng hợp, kết nối và kiểm thử toàn bộ mã nguồn tính năng từ tất cả các thành viên trong nhóm đang trong quá trình phát triển.
-- **Chính sách siết chặt:**
-  - ❌ **Cấm commit và push code trực tiếp.** Mọi thành viên đều phải làm việc trên nhánh riêng của mình.
-  - ✅ **Nhận đóng góp mã nguồn thông qua Pull Request từ các nhánh cá nhân.**
-  - 🛡️ **Kiểm thử tự động Shift-Left:** Mỗi PR vào `dev` sẽ tự động kích hoạt pipeline GitHub Actions (SonarQube & Semgrep) để phát hiện sớm các vi phạm Code Quality và Security trước khi được xem xét merge.
-
-### 2.3. Nhánh cá nhân / Feature — Nhánh phát triển độc lập
-- **Danh sách nhánh:** `namng` (Nam), `haind` (Hải), `manhdx` (Mạnh), `anhld` (Đức Anh), `mainp` (Mai).
-- **Chức năng:** Không gian làm việc riêng biệt của từng thành viên để nghiên cứu, cài đặt chức năng hoặc vá lỗ hổng.
-- **Chính sách:**
-  - Thành viên tự do commit và push trên nhánh của mình.
-  - Phải thường xuyên đồng bộ mã mới nhất từ `dev` về nhánh của mình trước khi viết thêm code:
-    ```bash
-    git fetch origin
-    git switch <tên_nhánh_cá_nhân>
-    git merge origin/dev
-    ```
-  - Khi hoàn thành tính năng, **chỉ được tạo Pull Request hướng tới nhánh đích là `dev`**.
-
----
-
-## 3. Bảng đối chiếu chính sách hoạt động Git
-
-| Hành động | Nhánh nguồn (Head) | Nhánh đích (Base) | Trạng thái | Cơ chế kiểm soát |
+| Tên nhánh | Phân loại | Mục đích sử dụng | Quyền Push trực tiếp | Nguồn tiếp nhận Pull Request |
 | :--- | :--- | :--- | :---: | :--- |
-| `git push` trực tiếp | Máy local | `main` | ❌ **NGHIÊM CẤM** | GitHub Branch Protection / Server Reject |
-| `git push` trực tiếp | Máy local | `dev` | ❌ **NGHIÊM CẤM** | GitHub Branch Protection / Quy ước nhóm |
-| `git push` | Máy local | Nhánh cá nhân (`namng`, ...) | ✅ **CHO PHÉP** | Tự do phát triển |
-| Tạo Pull Request | Nhánh cá nhân | `dev` | ✅ **CHO PHÉP** | Chạy CI/CD kiểm thử Shift-Left |
-| Tạo Pull Request | Nhánh cá nhân | `main` | ⛔ **BỊ CHẶN ĐỨNG** | CI/CD Guard Job từ chối & fail ngay lập tức |
-| Tạo Pull Request | `dev` | `main` | ✅ **HỢP LỆ** | Chỉ Admin/Lead thực hiện khi release |
+| `main` | Production | Mã nguồn chính thức triển khai môi trường thực tế | Cấm | Duy nhất từ nhánh `dev` |
+| `dev` | Integration | Tích hợp và kiểm thử hệ thống tổng thể | Cấm | Các nhánh cá nhân / tính năng |
+| `namng`, `haind`, `manhdx`, `anhld`, `mainp` | Feature / Dev | Không gian làm việc độc lập của kỹ sư phát triển | Được phép | Nhận merge đồng bộ từ `origin/dev` |
 
 ---
 
-## 4. Cơ chế cưỡng chế kỹ thuật (Technical Enforcement)
+## 4. QUY TRÌNH PHÁT TRIỂN CHUẨN HÓA (4 BƯỚC)
 
-Để chính sách không dừng lại ở mức "lời nói", dự án áp dụng 2 tầng bảo vệ tự động:
+Kỹ sư phát triển thực hiện các bước sau cho mỗi hạng mục công việc:
 
-### Tầng 1: Tự động chặn bằng GitHub Actions CI/CD Pipeline (Phân tách 3 Stage độc lập & Dual-Track CD)
-
-Hệ thống CI/CD được thiết lập tự động hóa 100% trên **GitHub Actions** (`.github/workflows/sonarqube.yml`), phân tách thành **3 Giai đoạn (Stages)** riêng biệt theo mô hình DAG (Directed Acyclic Graph) tuần tự, tích hợp kiểm soát an ninh mã nguồn tĩnh và áp dụng kiến trúc **Dual-Track Deployment** (Phân tách vòng đời giữa ứng dụng Web và hạ tầng Giám sát bền vững):
-
-```text
- ┌────────────────────────────────────────────────────────────────────────┐
- │ [STAGE 1] Policy Guard — Kiểm tra Nhánh, Commit & PR                   │ (Kích hoạt nhanh 3-5s cho mọi Push & PR)
- │  └── Chặn commit sai Conventional Commits & PR sai nhánh / tiêu đề     │
- └───────────────────────────────────┬────────────────────────────────────┘
-                                     │
-                 ┌───────────────────┴───────────────────┐
-                 ▼ (Khi PR hoặc Merge vào DEV)           ▼ (Khi PR hoặc Merge vào MAIN)
- ┌────────────────────────────────────────┐              │
- │ [STAGE 2: Dev Gate] Shift-Left SAST    │              │
- │  ├── SonarQube SAST & Code Quality     │              │
- │  │   (Bugs, code smells, lỗ hổng)      │              │
- │  ├── Semgrep Security SAST             │              │
- │  │   (Taint data: SQLi, XSS, Misconfig)│              │
- │  └── Lint Config & Rule Validation     │              │
- │      (Kiểm tra cú pháp cấu hình FOSS)  │              │
- └───────────────────┬────────────────────┘              │
-                     │                                   │
-                     ▼ (Sau khi hoàn tất Stage 2)        ▼
- ┌────────────────────────────────────────────────────────────────────────┐
- │ [STAGE 3: Production Gate] DUAL-TRACK CD & VERIFICATION                │
- │                                                                        │
- │  Nhận diện thay đổi theo đường dẫn (Path-based Selective Execution):   │
- │                                                                        │
- │  ├── 🌐 LUỒNG 1: WEB APPLICATION WORKLOAD (Khi sửa code web/db)        │
- │  │    • Build Docker Image PHP 8.2 & MariaDB sạch                      │
- │  │    • Kiểm tra nhịp tim API /health (HTTP 200) & Smoke Test Trang chủ│
- │  │    • Deploy độc lập: docker compose up -d --no-deps --build web     │
- │  │    👉 CHỈ thay thế container Web. Hạ tầng Logging VẪN SỐNG 24/7 để  │
- │  │       hứng trọn log deploy & bắt lỗi tức thì!                       │
- │  │                                                                     │
- │  └── 📊 LUỒNG 2: OBSERVABILITY PLATFORM (Khi sửa config/rules log)     │
- │       • Validate 100% tệp YAML, JSON và cú pháp LogQL Rules            │
- │       • Kiểm tra Loki /ready và Grafana provisioning                   │
- │       • Deploy độc lập: docker compose -f ...monitoring.yml up -d      │
- │       👉 CHỈ cập nhật hạ tầng log, container Web HOÀN TOÀN KHÔNG BỊ   │
- │          ảnh hưởng hay ngắt kết nối phục vụ người dùng!                │
- └────────────────────────────────────────────────────────────────────────┘
-```
-
-#### 📋 Bảng tổng hợp các Stage trong Pipeline:
-
-| Giai đoạn | Job GitHub Actions | Điều kiện chạy | Nhiệm vụ chính | Tiêu chuẩn PASS | Xử lý khi FAIL |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **STAGE 1: Policy Guard** | `[STAGE 1] Policy Guard — Kiểm tra Nhánh, Commit & PR` | **Mọi sự kiện Push** lên nhánh cá nhân & **Mọi PR** vào `dev`/`main` *(3-5s)* | 1. **Kiểm tra Commit:** Quét toàn bộ commit trong payload đẩy lên, đối chiếu chuẩn Conventional Commits.<br>2. **Bảo vệ nhánh Main:** Ngăn chặn ngay lập tức nếu ai đó mở PR từ nhánh cá nhân vào `main`.<br>3. **Kiểm tra tiêu đề PR:** Xác thực cú pháp PR vào `dev` (`[<nhánh>] ...`) và PR vào `main` (`release: vX.Y.Z ...`). | - **100% commit** khớp regex Conventional Commits.<br>- Nhánh đích `main` chỉ nhận head từ `dev`.<br>- Tiêu đề PR khớp 100% regex theo tầng tương ứng. | ❌ **FAIL ngay lập tức (Exit 1)**.<br>Khóa lệnh commit/PR, in hộp hướng dẫn kèm câu lệnh sửa lỗi (`git commit --amend` hoặc đổi tên PR). |
-| **STAGE 2: Dev Gate** | `[STAGE 2: Dev Gate] SonarQube SAST & Code Quality`<br><br>`[STAGE 2: Dev Gate] Semgrep Security SAST` | **Chỉ kích hoạt khi:**<br>- Tạo Pull Request vào `dev`<br>- Merge/Push chính thức trên `dev` | 1. **SonarQube SAST:** Khởi tạo container SonarQube phân tích độ tin cậy, nợ kỹ thuật (Technical Debt), Code Smells, Bugs và tính chuẩn mực PSR-12 của PHP 8.2.<br>2. **Semgrep SAST:** Quét chuyên sâu bảo mật theo luồng dữ liệu Taint-Tracking (Source -> Sink), dò tìm các lỗ hổng Injection (SQLi, XSS), cấu hình sai bảo mật.<br>3. **Báo cáo:** Xuất Step Summary trực quan và đính kèm Artifacts báo cáo PDF/HTML/JSON. | - **Unit test CI:** 21/21 test cases chạy PASS (`exit 0`).<br>- **PHP Lint:** Cú pháp PHP 8.2 không có lỗi Fatal/Syntax.<br>- **Báo cáo SAST:** Quét hoàn tất, không phát hiện lỗi crash hệ thống, báo cáo được đính kèm vào Step Summary.<br>- **Reviewer duyệt:** Đạt tối thiểu 1 Approval từ Tech Lead sau khi đánh giá các phát hiện bảo mật. | ⚠️ **Cảnh báo chất lượng** trên giao diện PR.<br>Lead/Reviewer dựa vào kết quả kiểm tra để yêu cầu dev vá lỗ hổng trước khi phê duyệt merge vào nhánh `dev`. |
-| **STAGE 3: Production Gate** | `[STAGE 3: Production Gate] Dual-Track CD & Smoke Test` | **Chỉ kích hoạt khi:**<br>- Tạo Pull Request từ `dev` vào `main`<br>- Merge/Push chính thức trên `main` | 1. **Dual-Track Change Detection:** Tự động phân tích payload commit để kích hoạt nhánh kiểm thử tương ứng (Web Workload vs Monitoring Platform).<br>2. **Web Gate:** Build sạch Dockerfile, kiểm tra MariaDB healthy và ping `/health` HTTP 200 OK.<br>3. **Monitoring Gate:** Validate YAML/JSON, kiểm tra Loki /ready và Grafana Dashboard.<br>4. **Decoupled Deployment:** Đảm bảo khi deploy Web thì cụm logging không bị restart, giữ nguyên 100% uptime cho việc hứng log.<br>5. **Teardown:** Tự động dọn dẹp sạch sẽ cụm container thử nghiệm trong runner. | - **Docker Build:** Mã thoát `exit 0`, không thiếu file/package.<br>- **MariaDB Status:** Báo `healthy` trong vòng tối đa 90 giây.<br>- **API /health:** Trả về HTTP Code đúng `200` và JSON `status: UP, database: connected`.<br>- **Monitoring Stack:** Cấu hình hợp lệ 100%, Loki & Promtail sẵn sàng thu thập log.<br>- **Smoke Test:** Trang chủ nạp thành công HTTP 200 và chứa nội dung `IlFreight`. | ⛔ **CHẶN ĐỨNG MERGE VÀO MAIN**.<br>Nếu Docker build gãy hoặc `/health` không trả về 200, PR lập tức bị khóa, không cho phép nạp mã nguồn lỗi lên môi trường Production! |
-
-### Tầng 2: Thiết lập Branch Protection Rules trên GitHub Repository
-Admin repository kích hoạt cấu hình bảo vệ trên GitHub Web (**Settings → Branches / Rulesets**):
-1. **Áp dụng cho nhánh `main` và `dev`:**
-   - [x] **Require a pull request before merging:** Bắt buộc phải thông qua PR, chặn đứng hoàn toàn `git push origin main` hoặc `git push origin dev`.
-   - [x] **Require approvals:** Yêu cầu tối thiểu 1 người phê duyệt trước khi merge.
-   - [x] **Require status checks to pass before merging:** Bắt buộc các job `[STAGE 1] Policy Guard` và `[STAGE 3: Production Gate]` phải báo xanh (Success).
-   - [x] **Do not allow bypassing the above settings:** Áp dụng cho cả Administrators.
-
----
-
-## 5. Quy trình đóng góp chuẩn dành cho thành viên (Step-by-Step)
-
-Mọi thành viên tuân thủ nghiêm ngặt 4 bước sau:
-
+### Bước 1: Đồng bộ mã nguồn mới nhất từ nhánh tích hợp
+Trước khi viết mã mới, kỹ sư bắt buộc cập nhật nhánh cá nhân từ `origin/dev`:
 ```bash
-# Bước 1: Lấy code mới nhất từ dev về nhánh cá nhân
 git fetch origin
-git switch namng
-git pull --ff-only origin namng
+git switch <tên_nhánh_cá_nhân>
+git pull --ff-only origin <tên_nhánh_cá_nhân>
 git merge origin/dev
-
-# Bước 2: Viết mã, commit và push lên nhánh cá nhân
-git add <các_file_thực_hiện>
-git commit -m "feat(auth): thêm cơ chế kiểm tra token"
-git push origin namng
-
-# Bước 3: Mở PR trên giao diện GitHub
-# CHỌN: base: dev  <---  compare: namng
-# Đợi CI/CD quét kiểm tra chất lượng và an ninh mã nguồn.
-
-# Bước 4: Sau khi Lead duyệt và merge PR vào dev:
-# Lead sẽ là người mở PR từ dev vào main để đưa mã nguồn lên Production.
 ```
+
+### Bước 2: Viết mã nguồn và tạo commit theo chuẩn
+```bash
+git add <danh_sách_tệp>
+git commit -m "feat(auth): thêm cơ chế kiểm tra tính hợp lệ của token"
+git push origin <tên_nhánh_cá_nhân>
+```
+
+### Bước 3: Khởi tạo Pull Request vào nhánh tích hợp (`dev`)
+* Thiết lập trên GitHub: `base: dev` <--- `compare: <tên_nhánh_cá_nhân>`.
+* Đặt tiêu đề theo đúng định dạng quy định: `[<tên_nhánh>] <loại>(<phạm_vi>): <mô tả>`.
+* Hệ thống CI/CD sẽ tự động kích hoạt Stage 1 (Policy Guard) và Stage 2 (SAST Scanner).
+
+### Bước 4: Đánh giá mã nguồn (Code Review) và Phát hành (Release)
+* Sau khi toàn bộ các bài kiểm tra tự động đạt trạng thái thành công, Tech Lead tiến hành phê duyệt và merge vào `dev`.
+* Khi hoàn thành một mốc phát hành (Milestone), Tech Lead khởi tạo Pull Request từ `dev` vào `main` theo cú pháp `release: vX.Y.Z - <mô tả>`. Pipeline kích hoạt Stage 3 để kiểm thử tải và sức khỏe dịch vụ trước khi hoàn tất triển khai.
 
 ---
 
-## 6. Quy tắc chuẩn hóa đặt tên Commit & Pull Request (Naming Conventions)
+## 5. TIÊU CHUẨN ĐỊNH DẠNG COMMIT VÀ PULL REQUEST
 
-Để đảm bảo lịch sử Git trong sạch, chuyên nghiệp theo tiêu chuẩn công nghiệp và phục vụ tự động hóa kiểm soát CI/CD, toàn bộ thành viên bắt buộc tuân thủ quy ước đặt tên sau:
+### 5.1. Tiêu chuẩn thông điệp Commit (Conventional Commits)
 
-### 6.1. Quy tắc đặt tên Commit (Toàn bộ Repository)
-
-Áp dụng tiêu chuẩn quốc tế **Conventional Commits**:
+Áp dụng tiêu chuẩn quốc tế Conventional Commits trên toàn bộ kho mã nguồn:
 ```text
-<loại_thay_đổi>(<phạm_vi>): <mô tả ngắn bằng tiếng Việt hoặc tiếng Anh>
+<loại_thay_đổi>(<phạm_vi>): <mô tả ngắn gọn>
 ```
 
-#### 📋 Bảng tra cứu các tiền tố (Types) bắt buộc:
+#### Bảng danh mục loại thay đổi (Commit Types):
 
-| Tiền tố (Type) | Ý nghĩa nghiệp vụ | Ví dụ thực tế trong dự án |
+| Tiền tố (Type) | Mục đích kỹ thuật | Ví dụ thực tế |
 | :--- | :--- | :--- |
-| `feat` | Thêm tính năng mới (Feature) | `feat(auth): thêm cơ chế đăng nhập và phân quyền người dùng` |
-| `fix` | Sửa lỗi chức năng (Bugfix / Hotfix) | `fix(db): xử lý timeout và fallback mật khẩu khi kết nối mariadb` |
-| `sec` / `fix(sec)` | Vá lỗ hổng bảo mật SAST (SQLi, XSS, etc.) | `sec(sqli): chuyển đổi câu lệnh sang prepared statement` |
-| `ci` | Cấu hình Pipeline, GitHub Actions, Docker | `ci(docker): thêm healthcheck và smoke test preview` |
-| `docs` | Viết tài liệu (README, Docs, Báo cáo đồ án) | `docs(policy): quy định quy tắc phân nhánh và đặt tên commit/PR` |
-| `refactor` | Tối ưu, cơ cấu lại code không đổi logic | `refactor(layout): gom nhóm css và tách header dùng chung` |
-| `test` | Viết thêm unit tests hoặc kịch bản kiểm thử | `test(ci): bổ sung test case cho parser báo cáo sonarqube` |
-| `perf` | Tối ưu hóa hiệu năng thực thi (Performance) | `perf(query): thêm chỉ mục index cho bảng tra cứu vận đơn` |
-| `style` | Định dạng mã nguồn (khoảng trắng, dấu ngoặc) | `style: định dạng lại thụt lề file index.php theo chuẩn PSR-12` |
-| `chore` | Tác vụ bảo trì linh tinh, dọn dẹp phụ trợ | `chore: dọn dẹp các tệp tạm và cập nhật danh sách .gitignore` |
-
-> 💡 **Quy tắc về Phạm vi (`scope`):** Đặt trong ngoặc đơn ngay sau Type, mô tả phân hệ bị ảnh hưởng: `auth`, `db`, `ports`, `logistics`, `admin`, `docker`, `policy`, `layout`.  
-> 💡 **Quy tắc về Mô tả (`subject`):** Viết ngắn gọn súc tích, không kết thúc bằng dấu chấm câu.
+| `feat` | Bổ sung tính năng mới | `feat(auth): thêm cơ chế đăng nhập và phân quyền người dùng` |
+| `fix` | Khắc phục lỗi logic hoặc lỗi xử lý ngoại lệ | `fix(db): xử lý timeout khi kết nối cơ sở dữ liệu` |
+| `sec` / `fix(sec)` | Khắc phục lỗ hổng an ninh mã nguồn | `sec(sqli): chuyển đổi câu truy vấn sang prepared statement` |
+| `ci` | Cấu hình tự động hóa, pipeline, Docker | `ci(docker): bổ sung kịch bản kiểm tra sức khỏe container` |
+| `docs` | Bổ sung hoặc chỉnh sửa tài liệu kỹ thuật | `docs(spec): cập nhật tài liệu kiến trúc hạ tầng giám sát` |
+| `refactor` | Tái cấu trúc mã nguồn không thay đổi logic | `refactor(layout): tách giao diện phần đầu trang dùng chung` |
+| `test` | Bổ sung hoặc cập nhật kịch bản kiểm thử | `test(ci): bổ sung kịch bản kiểm tra cú pháp cấu hình loki` |
+| `perf` | Tối ưu hóa hiệu năng và tốc độ xử lý | `perf(query): bổ sung chỉ mục index cho bảng dữ liệu vận đơn` |
+| `style` | Căn chỉnh định dạng mã nguồn (khoảng trắng, chuẩn PSR-12) | `style: định dạng thụt lề tệp index.php theo psr-12` |
+| `chore` | Tác vụ phụ trợ, dọn dẹp tệp tạm | `chore: cập nhật danh sách loại trừ trong .gitignore` |
 
 ---
 
-### 6.2. Quy tắc đặt tên Pull Request (PR) theo 2 tầng riêng biệt
+### 5.2. Tiêu chuẩn tiêu đề Pull Request 2 tầng (Two-Tier PR Naming)
 
-Quy trình đóng góp phân biệt rõ ràng giữa hai tầng: **Tầng phát triển cá nhân** và **Tầng phát hành hệ thống**. Do đó, tiêu đề PR bắt buộc tuân theo 2 mẫu khác nhau:
-
-#### 🔹 Tầng 1: PR từ nhánh cá nhân vào `dev` (Tính năng & Đóng góp thành viên)
-Mỗi PR từ nhánh thành viên vào `dev` đại diện cho một phần việc cá nhân được phân công, bắt buộc phải có định danh người thực hiện và loại công việc:
-
-- **Cú pháp bắt buộc:**
-  ```text
-  [<mã_nhánh_cá_nhân>] <loại>(<phạm_vi>): <mô tả ngắn gọn>
-  ```
-- **Danh sách mã nhánh cá nhân hợp lệ:** `[namng]`, `[haind]`, `[manhdx]`, `[anhld]`, `[mainp]`.
-- **Biểu thức chính quy (Regex) kiểm tra:**
+#### Tầng 1: Đóng góp tính năng từ nhánh cá nhân vào `dev`
+* **Cú pháp:** `[<mã_nhánh>] <loại>(<phạm_vi>): <mô tả>`
+* **Danh sách mã nhánh hợp lệ:** `[namng]`, `[haind]`, `[manhdx]`, `[anhld]`, `[mainp]`.
+* **Biểu thức chính quy (Regex):**
   ```regex
   ^\[(namng|haind|manhdx|anhld|mainp)\]\s+(feat|fix|sec|ci|docs|refactor|test|chore|style|perf|revert)(\([a-zA-Z0-9_\-\.\/]+\))?:\s.+
   ```
-- **Ví dụ thực tế theo từng thành viên:**
-  - `[namng] feat(db): bổ sung endpoint healthcheck phục vụ docker preview`
-  - `[manhdx] feat(auth): xây dựng trang đăng nhập và bảng tin thảo luận`
-  - `[haind] fix(ui): sửa lỗi hiển thị header trên giao diện mobile`
-  - `[mainp] feat(logistics): hoàn thiện api tra cứu vận đơn /api/track`
-  - `[anhld] feat(admin): xây dựng bảng điều khiển quản trị và xuất báo cáo`
+* **Ví dụ:**
+  * `[namng] feat(db): bổ sung endpoint healthcheck phục vụ preview`
+  * `[manhdx] feat(auth): xây dựng module xác thực người dùng`
 
-#### 🔹 Tầng 2: PR từ nhánh `dev` vào `main` (Phát hành chính thức lên Production)
-Nhánh `main` đại diện cho sản phẩm thật chạy môi trường Production. Do đó, PR từ `dev` vào `main` mang tính chất của một **phiên bản phát hành (Release Milestone / SemVer)**, không gắn tên cá nhân:
-
-- **Cú pháp bắt buộc:**
-  ```text
-  release: v<Major>.<Minor>.<Patch> - <Mô tả tổng quát phiên bản phát hành>
-  ```
-  *(Chấp nhận tiền tố `release:` hoặc `RELEASE:`)*
-- **Biểu thức chính quy (Regex) kiểm tra:**
+#### Tầng 2: Phát hành chính thức từ `dev` vào `main`
+* **Cú pháp:** `release: v<Major>.<Minor>.<Patch> - <Mô tả phiên bản>`
+* **Biểu thức chính quy (Regex):**
   ```regex
   ^(release|RELEASE):\s+v[0-9]+\.[0-9]+\.[0-9]+(\s+-\s+.+|\s*:\s*.+)
   ```
-- **Quy tắc tăng số phiên bản Semantic Versioning (SemVer):**
-  - **`vX.0.0` (Major):** Phát hành phiên bản chính thức ban đầu hoặc có thay đổi lớn phá vỡ tính tương thích ngược.
-  - **`v1.X.0` (Minor):** Bổ sung cụm tính năng mới lớn tích hợp từ các thành viên.
-  - **`v1.0.X` (Patch):** Bản vá lỗi khẩn cấp, vá lỗ hổng an ninh mạng (Hotfix).
-- **Ví dụ thực tế:**
-  - `release: v1.0.0 - Triển khai cổng thông tin Logistics InlaneWeb lên Production`
-  - `release: v1.1.0 - Tích hợp hệ thống quản trị admin và kiểm thử tự động SAST`
-  - `release: v1.1.1 - Vá lỗ hổng SQL Injection và phân quyền tài khoản`
+* **Nguyên tắc định danh phiên bản (Semantic Versioning - SemVer):**
+  * `vX.0.0` (Major): Thay đổi lớn phá vỡ tính tương thích ngược hoặc ra mắt hệ thống.
+  * `v1.X.0` (Minor): Bổ sung nhóm tính năng mới nhưng đảm bảo tương thích ngược.
+  * `v1.0.X` (Patch): Bản vá lỗi khẩn cấp hoặc vá lỗ hổng an ninh mạng.
+* **Ví dụ:**
+  * `release: v1.0.0 - Triển khai cổng thông tin Logistics InlaneWeb`
+  * `release: v1.1.0 - Tích hợp phân hệ giám sát FOSS và kiểm thử SAST`
 
 ---
 
-### 6.3. Sơ đồ cơ chế phòng thủ 2 tầng (Two-Tier Title Guard Architecture)
+## 6. CƠ CHẾ KIỂM SOÁT TỰ ĐỘNG (TECHNICAL ENFORCEMENT)
 
-Để đảm bảo không một commit hoặc Pull Request sai định dạng nào có thể lọt vào lịch sử dự án, hệ thống thiết lập cơ chế **phòng thủ 2 tầng (Defense-in-Depth)**:
+Hệ thống bảo vệ chất lượng mã nguồn thông qua 3 tầng rào chắn kỹ thuật:
 
 ```text
-               [ THAO TÁC CỦA DEV ]
-                        │
-                        ▼
-            gõ `git commit -m "..."`
-                        │
-                        ▼
-          ┌───────────────────────────┐
-          │  TẦNG 1: LOCAL GIT HOOK   │
-          │   (.githooks/commit-msg)  │
-          └─────────────┬─────────────┘
-                        │
-             Đúng chuẩn Conventional?
-             ├── ❌ KHÔNG ───> [HỦY BỎ NGAY TẠI MÁY] (Không tạo commit)
-             │                 (In hướng dẫn sửa cú pháp)
-             │
-             └── ✅ ĐÚNG (hoặc cố tình vượt rào bằng `git commit --no-verify`)
-                        │
-                        ▼
-                 Tạo commit cục bộ
-                        │
-                        ▼
-             gõ `git push origin <nhánh>`
-                        │
-                        ▼
-         ┌─────────────────────────────┐
-         │  TẦNG 2: GITHUB ACTIONS CI  │
-         │     (branch_policy_guard)   │
-         └──────────────┬──────────────┘
-                        │
-                        ├── Khi PUSH code: Quét toàn bộ commit trong payload
-                        │   ├── ❌ Sai chuẩn ──> [FAIL PIPELINE (Exit 1)] (Báo đỏ rực)
-                        │   └── ✅ Đúng chuẩn ─> PASS kiểm tra
-                        │
-                        └── Khi MỞ PULL REQUEST:
-                            ├── PR vào `dev`: Bắt buộc `[<nhánh>] <type>(<scope>): <mô tả>`
-                            │   ├── ❌ Sai chuẩn ──> [FAIL PIPELINE] (Khóa merge PR)
-                            │   └── ✅ Đúng chuẩn ─> Kích hoạt SAST Scanner (SonarQube/Semgrep)
-                            │
-                            └── PR vào `main`: Bắt buộc `release: vX.Y.Z - <mô tả>` & Head là `dev`
-                                ├── ❌ Sai chuẩn ──> [FAIL PIPELINE] (Khóa nạp vào Production)
-                                └── ✅ Đúng chuẩn ─> Kích hoạt Production Smoke Test Gate
+ ┌──────────────────────────────────────────────────────────────────┐
+ │                  MÔ HÌNH BẢO VỆ 3 TẦNG KỸ THUẬT                  │
+ ├──────────────────────────────────────────────────────────────────┤
+ │                                                                  │
+ │  [TẦNG 1: KIỂM SOÁT CỤC BỘ PHÍA CLIENT - GIT HOOK]               │
+ │   Chặn ngay tại máy trạm nếu thông điệp commit sai chuẩn         │
+ │                                                                  │
+ │            ▼ Khi push code hoặc mở Pull Request                  │
+ │                                                                  │
+ │  [TẦNG 2: KIỂM SOÁT TỰ ĐỘNG TRÊN CI/CD - GITHUB ACTIONS]        │
+ │   Stage 1: Policy Guard (Commit format, Target branch, PR Title) │
+ │   Stage 2: Shift-Left SAST (SonarQube & Semgrep Scan)            │
+ │   Stage 3: Production Gate (Dual-Track CD & Smoke Test)          │
+ │                                                                  │
+ │            ▼ Khi đủ điều kiện merge                              │
+ │                                                                  │
+ │  [TẦNG 3: BẢO VỆ NHÁNH PHÍA SERVER - BRANCH PROTECTION RULES]    │
+ │   Khóa nút Merge nếu thiếu review hoặc các stage CI chưa đạt     │
+ │                                                                  │
+ └──────────────────────────────────────────────────────────────────┘
 ```
+
+### 6.1. Chi tiết 3 Stage trong GitHub Actions Pipeline
+
+| Giai đoạn | Tên Job | Điều kiện kích hoạt | Nhiệm vụ chính | Tiêu chí đạt (Pass) | Biện pháp khi thất bại |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Stage 1: Policy Guard** | `Policy Guard - Branch, Commit & PR Validation` | Mọi sự kiện Push và mọi Pull Request (Thời gian: 3-5s) | - Quét toàn bộ commit trong payload đẩy lên.<br>- Ngăn chặn PR từ nhánh cá nhân vào `main`.<br>- Kiểm tra định dạng tiêu đề PR. | - 100% commit đúng chuẩn Conventional Commits.<br>- Nhánh `main` chỉ nhận head từ `dev`.<br>- Tiêu đề PR khớp 100% biểu thức regex. | Hủy bỏ tiến trình (Exit 1), xuất log cảnh báo kèm câu lệnh sửa lỗi chi tiết. |
+| **Stage 2: Dev Gate** | `SonarQube SAST & Code Quality`<br><br>`Semgrep Security SAST` | PR hoặc Push trên nhánh `dev` | - Quét chất lượng mã, độ tin cậy và code smells với SonarQube Community.<br>- Quét chuyên sâu lỗ hổng an ninh Taint-Tracking với Semgrep.<br>- Kiểm tra cú pháp cấu hình giám sát bằng Python validator. | - Bài kiểm tra cú pháp đạt 21/21 test cases.<br>- Báo cáo SAST xuất thành công.<br>- Nhận tối thiểu 1 phê duyệt từ Tech Lead. | Hiển thị cảnh báo chất lượng trên PR; yêu cầu kỹ sư sửa lỗi trước khi được duyệt merge. |
+| **Stage 3: Production Gate** | `Dual-Track CD & Smoke Test` | PR từ `dev` vào `main` hoặc Push trên `main` | - Phân tích thay đổi đường dẫn (Path-based selective execution).<br>- Kiểm tra build sạch Docker Web và cấu hình Monitoring.<br>- Khởi động môi trường kiểm thử tạm thời, xác nhận API `/health` đạt HTTP 200.<br>- Đảm bảo tính độc lập: Triển khai web không làm khởi động lại cụm giám sát. | - Docker build mã thoát 0.<br>- MariaDB đạt trạng thái healthy.<br>- API `/health` trả về HTTP 200.<br>- Cấu hình Monitoring hợp lệ. | Chặn hoàn toàn thao tác merge vào nhánh `main`. Không cho phép đưa mã nguồn lỗi lên Production. |
 
 ---
 
-### 6.4. Các kịch bản từ chối tự động & Mẫu thông báo lỗi (Automated CI/CD Feedback)
+### 6.2. Cấu hình bảo vệ nhánh phía Server (Branch Protection Rules)
 
-Job `branch_policy_guard` trong pipeline GitHub Actions tự động kiểm tra nghiêm ngặt trong mọi tình huống. Nếu vi phạm, pipeline sẽ **lập tức REJECT (exit 1)** và hiển thị hộp thông báo kèm helper hướng dẫn chi tiết:
-
-#### ❌ Case A: Khi User push commit sai format lên nhánh cá nhân
-```text
-======================================================================
-❌ LỖI VI PHẠM CHÍNH SÁCH ĐẶT TÊN COMMIT (CONVENTIONAL COMMITS)
-======================================================================
-🚫 Commit [def7890]: "update code"
-👉 Lý do: Tiêu đề commit 'update code' vi phạm chuẩn Conventional Commits.
-Cú pháp bắt buộc: <loại>(<phạm_vi>): <mô tả>
-Các loại (types) hợp lệ: feat, fix, sec, ci, docs, refactor, test, chore, style, perf.
-Ví dụ chuẩn: feat(auth): thêm chức năng xác thực token JWT
-             fix(db): khắc phục timeout khi truy vấn mariadb
-             ci(docker): bổ sung cổng smoke test kiểm tra healthcheck
-
-----------------------------------------------------------------------
-🛠️ HƯỚNG DẪN KHẮC PHỤC NHANH TRÊN MÁY CỦA BẠN:
-1. Nếu commit vi phạm là commit gần nhất:
-   git commit --amend -m "feat(<phạm_vi>): <mô tả lại cho đúng>"
-   git push --force origin <tên_nhánh_của_bạn>
-2. Nếu có nhiều commit vi phạm:
-   git rebase -i HEAD~<số_lượng_commit>
-   Đổi chữ 'pick' thành 'reword' ở các commit sai, sửa lại tên rồi push --force.
-======================================================================
-```
-
-#### ❌ Case B: Khi User tạo PR vào `dev` sai format tiêu đề
-```text
-======================================================================
-❌ SAI QUY ƯỚC ĐẶT TÊN PULL REQUEST VÀO NHÁNH DEV
-======================================================================
-Tiêu đề PR "feat(db): missing username prefix" không đúng quy ước đóng góp vào nhánh 'dev'.
-Cú pháp bắt buộc: [<mã_nhánh>] <loại>(<phạm_vi>): <mô tả>
-Các mã nhánh hợp lệ: [namng], [haind], [manhdx], [anhld], [mainp]
-Các loại hợp lệ: feat, fix, sec, ci, docs, refactor, test, chore, style, perf
-Ví dụ chuẩn: [namng] feat(db): bổ sung endpoint healthcheck phục vụ preview
-----------------------------------------------------------------------
-🛠️ CÁCH SỬA NHANH TRÊN GIAO DIỆN GITHUB:
-1. Tại trang Pull Request này trên GitHub, bấm nút 'Edit' ở cạnh tiêu đề.
-2. Đổi lại tiêu đề theo đúng mẫu: [tên_nhánh] loại(phạm_vi): mô tả
-3. Nhấn 'Save'. Pipeline sẽ tự động kiểm tra lại và bật xanh!
-======================================================================
-```
-
-#### ❌ Case C: Khi Admin tạo PR vào `main` sai format phiên bản
-```text
-======================================================================
-❌ SAI QUY ƯỚC ĐẶT TÊN PULL REQUEST RELEASE VÀO NHÁNH MAIN
-======================================================================
-Tiêu đề PR "merge dev to main" không đúng chuẩn Release SemVer vào nhánh 'main'.
-Cú pháp bắt buộc: release: v<Major>.<Minor>.<Patch> - <Mô tả phiên bản>
-Ví dụ chuẩn: release: v1.0.0 - Triển khai cổng thông tin InlaneWeb lên Production
-----------------------------------------------------------------------
-🛠️ CÁCH SỬA NHANH TRÊN GIAO DIỆN GITHUB:
-1. Bấm nút 'Edit' cạnh tiêu đề PR trên GitHub.
-2. Đổi tiêu đề thành: release: vX.Y.Z - <Mô tả phiên bản phát hành>
-3. Bấm 'Save' để kích hoạt lại kiểm tra.
-======================================================================
-```
-
-#### ❌ Case D: Khi có người cố tình mở PR vào `main` từ nhánh cá nhân
-```text
-======================================================================
-⛔ VI PHẠM CHÍNH SÁCH BẢO VỆ NHÁNH MAIN
-======================================================================
-Chỉ cho phép tạo Pull Request vào nhánh 'main' xuất phát từ nhánh 'dev'.
-Nghiêm cấm tạo PR trực tiếp từ nhánh phát triển 'namng' lên 'main'!
-----------------------------------------------------------------------
-🛠️ HƯỚNG DẪN: Hãy đóng PR này và mở PR mới hướng vào nhánh 'dev' trước.
-======================================================================
-```
+Áp dụng trên cả hai nhánh `main` và `dev` qua giao diện quản trị GitHub:
+1. **Require a pull request before merging:** Bắt buộc mọi thay đổi phải thông qua PR. Chặn thao tác `git push origin main` hoặc `git push origin dev`.
+2. **Require approvals:** Yêu cầu tối thiểu 1 phê duyệt từ kỹ sư phụ trách trước khi hoàn tất merge.
+3. **Require status checks to pass before merging:** Bắt buộc các job `Policy Guard` và `Production Gate` phải đạt trạng thái thành công.
+4. **Do not allow bypassing the above settings:** Áp dụng ràng buộc bình đẳng cho toàn bộ tài khoản, bao gồm cả quyền Quản trị viên (Admin).
 
 ---
 
-### 6.5. Kích hoạt Git Hook chặn lỗi ngay từ máy cá nhân (Khuyên dùng)
+### 6.3. Kích hoạt kiểm soát cục bộ bằng Git Hook (Khuyến nghị áp dụng)
 
-Để bảo vệ lịch sử commit và không bị pipeline server từ chối sau khi push, mỗi thành viên được khuyến nghị kích hoạt hook kiểm tra cục bộ có sẵn trong repository:
+Nhằm giảm thiểu việc commit sai cú pháp và bị hệ thống CI/CD từ chối sau khi push, kỹ sư kích hoạt bộ lọc kiểm tra cục bộ được cấu hình sẵn trong repository bằng một câu lệnh:
 
 ```bash
-# Chạy duy nhất 1 lệnh tại thư mục gốc dự án:
 git config core.hooksPath .githooks
 ```
 
-- **Nguyên lý hoạt động:** Hook `.githooks/commit-msg` sẽ tự động kích hoạt mỗi khi gõ lệnh `git commit`. 
-- Nếu tiêu đề commit vi phạm quy tắc Conventional Commits, tiến trình commit sẽ **lập tức bị hủy bỏ ngay trên máy của bạn**, yêu cầu đặt lại tên đúng chuẩn trước khi tệp được ghi vào lịch sử Git!
+*Nguyên lý hoạt động:* Tệp script `.githooks/commit-msg` sẽ tự động chặn thao tác tạo commit nếu tiêu đề vi phạm quy chuẩn Conventional Commits, đồng thời hướng dẫn sửa đổi cú pháp ngay tại terminal của máy trạm.
 
+---
 
+## 7. BẢNG TRA CỨU VÀ KHẮC PHỤC VI PHẠM THƯỜNG GẶP
 
-
+| Tình huống vi phạm | Nguyên nhân | Hướng dẫn xử lý |
+| :--- | :--- | :--- |
+| **Commit sai cú pháp** | Tiêu đề commit không chứa tiền tố quy chuẩn (ví dụ: `update code`). | Sửa commit gần nhất bằng lệnh:<br>`git commit --amend -m "feat(phạm_vi): mô_tả_chuẩn"`<br>Sau đó cập nhật lên remote:<br>`git push --force origin <tên_nhánh>` |
+| **Tiêu đề PR vào `dev` bị từ chối** | Thiếu mã định danh thành viên hoặc sai cú pháp (ví dụ: `fix login error`). | Nhấn nút **Edit** cạnh tiêu đề PR trên giao diện GitHub, đổi thành:<br>`[<mã_nhánh>] fix(auth): mô tả sự cố`<br>Sau khi lưu, pipeline sẽ tự động chạy lại. |
+| **PR vào `main` bị chặn đứng** | Mở PR từ nhánh cá nhân thay vì từ nhánh `dev`. | Đóng Pull Request hiện tại. Mở Pull Request hướng vào nhánh `dev` để thực hiện kiểm thử tích hợp trước. |
+| **Tiêu đề PR phát hành bị từ chối** | Không tuân theo định dạng SemVer khi merge vào `main`. | Nhấn nút **Edit** cạnh tiêu đề PR trên GitHub, điều chỉnh thành:<br>`release: vX.Y.Z - Mô tả phiên bản phát hành` |

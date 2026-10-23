@@ -1,124 +1,148 @@
-# 🚢 PTIT-DevOps-SonarQube
-
-> **Học phần:** Thực hành DevOps / DevSecOps  
-> **Ứng dụng mục tiêu:** InlaneWeb Logistics Portal (PHP 8.2 & MariaDB)  
-> **Nhóm sinh viên thực hiện:**
-> - **Nam** (`namng`) - *Nhóm trưởng / DevOps & Database*
-> - **Hải** (`haind`) - *Core Web & Architecture*
-> - **Mạnh** (`manhdx`) - *User Authentication & Community*
-> - **Đức Anh** (`anhld`) - *Admin Portal & Reporting*
-> - **Mai** (`mainp`) - *Logistics Services & Tracking*
+# PTIT-DevOps-SonarQube
+**HỆ THỐNG CỔNG THÔNG TIN VẬN TẢI INLANEWEB & QUY TRÌNH DEVSECOPS**
 
 ---
 
-## 📌 Giới thiệu dự án
+| Thuộc tính | Chi tiết |
+| :--- | :--- |
+| **Dự án:** | InlaneWeb Logistics Portal |
+| **Công nghệ:** | PHP 8.2, MariaDB 10.11, Docker Compose, Grafana Loki Stack |
+| **Học phần:** | Thực hành DevOps / DevSecOps |
+| **Tổ chức:** | Học viện Công nghệ Bưu chính Viễn thông (PTIT) |
 
-**InlaneWeb** là hệ thống cổng thông tin quản lý vận tải và logistics đường biển, được xây dựng trên nền tảng **PHP 8.2** và cơ sở dữ liệu **MariaDB**. Toàn bộ hệ thống được container hóa bằng **Docker & Docker Compose**, vận hành quy trình **DevSecOps** tự động hóa kiểm thử tĩnh bảo mật (SAST) với **SonarQube Community** và **Semgrep**.
+### Danh sách kỹ sư phụ trách:
+* **Nam** (`namng`) - Trưởng nhóm / Kiến trúc DevOps & Hạ tầng cơ sở dữ liệu
+* **Hải** (`haind`) - Kỹ sư Web lõi & Kiến trúc hệ thống
+* **Mạnh** (`manhdx`) - Kỹ sư Xác thực người dùng & Module cộng đồng
+* **Đức Anh** (`anhld`) - Kỹ sư Quản trị hệ thống & Báo cáo số liệu
+* **Mai** (`mainp`) - Kỹ sư Nghiệp vụ Logistics & Vận đơn
 
 ---
 
-## 📚 Tài liệu dự án (Documentation)
+## 1. GIỚI THIỆU HỆ THỐNG
 
-Hệ thống tài liệu chi tiết được tổ chức trong thư mục [`docs/`](docs/):
+**InlaneWeb Logistics Portal** là nền tảng quản lý vận tải đường biển được xây dựng trên kiến trúc container hóa kết hợp quy trình vận hành bảo mật DevSecOps tự động.
 
-- 📜 [**01. Hạ tầng triển khai (docs/01-hạ tầng triển khai.md)**](docs/01-hạ%20tầng%20triển%20khai.md): Kiến trúc Container, máy chủ Runner, cấu hình Docker Compose và mạng nội bộ.
-- 📜 [**02. Quy tắc triển khai & Quy ước Git (docs/02-Quy tắc triển khai.md)**](docs/02-Quy%20tắc%20triển%20khai.md): **(Bắt buộc đọc)** Toàn bộ chính sách phân nhánh, quy chuẩn đặt tên Commit (Conventional Commits), quy chuẩn PR 2 tầng, và cơ chế kỹ thuật tự động kiểm tra (CI/CD Guard & Git Hooks).
+Hệ thống tích hợp:
+* **Kiểm tra an ninh mã nguồn tự động (SAST):** Phân tích mã nguồn PHP 8.2 bằng SonarQube Community và Semgrep CLI.
+* **Hạ tầng giám sát mã nguồn mở (FOSS Observability):** Thu thập và phân tích log tập trung bằng Grafana Loki 3.0, Promtail 3.0 và Grafana 11.0.
+* **Cơ chế tự phục hồi (Container Auto-Healing):** Theo dõi nhịp tim container thông qua Docker Healthcheck và tự động tái khởi động dịch vụ khi phát sinh sự cố.
+* **Kiến trúc triển khai phân tách (Dual-Track Deployment):** Vòng đời phát hành ứng dụng web hoạt động độc lập với hạ tầng giám sát 24/7.
 
 ---
 
-## 🌳 Tổng quan luồng phát triển & Phân nhánh
+## 2. HỆ THỐNG TÀI LIỆU TIÊU CHUẨN (SPECIFICATIONS & SOPS)
 
-Dự án áp dụng mô hình phân nhánh nghiêm ngặt:
+Toàn bộ quy định kỹ thuật và hướng dẫn vận hành chi tiết được lưu trữ tại thư mục `docs/`:
+
+1. [**Tài liệu đặc tả hạ tầng kỹ thuật và giám sát hệ thống (docs/01-hạ tầng triển khai.md)**](docs/01-h%E1%BA%A1%20t%E1%BA%A7ng%20tri%E1%BB%83n%20khai.md)  
+   *Mã hiệu: SPEC-INFRA-01* — Kiến trúc container, nguyên lý phân tách vòng đời ứng dụng và giám sát, cấu hình Promtail/Loki/Grafana, quy tắc cảnh báo sự cố và runbook vận hành.
+
+2. [**Quy chuẩn phân nhánh và triển khai mã nguồn (docs/02-Quy tắc triển khai.md)**](docs/02-Quy%20t%E1%BA%AFc%20tri%E1%BB%83n%20khai.md)  
+   *Mã hiệu: POL-DEVOPS-02* — **(Tài liệu bắt buộc)** Ma trận phân quyền nhánh (RACI), tiêu chuẩn Conventional Commits, quy chuẩn Pull Request 2 tầng, và cơ chế kiểm soát kỹ thuật tự động 3 tầng (Git Hooks, GitHub Actions, Branch Protection).
+
+---
+
+## 3. SƠ ĐỒ PHÂN CẤP NHÁNH VÀ LUỒNG PHÁT TRIỂN
 
 ```text
  ┌──────────────────────────────────────────────────────────────────┐
- │                  SO DO PHAN CAP NHANH & CI/CD LUONG              │
+ │               SƠ ĐỒ PHÂN CẤP NHÁNH VÀ LUỒNG PHÁT TRIỂN           │
  └──────────────────────────────────────────────────────────────────┘
 
-     [1. NHANH CA NHAN / TINH NANG]
+     [1. NHÁNH TÍNH NĂNG / CÁ NHÂN]
       namng, haind, manhdx, anhld, mainp
          │
-         │  • git commit (Theo chuan Conventional Commits)
-         │  • git push origin <ten_nhanh_ca_nhan>
+         │  - Thực hiện commit theo chuẩn Conventional Commits
+         │  - Push lên remote nhánh cá nhân
          │
-         ▼  (1) Mo PR vao dev: [<ma_nhanh>] <loai>(<pham_vi>): <mo ta>
+         ▼  (1) Mở PR vào dev: [<mã_nhánh>] <loại>(<phạm_vi>): <mô tả>
      ┌──────────────────────────────────────────────────────────────┐
-     │ [CI/CD Shift-Left Gate] Kiem tra tu dong chat luong ma nguon:│
-     │   ├── [Stage 1] Policy Guard (Commit format & PR Title)      │
-     │   └── [Stage 2] SonarQube & Semgrep SAST Scanner             │
+     │ CỔNG KIỂM SOÁT SHIFT-LEFT GATE (Tự động):                    │
+     │  - Stage 1: Policy Guard (Xác thực Commit & Tiêu đề PR)      │
+     │  - Stage 2: SonarQube & Semgrep SAST Scanner                 │
      └──────────────────────────────┬───────────────────────────────┘
                                     │
-                                    │  [PASS SAST & Lead phe duyet]
+                                    │  (Đạt tiêu chuẩn và Lead duyệt)
                                     ▼
-     [2. NHANH TICH HOP CHUNG - DEV]
-      dev (Tong hop, ket noi va kiem thu toan bo tinh nang)
+     [2. NHÁNH TÍCH HỢP CHUNG - DEV]
+      dev (Tổng hợp, kiểm thử tích hợp các phân hệ)
          │
-         ▼  (2) Mo PR vao main: release: vX.Y.Z - <mo ta phat hanh>
+         ▼  (2) Mở PR vào main: release: vX.Y.Z - <mô tả phát hành>
      ┌──────────────────────────────────────────────────────────────┐
-     │ [CI/CD Production Gate] Kiem thu thuc te truoc release:      │
-     │   └── [Stage 3] Dual-Track CD & Smoke Test Healthcheck       │
+     │ CỔNG KIỂM SOÁT PRODUCTION GATE (Tự động):                    │
+     │  - Stage 3: Dual-Track CD & Smoke Test Healthcheck           │
      └──────────────────────────────┬───────────────────────────────┘
                                     │
-                                    │  [PASS Smoke Test & Lead merge]
+                                    │  (Đạt Smoke Test và Lead duyệt)
                                     ▼
-     [3. NHANH PRODUCTION - ON DINH TUYET DOI]
-      main (San sang trien khai phuc vu nguoi dung)
+     [3. NHÁNH MÔI TRƯỜNG THỰC TẾ - MAIN]
+      main (Trạng thái ổn định tuyệt đối, sẵn sàng triển khai)
 ```
 
 ### Ba nguyên tắc cốt lõi:
-1. 🚫 **KHÔNG commit và push trực tiếp** lên `main` và `dev`.
-2. 🔀 **Pull Request của thành viên CHỈ hướng vào nhánh `dev`** với định dạng tiêu đề: `[<mã_nhánh>] <loại>(<phạm_vi>): <mô tả>`.
-3. ⛔ **TUYỆT ĐỐI CẤM tạo PR từ nhánh cá nhân lên `main`.** Nhánh `main` chỉ nhận PR từ `dev` với định dạng Release: `release: vX.Y.Z - <mô tả>`.
-
-👉 *Xem chi tiết bảng tra cứu Types, biểu thức Regex, mẫu lỗi và cách kích hoạt Git Hook cục bộ tại [docs/02-Quy tắc triển khai.md](docs/02-Quy%20tắc%20triển%20khai.md).*
+1. **Tuyệt đối không commit hoặc push trực tiếp** lên hai nhánh chính: `main` và `dev`.
+2. **Mọi Pull Request của thành viên chỉ được hướng vào nhánh `dev`** với định dạng: `[<mã_nhánh>] <loại>(<phạm_vi>): <mô tả>`.
+3. **Tuyệt đối cấm tạo Pull Request từ các nhánh cá nhân vào `main`.** Nhánh `main` chỉ nhận mã nguồn từ `dev` với định dạng phát hành: `release: vX.Y.Z - <mô tả>`.
 
 ---
 
-## 🛡️ Kiến trúc DevSecOps Pipeline (3 Giai đoạn kiểm soát)
+## 4. KIẾN TRÚC PIPELINE CI/CD (3 GIAI ĐOẠN ĐỘC LẬP)
 
-Hệ thống CI/CD được thiết lập tự động hóa 100% trên **GitHub Actions** phân tách thành 3 giai đoạn rõ ràng:
+Pipeline tự động hóa trên GitHub Actions (`.github/workflows/sonarqube.yml`) gồm 3 giai đoạn:
 
 ```text
 GitHub Actions Pipeline:
-  ├── [STAGE 1] Policy Guard — Kiểm tra Nhánh, Commit & PR
-  │      └── Kích hoạt nhanh 3-5s: Chặn commit sai Conventional Commits & PR sai nhánh/tiêu đề
+  ├── [STAGE 1] Policy Guard — Kiểm tra Nhánh, Commit & Tiêu đề PR
+  │      └── Kích hoạt nhanh 3-5s: Chặn commit sai cú pháp & PR sai nhánh/tiêu đề
   │
-  ├── [STAGE 2: Dev Gate] Shift-Left Security & Code Quality (Khi PR hoặc Merge vào DEV)
-  │      ├── SonarQube SAST & Code Quality: Quét bugs, code smells, lỗ hổng & chất lượng mã nguồn
-  │      └── Semgrep Security SAST: Phân tích luồng dữ liệu Source-to-Sink (SQLi, XSS, Misconfigs)
+  ├── [STAGE 2: Dev Gate] Shift-Left SAST & Kiểm thử an ninh (Khi PR hoặc Merge vào DEV)
+  │      ├── SonarQube SAST: Quét nợ kỹ thuật, bugs, code smells và chuẩn PSR-12
+  │      ├── Semgrep SAST: Dò tìm lỗ hổng Taint-Tracking (SQLi, XSS, Misconfigurations)
+  │      └── Config Validator: Kiểm tra cú pháp YAML/JSON và Alert Rules FOSS
   │
-  └── [STAGE 3: Production Gate] Docker Build & Smoke Test Healthcheck (Khi PR hoặc Merge vào MAIN)
-         ├── Build sạch toàn bộ Docker Images (PHP 8.2 & MariaDB)
-         ├── Khởi chạy cụm Preview tạm thời trong runner bằng Docker Compose
-         ├── Chờ MariaDB đạt trạng thái healthy
-         ├── Gọi API /health xác nhận HTTP 200 OK & kết nối DB thông suốt
-         └── Smoke Test tải Trang chủ trước khi cho phép nạp code vào Production
+  └── [STAGE 3: Production Gate] Dual-Track CD & Smoke Test (Khi PR hoặc Merge vào MAIN)
+         ├── Nhận diện thay đổi theo đường dẫn (Path-based selective execution)
+         ├── Kiểm tra tính độc lập: Deploy web không làm gián đoạn hạ tầng giám sát
+         ├── Khởi chạy môi trường thử nghiệm tạm thời
+         ├── Xác nhận MariaDB healthy và endpoint /health phản hồi HTTP 200
+         └── Thực hiện Smoke Test trang chủ trước khi hoàn tất triển khai
 ```
 
 ---
 
-## 🚀 Khởi chạy ứng dụng cục bộ (Local Development)
+## 5. HƯỚNG DẪN TRIỂN KHAI VÀ VẬN HÀNH CỤC BỘ
 
-Yêu cầu môi trường: **Docker** & **Docker Compose**.
+### Yêu cầu tiên quyết:
+* Docker Engine 24.0+
+* Docker Compose V2
 
-1. **Clone repository:**
-   ```bash
-   git clone https://github.com/wtfwhoyouare/PTIT-DevOps-SonarQube.git
-   cd PTIT-DevOps-SonarQube
-   ```
+### Các bước thực hiện:
 
-2. **Kích hoạt Git Hook kiểm tra commit cục bộ (Khuyên dùng):**
-   ```bash
-   git config core.hooksPath .githooks
-   ```
+#### Bước 1: Lấy mã nguồn dự án
+```bash
+git clone https://github.com/wtfwhoyouare/PTIT-DevOps-SonarQube.git
+cd PTIT-DevOps-SonarQube
+```
 
-3. **Khởi chạy cụm dịch vụ:**
-   ```bash
-   cd InlaneWeb
-   docker compose up -d --build
-   ```
+#### Bước 2: Kích hoạt Git Hook kiểm soát commit cục bộ (Khuyến nghị)
+```bash
+git config core.hooksPath .githooks
+```
 
-4. **Truy cập ứng dụng:**
-   - 🌐 **Web Portal:** `http://localhost:8080`
-   - 💓 **Healthcheck Endpoint:** `http://localhost:8080/health`
-   - 🗄️ **MariaDB Database:** Port nội bộ `3306` (Container `inlaneweb_db`)
+#### Bước 3: Khởi chạy cụm dịch vụ ứng dụng nghiệp vụ
+```bash
+cd InlaneWeb
+docker compose up -d --build
+```
+
+#### Bước 4: Khởi chạy cụm dịch vụ giám sát tập trung
+```bash
+docker compose -f docker-compose.monitoring.yml up -d
+```
+
+#### Bước 5: Kiểm tra kết nối dịch vụ
+* **Web Portal:** `http://localhost:8080`
+* **Healthcheck API:** `http://localhost:8080/health`
+* **Grafana Dashboard:** `http://localhost:3000` (Tài khoản mặc định: `admin` / `admin`)
+* **Loki Ingestion Status:** `http://localhost:3100/ready`
