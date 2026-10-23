@@ -112,7 +112,9 @@ Nhằm tối ưu hóa tài nguyên phần cứng cho môi trường học tập 
 InlaneWeb/
 ├── monitoring/
 │   ├── loki/
-│   │   └── loki-config.yml          # Cấu hình lưu trữ và quy tắc LogQL của Loki
+│   │   ├── loki-config.yml          # Cấu hình lưu trữ và quy tắc LogQL của Loki
+│   │   └── rules/fake/
+│   │       └── alert-rules.yml      # Định nghĩa các rule phát hiện lỗi 5xx, DB fail
 │   ├── promtail/
 │   │   └── promtail-config.yml      # Cấu hình Scrape targets và Labeling log từ Docker
 │   ├── grafana/
@@ -122,7 +124,61 @@ InlaneWeb/
 │   │   │   └── dashboards/          # Tự động nạp Dashboard giám sát hệ thống
 │   │   │       ├── dashboard.yml
 │   │   │       └── inlaneweb-overview.json
-│   │   └── alerts/
-│   │       └── alert-rules.yml      # Định nghĩa các rule phát hiện lỗi 5xx, DB fail
 │   └── docker-compose.monitoring.yml # Cụm container giám sát (Loki, Promtail, Grafana, Autoheal)
 ```
+
+---
+
+### 3.4. Chiến lược triển khai phân tách vòng đời (Decoupled Dual-Track Deployment Strategy)
+
+#### 1. Nguyên lý phân tách vòng đời (Application vs. Standing Infrastructure Lifecycle)
+Trong kiến trúc vận hành Production chuẩn SRE/DevSecOps:
+* **Ứng dụng Web (`ilfreight_web` / `ilfreight_db`):** Có vòng đời ngắn, biến động cao (High Churn), thay đổi liên tục theo từng commit/feature/bugfix của lập trình viên.
+* **Hạ tầng Giám sát (`Loki`, `Promtail`, `Grafana`, `Autoheal`):** Là hạ tầng nền tảng bền vững (Standing Persistent Infrastructure). Hệ thống này phải duy trì hoạt động liên tục 24/7 với **Zero-Downtime**, tuyệt đối **không được phép bị restart kéo theo** mỗi khi có bản release code web mới.
+* **Lợi ích vận hành:**
+  1. **Không bị mù thông tin (Eliminate Deployment Blind Spots):** Cụm giám sát luôn sống để bắt trọn từng log khởi động và ghi nhận lỗi crash ngay trong tích tắc ứng dụng Web đang deploy.
+  2. **Bảo toàn dữ liệu & Buffer:** Tránh việc Promtail mất chỉ mục quét container hoặc Loki bị ngắt quãng tiến trình flush chunk log lên ổ đĩa.
+  3. **Tối ưu tài nguyên CI/CD:** Khi chỉ sửa code Web, hệ thống không phải tải lại các image giám sát nặng hàng trăm MB, rút ngắn 80% thời gian chạy pipeline.
+
+#### 2. Sơ đồ kiến trúc phân tách luồng chạy trên Production
+
+```text
+ ┌────────────────────────────────────────────────────────────────────────────────────────┐
+ │                      MÁY CHỦ PRODUCTION (HOST ENVIRONMENT)                             │
+ │                                                                                        │
+ │  ┌──────────────────────────────────────────────────────────────────────────────────┐  │
+ │  │ [HẠ TẦNG NỀN TẢNG BỀN VỮNG - STANDING OBSERVABILITY PLATFORM] (24/7 Zero-Downtime)│  │
+ │  │  • Dịch vụ: ilfreight_loki, ilfreight_promtail, ilfreight_grafana, autoheal      │  │
+ │  │  • Quản lý qua: docker-compose.monitoring.yml                                    │  │
+ │  │  • Chu kỳ cập nhật: Rất thấp (Chỉ khi đổi Alert Rule hoặc nâng cấp Dashboard)    │  │
+ │  │  • Lệnh cập nhật: docker compose -f docker-compose.monitoring.yml up -d          │  │
+ │  └──────────────────────────────────────────┬───────────────────────────────────────┘  │
+ │                                             │ Lắng nghe Docker Socket                  │
+ │                                             │ (/var/run/docker.sock)                   │
+ │                                             ▼                                          │
+ │  ┌──────────────────────────────────────────────────────────────────────────────────┐  │
+ │  │ [KHỐI ỨNG DỤNG NGHIỆP VỤ - APPLICATION WORKLOAD] (Biến động theo từng Release)    │  │
+ │  │  • Dịch vụ: ilfreight_web, ilfreight_db                                          │  │
+ │  │  • Quản lý qua: docker-compose.yml                                               │  │
+ │  │  • Chu kỳ cập nhật: Thường xuyên theo từng Pull Request vào main                 │  │
+ │  │  • Lệnh cập nhật: docker compose up -d --no-deps --build web                     │  │
+ │  │                                                                                  │  │
+ │  │  👉 Khi container Web mới được tạo, Promtail tự động phát hiện (Service         │  │
+ │  │     Discovery) và hút log ngay tức khắc mà KHÔNG CẦN restart cụm monitoring!     │  │
+ │  └──────────────────────────────────────────────────────────────────────────────────┘  │
+ └────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### 3. Quy tắc điều phối Idempotent trong CI/CD & Production
+* **Lệnh deploy Web độc lập:**
+  ```bash
+  cd InlaneWeb
+  docker compose up -d --no-deps --build web
+  ```
+  *(Cờ `--no-deps` đảm bảo không tái khởi động DB và không ảnh hưởng đến các service khác)*
+* **Lệnh deploy Monitoring độc lập:**
+  ```bash
+  cd InlaneWeb
+  docker compose -f docker-compose.monitoring.yml up -d --remove-orphans
+  ```
+  *(Docker Compose tự đối chiếu cấu hình, chỉ cập nhật container có file thay đổi, giữ nguyên các container khác)*
