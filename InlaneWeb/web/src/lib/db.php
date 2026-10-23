@@ -8,6 +8,8 @@
  * - db_error() in nguyen mysqli_error() ra front-end -> Error-based SQLi.
  */
 
+require_once __DIR__ . '/logger.php';
+
 function db(): mysqli
 {
     static $conn = null;
@@ -23,7 +25,9 @@ function db(): mysqli
 
         $conn = mysqli_connect($host, $user, $pass, $name);
         if (!$conn) {
-            die('DB connection failed: ' . mysqli_connect_error());
+            $err = mysqli_connect_error() ?: 'Unknown DB connection error';
+            InlaneLogger::logSqlError("CONNECT {$host}:{$name}", $err, mysqli_connect_errno());
+            die('DB connection failed: ' . $err);
         }
     }
     return $conn;
@@ -38,9 +42,11 @@ function query(string $sql)
     $conn = db();
     $res = mysqli_query($conn, $sql);
     if ($res === false) {
+        $err = mysqli_error($conn);
+        InlaneLogger::logSqlError($sql, $err, mysqli_errno($conn));
         // Loi SQL hien nguyen van ra trang -> Error-based SQLi
         echo '<div class="sql-error"><strong>SQL Error:</strong> '
-            . mysqli_error($conn) . '</div>';
+            . $err . '</div>';
     }
     return $res;
 }
@@ -51,8 +57,10 @@ function exec_write(string $sql): bool
     $conn = db();
     $ok = mysqli_query($conn, $sql);
     if ($ok === false) {
+        $err = mysqli_error($conn);
+        InlaneLogger::logSqlError($sql, $err, mysqli_errno($conn));
         echo '<div class="sql-error"><strong>SQL Error:</strong> '
-            . mysqli_error($conn) . '</div>';
+            . $err . '</div>';
         return false;
     }
     return true;
@@ -79,6 +87,7 @@ function exec_multi(string $sql): array
         } while (mysqli_more_results($conn) && mysqli_next_result($conn));
     }
     if ($err = mysqli_error($conn)) {
+        InlaneLogger::logSqlError($sql, $err, mysqli_errno($conn));
         echo '<div class="sql-error"><strong>SQL Error:</strong> ' . $err . '</div>';
     }
     return $out;

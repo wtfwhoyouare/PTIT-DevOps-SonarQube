@@ -25,7 +25,7 @@
 
 Hệ thống tích hợp:
 * **Kiểm tra an ninh mã nguồn tự động (SAST):** Phân tích mã nguồn PHP 8.2 bằng SonarQube Community và Semgrep CLI.
-* **Hạ tầng giám sát mã nguồn mở (FOSS Observability):** Thu thập và phân tích log tập trung bằng Grafana Loki 3.0, Promtail 3.0 và Grafana 11.0.
+* **Hạ tầng giám sát phân luồng chuyên biệt (Dual-Stream Observability):** Tách bạch độc lập giữa luồng nhật ký ứng dụng web (bắt trọn vẹn Cause Exceptions, chuỗi lỗi lồng nhau, stack trace) và luồng nhật ký lưu lượng HTTP (nhận diện Attack Vectors, payload khai thác và phản hồi rò rỉ Error-Based) qua Promtail 3.0, Grafana Loki 3.0 và Grafana 11.0.
 * **Cơ chế tự phục hồi (Container Auto-Healing):** Theo dõi nhịp tim container thông qua Docker Healthcheck và tự động tái khởi động dịch vụ khi phát sinh sự cố.
 * **Kiến trúc triển khai phân tách (Dual-Track Deployment):** Vòng đời phát hành ứng dụng web hoạt động độc lập với hạ tầng giám sát 24/7.
 
