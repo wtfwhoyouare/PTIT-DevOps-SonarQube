@@ -6,8 +6,7 @@
 # ============================================================================
 services:
   db:
-    build: ./db
-    image: ${INLANEWEB_DB_IMAGE:-inlaneweb-db:latest}
+    image: ${INLANEWEB_DB_IMAGE:-ghcr.io/wtfwhoyouare/inlaneweb-db:latest}
     container_name: ilfreight_db
     restart: always
     environment:
