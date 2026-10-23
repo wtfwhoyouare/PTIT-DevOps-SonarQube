@@ -57,7 +57,7 @@ scrape_configs:
 
       # 4A. Nhận diện Vector tấn công SQL Injection (SQLi)
       - match:
-          selector: '{container="ilfreight_web"} |~ "(?i)(union(\\s+|%20|\\+)select|sleep\\(|benchmark\\(|or(\\s+|%20|\\+)1=1|--|load_file\\(|into(\\s+|%20|\\+)outfile|into(\\s+|%20|\\+)dumpfile|information_schema|database\\(|schema\\(|sqlmap|havij)"'
+          selector: '{container="ilfreight_web"} |~ "(?i)(union(\\s+|%20|\\+)select|sleep\\(|benchmark\\(|or(\\s+|%20|\\+)1=1|--|concat\\(|char\\(|load_file\\(|into(\\s+|%20|\\+)outfile|into(\\s+|%20|\\+)dumpfile|information_schema|database\\(|schema\\(|sqlmap|havij)"'
           stages:
             - labels:
                 log_category: http_traffic
