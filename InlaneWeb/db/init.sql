@@ -20,7 +20,7 @@ CREATE DATABASE IF NOT EXISTS ilfreight CHARACTER SET utf8mb4 COLLATE utf8mb4_un
 USE ilfreight;
 
 -- ---- users ----------------------------------------------------------------
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id             INT NOT NULL AUTO_INCREMENT,
     username       VARCHAR(100) UNIQUE NOT NULL,
     password       VARCHAR(255) NOT NULL,   -- luu cleartext (bad practice CO Y)
@@ -38,7 +38,7 @@ INSERT INTO users (username, password, email, role, api_key) VALUES
 ('mgarcia', 'Barca#2010',  'mgarcia@ilfreight.local','staff',    'ILF-STF-99887766554433');
 
 -- ---- ports (bang tra cuu cong khai — giong bai giang) ----------------------
-CREATE TABLE ports (
+CREATE TABLE IF NOT EXISTS ports (
     id      INT NOT NULL AUTO_INCREMENT,
     code    VARCHAR(10),
     city    VARCHAR(100),
@@ -58,7 +58,7 @@ INSERT INTO ports (code, city, country, volume) VALUES
 ('US LAX', 'Los Angeles','USA',          9.20);
 
 -- ---- shipments (van don) ---------------------------------------------------
-CREATE TABLE shipments (
+CREATE TABLE IF NOT EXISTS shipments (
     id          INT NOT NULL AUTO_INCREMENT,
     tracking_no VARCHAR(30) UNIQUE,
     port_code   VARCHAR(10),
@@ -75,7 +75,7 @@ INSERT INTO shipments (tracking_no, port_code, status, customer_id) VALUES
 ('ILF1046US', 'US LAX', 'Out for Delivery',4);
 
 -- ---- comments (binh luan don hang) ----------------------------------------
-CREATE TABLE comments (
+CREATE TABLE IF NOT EXISTS comments (
     id          INT NOT NULL AUTO_INCREMENT,
     shipment_id INT,
     user_id     INT,
@@ -90,7 +90,7 @@ INSERT INTO comments (shipment_id, user_id, content) VALUES
 (3, 3, 'Hang bi giu o hai quan, can ho tro gap.');
 
 -- ---- news ------------------------------------------------------------------
-CREATE TABLE news (
+CREATE TABLE IF NOT EXISTS news (
     id           INT NOT NULL AUTO_INCREMENT,
     title        VARCHAR(200),
     body         TEXT,
@@ -109,7 +109,7 @@ CREATE DATABASE IF NOT EXISTS dev CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_
 USE dev;
 
 -- ---- credentials (muc tieu dump) ------------------------------------------
-CREATE TABLE credentials (
+CREATE TABLE IF NOT EXISTS credentials (
     id            INT NOT NULL AUTO_INCREMENT,
     username      VARCHAR(100),
     password_hash VARCHAR(64),
@@ -123,7 +123,7 @@ INSERT INTO credentials (username, password_hash, api_key) VALUES
 ('backup_svc','9da2c9bcdf39d8610954e0e11ea8f45f', 'DEV-KEY-backup-4b1dp0nd');
 
 -- ---- flags (co theo tung ky thuat — chung minh khai thac thanh cong) -------
-CREATE TABLE flags (
+CREATE TABLE IF NOT EXISTS flags (
     id        INT NOT NULL AUTO_INCREMENT,
     technique VARCHAR(60),
     flag      VARCHAR(120),

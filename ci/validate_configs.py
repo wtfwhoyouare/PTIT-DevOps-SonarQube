@@ -39,17 +39,21 @@ def validate_json_file(filepath: str) -> bool:
 def main() -> int:
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     monitoring_dir = os.path.join(base_dir, "InlaneWeb", "monitoring")
-    compose_file = os.path.join(base_dir, "InlaneWeb", "docker-compose.monitoring.yml")
-
     failures = 0
     total = 0
 
-    print("🔍 [Validation Gate] Bắt đầu kiểm tra các tệp cấu hình Monitoring...")
+    print("🔍 [Validation Gate] Bắt đầu kiểm tra các tệp cấu hình Monitoring & Production Compose...")
 
-    if os.path.exists(compose_file):
-        total += 1
-        if not validate_yaml_file(compose_file):
-            failures += 1
+    compose_files = [
+        os.path.join(base_dir, "InlaneWeb", "docker-compose.monitoring.yml"),
+        os.path.join(base_dir, "InlaneWeb", "docker-compose.prod.yml"),
+    ]
+
+    for comp in compose_files:
+        if os.path.exists(comp):
+            total += 1
+            if not validate_yaml_file(comp):
+                failures += 1
 
     for yml_path in glob.glob(os.path.join(monitoring_dir, "**", "*.yml"), recursive=True) + \
                      glob.glob(os.path.join(monitoring_dir, "**", "*.yaml"), recursive=True):

@@ -530,7 +530,7 @@ jobs:
             ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "docker tag $IMAGE_URI inlaneweb-web:latest || true"
 
             ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "mkdir -p $PROD_PATH && cd $PROD_PATH && git fetch origin main && git checkout -f main && git pull origin main"
-            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "cd $PROD_PATH/InlaneWeb && docker compose up -d --no-deps web"
+            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "cd $PROD_PATH/InlaneWeb && INLANEWEB_IMAGE=$IMAGE_URI docker compose -f docker-compose.prod.yml up -d --no-deps web"
 
             sleep 5
             ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "curl -f -s http://localhost:8088/health || curl -f -s http://localhost:80/health"
