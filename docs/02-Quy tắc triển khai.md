@@ -79,9 +79,9 @@ Tài liệu này quy định chi tiết và bắt buộc về chức năng, quy�
 
 Để chính sách không dừng lại ở mức "lời nói", dự án áp dụng 2 tầng bảo vệ tự động:
 
-### Tầng 1: Tự động chặn bằng GitHub Actions CI/CD Pipeline (Phân tách 3 Stage độc lập & Tích hợp Monitoring)
+### Tầng 1: Tự động chặn bằng GitHub Actions CI/CD Pipeline (Phân tách 3 Stage độc lập & Dual-Track CD)
 
-Hệ thống CI/CD được thiết lập tự động hóa 100% trên **GitHub Actions** (`.github/workflows/sonarqube.yml`), phân tách thành **3 Giai đoạn (Stages)** riêng biệt theo mô hình DAG (Directed Acyclic Graph) tuần tự, tích hợp kiểm soát an ninh mã nguồn tĩnh và xác thực toàn diện cụm giám sát FOSS:
+Hệ thống CI/CD được thiết lập tự động hóa 100% trên **GitHub Actions** (`.github/workflows/sonarqube.yml`), phân tách thành **3 Giai đoạn (Stages)** riêng biệt theo mô hình DAG (Directed Acyclic Graph) tuần tự, tích hợp kiểm soát an ninh mã nguồn tĩnh và áp dụng kiến trúc **Dual-Track Deployment** (Phân tách vòng đời giữa ứng dụng Web và hạ tầng Giám sát bền vững):
 
 ```text
  ┌────────────────────────────────────────────────────────────────────────┐
@@ -103,16 +103,23 @@ Hệ thống CI/CD được thiết lập tự động hóa 100% trên **GitHub 
                      │                                   │
                      ▼ (Sau khi hoàn tất Stage 2)        ▼
  ┌────────────────────────────────────────────────────────────────────────┐
- │ [STAGE 3: Production Gate] Docker Build & Monitoring Smoke Test        │ (Chỉ mở cổng kiểm thử trước khi nạp vào MAIN)
- │  ├── 1. Build sạch toàn bộ Docker Images (App + Monitoring Stack)      │
- │  ├── 2. Khởi chạy toàn bộ cụm: App + DB + Loki + Promtail + Grafana    │
- │  ├── 3. Healthcheck dịch vụ (MariaDB healthy, Web /health HTTP 200)    │
- │  ├── 4. E2E Logging & Alert Test (Kiểm thử thực tế luồng log):         │
- │  │    • Bắn thử request gây lỗi 500 giả định                           │
- │  │    • Truy vấn API Loki kiểm tra log lỗi đã được Promtail nhặt chưa  │
- │  │    • Xác nhận Rule Alert phát hiện lỗi sẵn sàng hoạt động           │
- │  ├── 5. E2E Autoheal Test: Giả lập crash container -> Docker tự cứu   │
- │  └── 6. Ghi báo cáo Step Summary & Dọn dẹp sạch sẽ runner              │
+ │ [STAGE 3: Production Gate] DUAL-TRACK CD & VERIFICATION                │
+ │                                                                        │
+ │  Nhận diện thay đổi theo đường dẫn (Path-based Selective Execution):   │
+ │                                                                        │
+ │  ├── 🌐 LUỒNG 1: WEB APPLICATION WORKLOAD (Khi sửa code web/db)        │
+ │  │    • Build Docker Image PHP 8.2 & MariaDB sạch                      │
+ │  │    • Kiểm tra nhịp tim API /health (HTTP 200) & Smoke Test Trang chủ│
+ │  │    • Deploy độc lập: docker compose up -d --no-deps --build web     │
+ │  │    👉 CHỈ thay thế container Web. Hạ tầng Logging VẪN SỐNG 24/7 để  │
+ │  │       hứng trọn log deploy & bắt lỗi tức thì!                       │
+ │  │                                                                     │
+ │  └── 📊 LUỒNG 2: OBSERVABILITY PLATFORM (Khi sửa config/rules log)     │
+ │       • Validate 100% tệp YAML, JSON và cú pháp LogQL Rules            │
+ │       • Kiểm tra Loki /ready và Grafana provisioning                   │
+ │       • Deploy độc lập: docker compose -f ...monitoring.yml up -d      │
+ │       👉 CHỈ cập nhật hạ tầng log, container Web HOÀN TOÀN KHÔNG BỊ   │
+ │          ảnh hưởng hay ngắt kết nối phục vụ người dùng!                │
  └────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -121,8 +128,8 @@ Hệ thống CI/CD được thiết lập tự động hóa 100% trên **GitHub 
 | Giai đoạn | Job GitHub Actions | Điều kiện chạy | Nhiệm vụ chính | Tiêu chuẩn PASS | Xử lý khi FAIL |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **STAGE 1: Policy Guard** | `[STAGE 1] Policy Guard — Kiểm tra Nhánh, Commit & PR` | **Mọi sự kiện Push** lên nhánh cá nhân & **Mọi PR** vào `dev`/`main` *(3-5s)* | 1. **Kiểm tra Commit:** Quét toàn bộ commit trong payload đẩy lên, đối chiếu chuẩn Conventional Commits.<br>2. **Bảo vệ nhánh Main:** Ngăn chặn ngay lập tức nếu ai đó mở PR từ nhánh cá nhân vào `main`.<br>3. **Kiểm tra tiêu đề PR:** Xác thực cú pháp PR vào `dev` (`[<nhánh>] ...`) và PR vào `main` (`release: vX.Y.Z ...`). | - **100% commit** khớp regex Conventional Commits.<br>- Nhánh đích `main` chỉ nhận head từ `dev`.<br>- Tiêu đề PR khớp 100% regex theo tầng tương ứng. | ❌ **FAIL ngay lập tức (Exit 1)**.<br>Khóa lệnh commit/PR, in hộp hướng dẫn kèm câu lệnh sửa lỗi (`git commit --amend` hoặc đổi tên PR). |
-| **STAGE 2: Dev Gate** | `[STAGE 2: Dev Gate] SonarQube SAST & Code Quality`<br><br>`[STAGE 2: Dev Gate] Semgrep Security SAST` | **Chỉ kích hoạt khi:**<br>- Tạo Pull Request vào `dev`<br>- Merge/Push chính thức trên `dev` | 1. **SonarQube SAST:** Khởi tạo container SonarQube phân tích độ tin cậy, nợ kỹ thuật (Technical Debt), Code Smells, Bugs và tính chuẩn mực PSR-12 của PHP 8.2.<br>2. **Semgrep SAST:** Quét chuyên sâu bảo mật theo luồng dữ liệu Taint-Tracking (Source -> Sink), dò tìm các lỗ hổng Injection (SQLi, XSS), cấu hình sai bảo mật.<br>3. **Báo cáo:** Xuất Step Summary trực quan và đính kèm Artifacts báo cáo PDF/HTML/JSON. | - **Unit test CI:** 20/20 test cases chạy PASS (`exit 0`).<br>- **PHP Lint:** Cú pháp PHP 8.2 không có lỗi Fatal/Syntax.<br>- **Báo cáo SAST:** Quét hoàn tất, không phát hiện lỗi crash hệ thống, báo cáo được đính kèm vào Step Summary.<br>- **Reviewer duyệt:** Đạt tối thiểu 1 Approval từ Tech Lead sau khi đánh giá các phát hiện bảo mật. | ⚠️ **Cảnh báo chất lượng** trên giao diện PR.<br>Lead/Reviewer dựa vào kết quả kiểm tra để yêu cầu dev vá lỗ hổng trước khi phê duyệt merge vào nhánh `dev`. |
-| **STAGE 3: Production Gate** | `[STAGE 3: Production Gate] Docker Build & Smoke Test Healthcheck` | **Chỉ kích hoạt khi:**<br>- Tạo Pull Request từ `dev` vào `main`<br>- Merge/Push chính thức trên `main` | 1. **Docker Build Validation:** Tự động build sạch toàn bộ Dockerfile (Web PHP 8.2 & MariaDB + Stack giám sát). Đảm bảo mã nguồn đóng gói thành công 100%.<br>2. **Ephemeral Deployment:** Bung cụm container chạy thử nghiệm thật trong GitHub Runner bằng `docker compose up -d`.<br>3. **Database Healthcheck:** Vòng lặp ping kiểm tra container `ilfreight_db` đạt trạng thái `healthy`.<br>4. **API Healthcheck:** Gọi `GET /health`, bắt buộc phản hồi HTTP 200 OK và xác nhận Database kết nối thông suốt.<br>5. **E2E Smoke Test & Logging Validation:** Tải thử Trang chủ (`/`), đồng thời kiểm thử luồng log đẩy về Loki & cơ chế autoheal.<br>6. **Teardown:** Tự động dọn dẹp sạch sẽ cụm container trong runner sau khi kiểm thử xong. | - **Docker Build:** Mã thoát `exit 0`, không thiếu file/package.<br>- **MariaDB Status:** Báo `healthy` trong vòng tối đa 90 giây.<br>- **API /health:** Trả về HTTP Code đúng `200` và JSON `status: UP, database: connected`.<br>- **Monitoring Stack:** Loki phản hồi `/ready` và lưu trữ log thành công.<br>- **Smoke Test:** Trang chủ nạp thành công HTTP 200 và chứa nội dung `IlFreight`. | ⛔ **CHẶN ĐỨNG MERGE VÀO MAIN**.<br>Nếu Docker build gãy hoặc `/health` không trả về 200, PR lập tức bị khóa, không cho phép nạp mã nguồn lỗi lên môi trường Production! |
+| **STAGE 2: Dev Gate** | `[STAGE 2: Dev Gate] SonarQube SAST & Code Quality`<br><br>`[STAGE 2: Dev Gate] Semgrep Security SAST` | **Chỉ kích hoạt khi:**<br>- Tạo Pull Request vào `dev`<br>- Merge/Push chính thức trên `dev` | 1. **SonarQube SAST:** Khởi tạo container SonarQube phân tích độ tin cậy, nợ kỹ thuật (Technical Debt), Code Smells, Bugs và tính chuẩn mực PSR-12 của PHP 8.2.<br>2. **Semgrep SAST:** Quét chuyên sâu bảo mật theo luồng dữ liệu Taint-Tracking (Source -> Sink), dò tìm các lỗ hổng Injection (SQLi, XSS), cấu hình sai bảo mật.<br>3. **Báo cáo:** Xuất Step Summary trực quan và đính kèm Artifacts báo cáo PDF/HTML/JSON. | - **Unit test CI:** 21/21 test cases chạy PASS (`exit 0`).<br>- **PHP Lint:** Cú pháp PHP 8.2 không có lỗi Fatal/Syntax.<br>- **Báo cáo SAST:** Quét hoàn tất, không phát hiện lỗi crash hệ thống, báo cáo được đính kèm vào Step Summary.<br>- **Reviewer duyệt:** Đạt tối thiểu 1 Approval từ Tech Lead sau khi đánh giá các phát hiện bảo mật. | ⚠️ **Cảnh báo chất lượng** trên giao diện PR.<br>Lead/Reviewer dựa vào kết quả kiểm tra để yêu cầu dev vá lỗ hổng trước khi phê duyệt merge vào nhánh `dev`. |
+| **STAGE 3: Production Gate** | `[STAGE 3: Production Gate] Dual-Track CD & Smoke Test` | **Chỉ kích hoạt khi:**<br>- Tạo Pull Request từ `dev` vào `main`<br>- Merge/Push chính thức trên `main` | 1. **Dual-Track Change Detection:** Tự động phân tích payload commit để kích hoạt nhánh kiểm thử tương ứng (Web Workload vs Monitoring Platform).<br>2. **Web Gate:** Build sạch Dockerfile, kiểm tra MariaDB healthy và ping `/health` HTTP 200 OK.<br>3. **Monitoring Gate:** Validate YAML/JSON, kiểm tra Loki /ready và Grafana Dashboard.<br>4. **Decoupled Deployment:** Đảm bảo khi deploy Web thì cụm logging không bị restart, giữ nguyên 100% uptime cho việc hứng log.<br>5. **Teardown:** Tự động dọn dẹp sạch sẽ cụm container thử nghiệm trong runner. | - **Docker Build:** Mã thoát `exit 0`, không thiếu file/package.<br>- **MariaDB Status:** Báo `healthy` trong vòng tối đa 90 giây.<br>- **API /health:** Trả về HTTP Code đúng `200` và JSON `status: UP, database: connected`.<br>- **Monitoring Stack:** Cấu hình hợp lệ 100%, Loki & Promtail sẵn sàng thu thập log.<br>- **Smoke Test:** Trang chủ nạp thành công HTTP 200 và chứa nội dung `IlFreight`. | ⛔ **CHẶN ĐỨNG MERGE VÀO MAIN**.<br>Nếu Docker build gãy hoặc `/health` không trả về 200, PR lập tức bị khóa, không cho phép nạp mã nguồn lỗi lên môi trường Production! |
 
 ### Tầng 2: Thiết lập Branch Protection Rules trên GitHub Repository
 Admin repository kích hoạt cấu hình bảo vệ trên GitHub Web (**Settings → Branches / Rulesets**):
