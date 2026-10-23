@@ -1,0 +1,62 @@
+# ============================================================================
+#  Hạ tầng Giám sát Tập trung FOSS — Monitoring Server (Loki + Grafana)
+#  Triển khai trên máy chủ giám sát chuyên dụng (Tách riêng với Web Server).
+#  - Port 3100: Nhận luồng log từ Promtail ở Web Server đẩy sang.
+#  - Port 3000: Giao diện Grafana Dashboard theo dõi an ninh thời gian thực.
+# ============================================================================
+
+services:
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: monitoring_loki
+    restart: always
+    ports:
+      # Mở 0.0.0.0:3100 để Promtail từ xa (Web Server) có thể kết nối và push log
+      - "0.0.0.0:3100:3100"
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - ./loki/rules:/etc/loki/rules:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - monitoring_net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3100/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  grafana:
+    image: grafana/grafana:11.0.0
+    container_name: monitoring_grafana
+    restart: always
+    ports:
+      # Mở 0.0.0.0:3000 để truy cập giao diện Grafana từ trình duyệt
+      - "0.0.0.0:3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      loki:
+        condition: service_healthy
+    networks:
+      - monitoring_net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+networks:
+  monitoring_net:
+    driver: bridge
+
+volumes:
+  loki_data:
+  grafana_data:
