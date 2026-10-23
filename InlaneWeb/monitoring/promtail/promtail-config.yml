@@ -1,0 +1,39 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # Thu thap log truc tiep tu cac container docker qua Docker daemon socket
+  - job_name: docker_containers
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+    relabel_configs:
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/(.*)'
+        target_label: 'container'
+      - source_labels: ['container']
+        regex: '(ilfreight_web|ilfreight_db)'
+        action: keep
+    pipeline_stages:
+      # Nhan dien status code va gan tag loi neu gap 5xx hoac fatal error
+      - regex:
+          expression: '.*(?P<status_code>\b[45]\d\d\b).*'
+      - labels:
+          status_code:
+      - match:
+          selector: '{container="ilfreight_web"} |= " 500 "'
+          stages:
+            - labels:
+                level: error
+      - match:
+          selector: '{container="ilfreight_web"} |~ "(?i)(Fatal error|error)"'
+          stages:
+            - labels:
+                level: error

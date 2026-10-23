@@ -25,6 +25,46 @@ function page(string $file): void
 //  ROUTING
 // ---------------------------------------------------------------------------
 
+// Healthcheck endpoint cho CI/CD Smoke Test & Container Orchestration
+if ($path === '/health' || $path === '/api/health') {
+    header('Content-Type: application/json; charset=utf-8');
+    $db_ok = false;
+    $db_err = '';
+    try {
+        $conn = db();
+        if ($conn && @mysqli_ping($conn)) {
+            $db_ok = true;
+        } else {
+            $test = @mysqli_query($conn, 'SELECT 1');
+            if ($test !== false) {
+                $db_ok = true;
+            }
+        }
+    } catch (\Throwable $e) {
+        $db_err = $e->getMessage();
+    }
+
+    if ($db_ok) {
+        http_response_code(200);
+        echo json_encode([
+            'status' => 'UP',
+            'application' => 'InlaneWeb Logistics Portal',
+            'database' => 'CONNECTED',
+            'timestamp' => gmdate('Y-m-d\TH:i:s\Z'),
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    } else {
+        http_response_code(503);
+        echo json_encode([
+            'status' => 'DOWN',
+            'application' => 'InlaneWeb Logistics Portal',
+            'database' => 'DISCONNECTED',
+            'error' => $db_err,
+            'timestamp' => gmdate('Y-m-d\TH:i:s\Z'),
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    }
+    exit;
+}
+
 // Auth
 if ($path === '/login')  { page('login.php'); }
 if ($path === '/logout') { page('logout.php'); }
