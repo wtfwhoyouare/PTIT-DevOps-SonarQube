@@ -41,6 +41,9 @@ Toàn bộ quy định kỹ thuật và hướng dẫn vận hành chi tiết đ
 2. [**Quy chuẩn phân nhánh và triển khai mã nguồn (docs/02-Quy tắc triển khai.md)**](docs/02-Quy%20t%E1%BA%AFc%20tri%E1%BB%83n%20khai.md)  
    *Mã hiệu: POL-DEVOPS-02* — **(Tài liệu bắt buộc)** Ma trận phân quyền nhánh (RACI), tiêu chuẩn Conventional Commits, quy chuẩn Pull Request 2 tầng, và cơ chế kiểm soát kỹ thuật tự động 3 tầng (Git Hooks, GitHub Actions, Branch Protection).
 
+3. [**Tiêu chuẩn kiểm soát an ninh và đảm bảo chất lượng mã nguồn (docs/03-Kiểm soát an ninh và chất lượng mã nguồn.md)**](docs/03-Ki%E1%BB%83m%20so%C3%A1t%20an%20ninh%20v%C3%A0%20ch%E1%BA%A5t%20l%C6%B0%E1%BB%A3ng%20m%C3%A3%20ngu%E1%BB%93n.md)  
+   *Mã hiệu: STD-APPSEC-03* — Tiêu chuẩn kiểm thử an ninh tĩnh (SAST), phương pháp luận phân tích luồng dữ liệu (Taint Analysis/Source-Sink), kỹ thuật xây dựng mẫu nhận diện lỗ hổng Semgrep, ngưỡng chặn chất lượng SonarQube Quality Gate và cơ chế thẩm định tự động trong CI/CD.
+
 ---
 
 ## 3. SƠ ĐỒ PHÂN CẤP NHÁNH VÀ LUỒNG PHÁT TRIỂN
