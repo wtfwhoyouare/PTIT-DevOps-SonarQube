@@ -197,14 +197,14 @@ Hệ thống bảo vệ chất lượng mã nguồn thông qua 3 tầng rào ch�
  └──────────────────────────────────────────────────────────────────┘
 ```
 
-### 6.1. Chi tiết 3 Stage trong GitHub Actions Pipeline
+### 6.1. Chi tiết 4 Stage trong GitHub Actions Pipeline
 
 | Giai đoạn | Tên Job | Điều kiện kích hoạt | Nhiệm vụ chính | Tiêu chí đạt (Pass) | Biện pháp khi thất bại |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Stage 1: Policy Guard** | `Policy Guard - Branch, Commit & PR Validation` | Mọi sự kiện Push và mọi Pull Request (Thời gian: 3-5s) | - Quét toàn bộ commit trong payload đẩy lên.<br>- Ngăn chặn PR từ nhánh cá nhân vào `main`.<br>- Kiểm tra định dạng tiêu đề PR. | - 100% commit đúng chuẩn Conventional Commits.<br>- Nhánh `main` chỉ nhận head từ `dev`.<br>- Tiêu đề PR khớp 100% biểu thức regex. | Hủy bỏ tiến trình (Exit 1), xuất log cảnh báo kèm câu lệnh sửa lỗi chi tiết. |
 | **Stage 2: Dev Gate** | `SonarQube SAST & Code Quality`<br><br>`Semgrep Security SAST` | PR hoặc Push trên nhánh `dev` | - Quét chất lượng mã, độ tin cậy và code smells với SonarQube Community.<br>- Quét chuyên sâu lỗ hổng an ninh Taint-Tracking với Semgrep.<br>- Kiểm tra cú pháp cấu hình giám sát bằng Python validator. | - Bài kiểm tra cú pháp đạt 21/21 test cases.<br>- Báo cáo SAST xuất thành công.<br>- Nhận tối thiểu 1 phê duyệt từ Tech Lead. | Hiển thị cảnh báo chất lượng trên PR; yêu cầu kỹ sư sửa lỗi trước khi được duyệt merge. |
 | **Stage 3: Production Gate** | `Dual-Track CD & Smoke Test` | PR từ `dev` vào `main` hoặc Push trên `main` | - Phân tích thay đổi đường dẫn (Path-based selective execution).<br>- Kiểm tra build sạch Docker Web và cấu hình Monitoring.<br>- Khởi động môi trường kiểm thử tạm thời, xác nhận API `/health` đạt HTTP 200.<br>- Đảm bảo tính độc lập: Triển khai web không làm khởi động lại cụm giám sát. | - Docker build mã thoát 0.<br>- MariaDB đạt trạng thái healthy.<br>- API `/health` trả về HTTP 200.<br>- Cấu hình Monitoring hợp lệ. | Chặn hoàn toàn thao tác merge vào nhánh `main`. Không cho phép đưa mã nguồn lỗi lên Production. |
-| **Stage 4: Production CD** | `Automated Live Deployment` | Push/Merge chính thức vào nhánh `main` sau khi Stage 3 đạt | - Tự động kết nối SSH máy chủ Production thật.<br>- Triển khai độc lập: cập nhật Web (`--no-deps --build web`) mà không làm gián đoạn hạ tầng logging.<br>- Post-deploy verification kiểm tra `/health`. | - Phân phát thành công lên máy chủ.<br>- Endpoint `/health` trên host Production phản hồi HTTP 200. | Cảnh báo thất bại trên Actions, kích hoạt quy trình rollback của quản trị viên. |
+| **Stage 4: Production CD** | 1. `Deploy Observability Platform`<br><br>2. `Deploy Web Workload`<br>*(Phân tách 2 Job độc lập)* | Push/Merge chính thức vào nhánh `main` sau khi Stage 3 đạt | - **Job 1 (Monitoring):** Độc lập cập nhật cụm Loki/Promtail/Grafana/Autoheal khi có thay đổi cấu hình giám sát.<br>- **Job 2 (Web):** Độc lập rebuild và deploy Web container (`--no-deps --build web`), bảo toàn 100% uptime của cụm logging.<br>- **Hậu kiểm tra:** Ping endpoint `/health` trên host Production. | - Phân phát thành công lên máy chủ.<br>- Cụm logging duy trì 24/7.<br>- Endpoint `/health` trên host Production phản hồi HTTP 200. | Cảnh báo thất bại trên Actions, kích hoạt quy trình rollback của quản trị viên. |
 
 ---
 

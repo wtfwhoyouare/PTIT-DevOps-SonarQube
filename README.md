@@ -108,11 +108,10 @@ GitHub Actions Pipeline:
   │      ├── Kiểm tra Loki /ready và luồng log bóc tách từ Promtail
   │      └── Smoke Test trang chủ trước khi cho phép nạp code vào Production
   │
-  └── [STAGE 4: Production CD] Automated Live Deployment (Khi Merge chính thức vào MAIN)
-         ├── Kết nối SSH an toàn tới máy chủ Production qua GitHub Secrets
-         ├── Triển khai phân hệ Web độc lập: docker compose up -d --no-deps --build web
-         ├── Triển khai hạ tầng giám sát: docker compose -f ...monitoring.yml up -d
-         └── Hậu kiểm tra sức khỏe hệ thống (Post-Deployment Healthcheck)
+  └── [STAGE 4: Production CD] Automated Dual-Track Deployment (Khi Merge vào MAIN)
+         ├── Job 1: Deploy Observability Platform (docker compose -f ...monitoring.yml up -d)
+         ├── Job 2: Deploy Web Workload (docker compose up -d --no-deps --build web)
+         └── Hậu kiểm tra: Xác thực endpoint /health trên máy chủ Production
 ```
 
 ---
