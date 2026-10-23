@@ -10,6 +10,7 @@
 services:
   db:
     build: ./db
+    image: inlaneweb-db:latest
     container_name: ilfreight_db
     restart: always
     environment:
@@ -32,6 +33,7 @@ services:
 
   web:
     build: ./web
+    image: inlaneweb-web:latest
     container_name: ilfreight_web
     restart: always
     depends_on:
