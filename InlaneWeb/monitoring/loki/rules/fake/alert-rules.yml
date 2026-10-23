@@ -41,7 +41,7 @@ groups:
       # KHỐI 2: CẢNH BÁO LƯU LƯỢNG HTTP (ATTACK VECTORS & ERROR-BASED RESPONSE LEAKS)
       - alert: HttpAttackVectorDetected
         expr: |
-          sum(rate({container="ilfreight_web"} |~ "(?i)(HTTP-ATTACK-VECTOR|SQLI_|PATH_TRAVERSAL|XSS_INJECTION)"[1m])) > 0
+          sum(rate({container="ilfreight_web"} |~ "(?i)(union(\\s+|%20|\\+)select|sleep\\(|benchmark\\(|or(\\s+|%20|\\+)1=1|load_file|into(\\s+|%20|\\+)outfile|information_schema|\\.\\./|%2e%2e%2f|<script|%3cscript)"[1m])) > 0
         for: 5s
         labels:
           severity: high
@@ -53,7 +53,7 @@ groups:
 
       - alert: HttpErrorBasedResponseLeak
         expr: |
-          sum(rate({container="ilfreight_web"} |~ "(?i)(HTTP-ERROR-BASED-RESPONSE|SQL_ERROR_LEAK|SQL_SYNTAX_ERROR)"[1m])) > 0
+          sum(rate({container="ilfreight_web"} |~ "(?i)(syntax\\s+error|database_query_failure|mysqli_error|SQL\\s+Error|\"status\":50[0-9])"[1m])) > 0
         for: 5s
         labels:
           severity: high
@@ -65,7 +65,7 @@ groups:
 
       - alert: HighHttp5xxRate
         expr: |
-          sum(rate({container="ilfreight_web"} |= " 500 "[1m])) > 0
+          sum(rate({container="ilfreight_web"} |~ "(?i)(\"status\":50[0-9]| 500 )"[1m])) > 0
         for: 10s
         labels:
           severity: critical

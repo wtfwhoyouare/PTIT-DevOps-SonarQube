@@ -46,11 +46,14 @@ class InlaneLogger
             $depth++;
         }
 
+        $rootCause = !empty($causes) ? $causes[count($causes) - 1]['message'] : $e->getMessage();
+
         self::emit('APP-EXCEPTION', [
             'level'       => 'error',
             'type'        => 'unhandled_exception',
             'class'       => get_class($e),
             'message'     => $e->getMessage(),
+            'root_cause'  => $rootCause,
             'file'        => $e->getFile(),
             'line'        => $e->getLine(),
             'cause_chain' => $causes,
