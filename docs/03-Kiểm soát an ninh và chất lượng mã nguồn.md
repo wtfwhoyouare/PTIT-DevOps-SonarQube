@@ -167,7 +167,7 @@ Trường hợp một phát hiện từ SonarQube hoặc Semgrep được xác �
 
 ## 5. CƠ CHẾ THẨM ĐỊNH TỰ ĐỘNG TRONG ĐƯỜNG ỐNG CI/CD
 
-Toàn bộ quy chuẩn an ninh và chất lượng được tích hợp trực tiếp thành các trạm kiểm soát tự động trong GitHub Actions workflow ([sonarqube.yml](file:///d:/ThS/DevOpsSec/PTIT-DevOps-SonarQube/.github/workflows/sonarqube.yml)).
+Toàn bộ quy chuẩn an ninh và chất lượng được tích hợp trực tiếp thành các trạm kiểm soát tự động trong GitHub Actions workflow ([devsecops-pipeline.yml](file:///d:/ThS/DevOpsSec/PTIT-DevOps-SonarQube/.github/workflows/devsecops-pipeline.yml)).
 
 ### 5.1. Ma trận phân bổ trạm kiểm soát theo Stage
 

@@ -21,7 +21,7 @@ permissions:
 
 # Independent servers: a newer commit may replace an obsolete scan.
 concurrency:
-  group: sonarqube-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  group: devsecops-${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
