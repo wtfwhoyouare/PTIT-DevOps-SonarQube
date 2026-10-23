@@ -1,0 +1,35 @@
+groups:
+  - name: inlaneweb-alerts
+    rules:
+      - alert: HighHttp5xxRate
+        expr: |
+          sum(rate({container="ilfreight_web"} |= " 500 "[1m])) > 0
+        for: 10s
+        labels:
+          severity: critical
+          service: web
+        annotations:
+          summary: "Tần suất lỗi HTTP 5xx tăng cao trên Web Portal"
+          description: "Phát hiện mã phản hồi 500 xuất hiện trong log container ilfreight_web."
+
+      - alert: DatabaseConnectionLost
+        expr: |
+          sum(rate({container="ilfreight_web"} |~ "(?i)(Access denied|Connection refused|Can't connect to MySQL server)"[1m])) > 0
+        for: 10s
+        labels:
+          severity: critical
+          service: db
+        annotations:
+          summary: "Ứng dụng mất kết nối cơ sở dữ liệu MariaDB"
+          description: "Container ilfreight_web báo lỗi kết nối MariaDB trong log."
+
+      - alert: PhpFatalCrash
+        expr: |
+          sum(rate({container="ilfreight_web"} |~ "(?i)(Fatal error|Uncaught Error)"[1m])) > 0
+        for: 10s
+        labels:
+          severity: warning
+          service: web
+        annotations:
+          summary: "Phát hiện PHP Fatal Crash trong mã nguồn"
+          description: "Có exception hoặc fatal error chưa được bắt trong ứng dụng PHP."

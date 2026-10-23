@@ -11,12 +11,15 @@ services:
   db:
     build: ./db
     container_name: ilfreight_db
+    restart: always
     environment:
       MYSQL_ROOT_PASSWORD: password
       MYSQL_ROOT_HOST: "%"
     # KHONG expose port DB ra host -> chi web container ket noi noi bo.
     networks:
       - labnet
+    labels:
+      autoheal: "true"
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 5s
@@ -30,12 +33,21 @@ services:
   web:
     build: ./web
     container_name: ilfreight_web
+    restart: always
     depends_on:
       db:
         condition: service_healthy
     # CHI bind localhost cua host -> lab khong lo ra mang LAN/internet.
     ports:
       - "127.0.0.1:8088:80"
+    labels:
+      autoheal: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f -s http://127.0.0.1/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     environment:
       DB_HOST: db
       DB_USER: root
@@ -54,6 +66,7 @@ services:
 
 networks:
   labnet:
+    name: inlaneweb_net
     driver: bridge
 
 volumes:

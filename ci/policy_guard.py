@@ -206,8 +206,8 @@ def main() -> int:
         with open(event_path, "r", encoding="utf-8") as f:
             event_data = json.load(f)
     except Exception as e:
-        print(f"⚠️ Không thể đọc GITHUB_EVENT_PATH: {e}", file=sys.stderr)
-        return 0
+        print(f"❌ Không thể đọc GITHUB_EVENT_PATH: {e}", file=sys.stderr)
+        return 1
 
     if event_name == "push":
         return validate_push_event(event_data)
