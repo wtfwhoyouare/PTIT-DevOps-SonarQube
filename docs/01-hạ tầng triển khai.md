@@ -266,11 +266,18 @@ Hệ thống hỗ trợ cơ chế triển khai tự động trực tiếp từ G
 | `PROD_PORT` | Không | Cổng SSH máy chủ (Mặc định: `22`) |
 | `PROD_PATH` | Không | Đường dẫn thư mục cài đặt dự án trên máy chủ (Mặc định: `/opt/inlaneweb`) |
 
-### 8.2. Quy trình phân phát tự động theo đường dẫn (Path-based Selective Rollout)
+### 8.2. Kiến trúc phân tách 2 Job triển khai độc lập (Decoupled Stage 4 CD)
 
-1. **Nhận diện thay đổi:** Pipeline tự động đối chiếu diff giữa commit trước và commit hiện tại.
-2. **Kích hoạt độc lập:**
-   - Nếu thay đổi tệp thuộc `InlaneWeb/web/` hoặc `InlaneWeb/db/`: Thực thi cập nhật Web workload (`--no-deps --build web`), bảo toàn 100% thời gian hoạt động của hạ tầng giám sát.
-   - Nếu thay đổi tệp thuộc `InlaneWeb/monitoring/`: Chỉ thực thi cập nhật cụm monitoring.
+Giai đoạn Stage 4 được thiết kế phân tách hoàn toàn thành **2 Jobs độc lập** chạy song song hoặc có điều kiện trong GitHub Actions, tuyệt đối không gộp chung:
+
+1. **Job `production_deploy_monitoring` (`Deploy Observability Platform`):**
+   - **Nhiệm vụ:** Độc lập triển khai hoặc cập nhật cụm Loki, Promtail, Grafana và Autoheal.
+   - **Lệnh điều phối:** `docker compose -f docker-compose.monitoring.yml up -d --remove-orphans`.
+   - **Đặc tính:** Duy trì tính bền vững 24/7, chỉ tái nạp khi có thay đổi cấu hình giám sát hoặc rules.
+2. **Job `production_deploy_web` (`Deploy Web Workload`):**
+   - **Nhiệm vụ:** Độc lập build và thay thế container ứng dụng Web PHP 8.2 khi có phát hành mới.
+   - **Lệnh điều phối:** `docker compose up -d --no-deps --build web`.
+   - **Đặc tính:** Tham số `--no-deps` đảm bảo không tái khởi động database và không ảnh hưởng đến cụm logging đang hoạt động.
 3. **Hậu kiểm tra (Post-Deployment Verification):** Tự động ping API `/health` của máy chủ Production. Nếu phản hồi mã khác 200, pipeline lập tức ghi nhận lỗi để quản trị viên can thiệp rollback.
+
 
