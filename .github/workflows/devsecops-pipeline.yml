@@ -445,17 +445,45 @@ jobs:
             scp -i ~/.ssh/deploy_key -P $PROD_PORT -o StrictHostKeyChecking=no -o ConnectTimeout=15 InlaneWeb/docker-compose.monitoring.yml "$PROD_USER@$PROD_HOST:$PROD_PATH/docker-compose.monitoring.yml"
             scp -i ~/.ssh/deploy_key -P $PROD_PORT -o StrictHostKeyChecking=no -o ConnectTimeout=15 -r InlaneWeb/monitoring/* "$PROD_USER@$PROD_HOST:$PROD_PATH/monitoring/"
             ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "docker network create inlaneweb_net 2>/dev/null || true"
-            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "cd $PROD_PATH && docker compose -f docker-compose.monitoring.yml up -d --remove-orphans"
+            # Dọn dẹp an toàn các container monitoring từ project cũ nếu có để tránh xung đột tên
+            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "docker rm -f ilfreight_loki ilfreight_promtail ilfreight_grafana ilfreight_autoheal 2>/dev/null || true"
+            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "cd $PROD_PATH && docker compose -p inlaneweb-monitoring -f docker-compose.monitoring.yml up -d --remove-orphans"
             
             echo "⏳ Đang kiểm tra trạng thái sẵn sàng của Grafana Loki..."
-            for i in {1..15}; do
+            LOKI_READY=false
+            for i in {1..20}; do
               if ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "curl -s http://127.0.0.1:3100/ready | grep -q ready"; then
-                echo "✅ Grafana Loki đã sẵn sàng nhận log!"
+                echo "✅ Grafana Loki đã sẵn sàng nhận log sau $i lần kiểm tra!"
+                LOKI_READY=true
                 break
               fi
-              echo "   ... chờ Loki ($i/15)"
+              echo "   ... chờ Loki ($i/20)"
               sleep 2
             done
+
+            if [ "$LOKI_READY" != "true" ]; then
+              echo "::error title=Loki Healthcheck Failed::Loki không phản hồi ready sau 20 lần kiểm tra!"
+              ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "cd $PROD_PATH && docker compose -p inlaneweb-monitoring -f docker-compose.monitoring.yml logs --tail=50"
+              exit 1
+            fi
+
+            echo "⏳ Đang kiểm tra trạng thái sẵn sàng của Grafana Dashboard..."
+            GRAFANA_READY=false
+            for i in {1..20}; do
+              if ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "curl -s http://127.0.0.1:3000/api/health | grep -q 'ok'"; then
+                echo "✅ Grafana Dashboard đã sẵn sàng hoạt động tại cổng 3000 sau $i lần kiểm tra!"
+                GRAFANA_READY=true
+                break
+              fi
+              echo "   ... chờ Grafana ($i/20)"
+              sleep 2
+            done
+
+            if [ "$GRAFANA_READY" != "true" ]; then
+              echo "::error title=Grafana Healthcheck Failed::Grafana không phản hồi HTTP ok sau 20 lần kiểm tra!"
+              ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "cd $PROD_PATH && docker compose -p inlaneweb-monitoring -f docker-compose.monitoring.yml logs --tail=50 grafana"
+              exit 1
+            fi
             echo "✅ Cập nhật hạ tầng giám sát Loki/Grafana/Promtail/Autoheal thành công!"
             STATUS="DEPLOYED"
           else
@@ -470,14 +498,14 @@ jobs:
 
           | Hạng mục | Trạng thái | Lệnh thực thi |
           | :--- | :---: | :--- |
-          | **Dịch vụ** | Loki, Promtail, Grafana, Autoheal | \`docker compose -f docker-compose.monitoring.yml up -d\` |
+          | **Dịch vụ** | Loki, Promtail, Grafana, Autoheal | \`docker compose -p inlaneweb-monitoring -f docker-compose.monitoring.yml up -d\` |
           | **Kết quả** | **$STATUS** | Hạ tầng giám sát bền vững |
           EOF
 
   production_deploy_web:
     name: "[STAGE 4: Production CD] Deploy Web Workload"
-    needs: [production_smoke_test]
-    if: always() && needs.production_smoke_test.result == 'success' && github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [production_smoke_test, production_deploy_monitoring]
+    if: always() && needs.production_smoke_test.result == 'success' && (needs.production_deploy_monitoring.result == 'success' || needs.production_deploy_monitoring.result == 'skipped') && github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -545,9 +573,18 @@ jobs:
             ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "docker tag $IMAGE_URI_DB inlaneweb-db:latest || true"
             ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "docker tag $IMAGE_URI_WEB inlaneweb-web:latest || true"
 
+            # Dọn dẹp an toàn container web/db từ project cũ nếu chưa gắn nhãn inlaneweb-prod
+            for c in ilfreight_web ilfreight_db; do
+              LABEL=$(ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "docker inspect -f '{{index .Config.Labels \"com.docker.compose.project\"}}' \$c 2>/dev/null || echo ''")
+              if [ -n "$LABEL" ] && [ "$LABEL" != "inlaneweb-prod" ]; then
+                echo "Dọn dẹp container \$c từ project cũ (\$LABEL)..."
+                ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "docker rm -f \$c 2>/dev/null || true"
+              fi
+            done
+
             ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "mkdir -p $PROD_PATH"
             scp -i ~/.ssh/deploy_key -P $PROD_PORT -o StrictHostKeyChecking=no -o ConnectTimeout=15 InlaneWeb/docker-compose.prod.yml "$PROD_USER@$PROD_HOST:$PROD_PATH/docker-compose.prod.yml"
-            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "cd $PROD_PATH && INLANEWEB_IMAGE=$IMAGE_URI_WEB INLANEWEB_DB_IMAGE=$IMAGE_URI_DB docker compose -f docker-compose.prod.yml up -d --remove-orphans"
+            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "cd $PROD_PATH && INLANEWEB_IMAGE=$IMAGE_URI_WEB INLANEWEB_DB_IMAGE=$IMAGE_URI_DB docker compose -p inlaneweb-prod -f docker-compose.prod.yml up -d --remove-orphans"
 
             echo "⏳ Đang kiểm tra nhịp tim Web workload (Healthcheck)..."
             WEB_HEALTHY=false
@@ -565,7 +602,7 @@ jobs:
             if [ "$WEB_HEALTHY" != "true" ]; then
               echo "::error title=Deployment Healthcheck Failed::Web endpoint /health không trả về HTTP 200 sau 30 lần kiểm tra!"
               echo "📋 [Debug Logs] Thu thập logs từ các containers trên máy chủ:"
-              ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "cd $PROD_PATH && docker compose -f docker-compose.prod.yml logs --tail=50"
+              ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "cd $PROD_PATH && docker compose -p inlaneweb-prod -f docker-compose.prod.yml logs --tail=50"
               exit 1
             fi
             echo "✅ Cập nhật ứng dụng Web & Database thành công từ GHCR! Logging duy trì hoạt động liên tục."
