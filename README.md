@@ -92,7 +92,7 @@ Toàn bộ quy định kỹ thuật và hướng dẫn vận hành chi tiết đ
 
 ## 4. KIẾN TRÚC PIPELINE CI/CD (4 GIAI ĐOẠN ĐỘC LẬP)
 
-Pipeline tự động hóa trên GitHub Actions (`.github/workflows/sonarqube.yml`) gồm 4 giai đoạn:
+Pipeline tự động hóa trên GitHub Actions (`.github/workflows/devsecops-pipeline.yml`) gồm 4 giai đoạn:
 
 ```text
 GitHub Actions Pipeline:
