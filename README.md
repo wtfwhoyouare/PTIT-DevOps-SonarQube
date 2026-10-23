@@ -11,11 +11,11 @@
 | **Tổ chức:** | Học viện Công nghệ Bưu chính Viễn thông (PTIT) |
 
 ### Danh sách kỹ sư phụ trách:
-* **Nam** (`namng`) - Trưởng nhóm / Kiến trúc DevOps & Hạ tầng cơ sở dữ liệu
-* **Hải** (`haind`) - Kỹ sư Web lõi & Kiến trúc hệ thống
-* **Mạnh** (`manhdx`) - Kỹ sư Xác thực người dùng & Module cộng đồng
-* **Đức Anh** (`anhld`) - Kỹ sư Quản trị hệ thống & Báo cáo số liệu
-* **Mai** (`mainp`) - Kỹ sư Nghiệp vụ Logistics & Vận đơn
+* **Nguyễn Giang Nam** (`namng`) - Trưởng nhóm / Kiến trúc DevOps & Hạ tầng cơ sở dữ liệu
+* **Nguyễn Đình Hải** (`haind`) - Kỹ sư Web lõi & Kiến trúc hệ thống
+* **Đào Xuân Mạnh** (`manhdx`) - Kỹ sư Xác thực người dùng & Module cộng đồng
+* **Lê Đức Anh** (`anhld`) - Kỹ sư Quản trị hệ thống & Báo cáo số liệu
+* **Nguyễn Phương Mai** (`mainp`) - Kỹ sư Nghiệp vụ Logistics & Vận đơn
 
 ---
 
@@ -43,6 +43,12 @@ Toàn bộ quy định kỹ thuật và hướng dẫn vận hành chi tiết đ
 
 3. [**Tiêu chuẩn kiểm soát an ninh và đảm bảo chất lượng mã nguồn (docs/03-Kiểm soát an ninh và chất lượng mã nguồn.md)**](docs/03-Ki%E1%BB%83m%20so%C3%A1t%20an%20ninh%20v%C3%A0%20ch%E1%BA%A5t%20l%C6%B0%E1%BB%A3ng%20m%C3%A3%20ngu%E1%BB%93n.md)  
    *Mã hiệu: STD-APPSEC-03* — Tiêu chuẩn kiểm thử an ninh tĩnh (SAST), phương pháp luận phân tích luồng dữ liệu (Taint Analysis/Source-Sink), kỹ thuật xây dựng mẫu nhận diện lỗ hổng Semgrep, ngưỡng chặn chất lượng SonarQube Quality Gate và cơ chế thẩm định tự động trong CI/CD.
+
+4. [**Hướng dẫn cấu hình và triển khai production (docs/04-Hướng dẫn cấu hình và triển khai production.md)**](docs/04-H%C6%B0%E1%BB%9Bng%20d%E1%BA%ABn%20c%E1%BA%A5u%20h%C3%ACnh%20v%C3%A0%20tri%E1%BB%83n%20khai%20production.md)  
+   *Mã hiệu: SOP-DEPLOY-04* — Sổ tay vận hành CD Runbook, phân tách 2 Job độc lập, cấu hình SSH Ed25519, GHCR, Nginx Proxy Manager và cơ chế Zero-Downtime với retry healthcheck.
+
+5. [**Báo cáo bài tập lớn DevSecOps hoàn chỉnh (docs/05-Báo cáo bài tập lớn DevSecOps.md)**](docs/05-B%C3%A1o%20c%C3%A1o%20b%C3%A0i%20t%E1%BA%ADp%20l%E1%BB%9Bn%20DevSecOps.md)  
+   *Mã hiệu: REP-DEVSECOPS-05* — Toàn văn khung cấu trúc báo cáo 6 chương chính thức phục vụ nghiệm thu, ma trận RACI, phân tích kiến trúc Dual-Track/Dual-Stream, đối chiếu thực nghiệm Red Team (14 SQLi vectors) và Blue Team (Loki/Grafana/Semgrep).
 
 ---
 

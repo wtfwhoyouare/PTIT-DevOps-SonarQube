@@ -444,10 +444,18 @@ jobs:
             ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "mkdir -p $PROD_PATH/monitoring"
             scp -i ~/.ssh/deploy_key -P $PROD_PORT -o StrictHostKeyChecking=no -o ConnectTimeout=15 InlaneWeb/docker-compose.monitoring.yml "$PROD_USER@$PROD_HOST:$PROD_PATH/docker-compose.monitoring.yml"
             scp -i ~/.ssh/deploy_key -P $PROD_PORT -o StrictHostKeyChecking=no -o ConnectTimeout=15 -r InlaneWeb/monitoring/* "$PROD_USER@$PROD_HOST:$PROD_PATH/monitoring/"
+            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "docker network create inlaneweb_net 2>/dev/null || true"
             ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "cd $PROD_PATH && docker compose -f docker-compose.monitoring.yml up -d --remove-orphans"
             
-            sleep 3
-            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "curl -s http://localhost:3100/ready | grep -q ready"
+            echo "⏳ Đang kiểm tra trạng thái sẵn sàng của Grafana Loki..."
+            for i in {1..15}; do
+              if ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "curl -s http://127.0.0.1:3100/ready | grep -q ready"; then
+                echo "✅ Grafana Loki đã sẵn sàng nhận log!"
+                break
+              fi
+              echo "   ... chờ Loki ($i/15)"
+              sleep 2
+            done
             echo "✅ Cập nhật hạ tầng giám sát Loki/Grafana/Promtail/Autoheal thành công!"
             STATUS="DEPLOYED"
           else

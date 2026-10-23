@@ -41,20 +41,23 @@ Hệ thống triển khai áp dụng mô hình phân tách độc lập (Decoupl
  [ GITHUB ACTIONS RUNNER ]
       │
       ├─► STAGE 3: Production Gate (Smoke Test & E2E Validation)
-      │     ├─ Validate cấu hình YAML / Python
-      │     ├─ Build Docker Image InlaneWeb (PHP 8.2 Apache)
+      │     ├─ Validate cấu hình YAML / Python (21/21 test cases)
+      │     ├─ Build Docker Images Production (inlaneweb & inlaneweb-db)
       │     ├─ Chạy Ephemeral Stack (App + MariaDB + Loki + Promtail + Grafana)
       │     ├─ Healthcheck /health (HTTP 200) & E2E Smoke Test
-      │     └─ Push Image đã kiểm định lên GitHub Container Registry (GHCR)
-      │        └── Tag: ghcr.io/<owner>/inlaneweb:<sha> & :latest
+      │     └─ Push Images đã kiểm định lên GitHub Container Registry (GHCR)
+      │        ├── ghcr.io/<owner>/inlaneweb:<sha> & :latest
+      │        └── ghcr.io/<owner>/inlaneweb-db:<sha> & :latest
       │
       └─► STAGE 4: Production CD (SSH Over Target VPS)
             │
             ├─► Job 1: Deploy Observability Platform (Loki, Promtail, Grafana, Autoheal)
-            │     └── Lệnh: docker compose -f docker-compose.monitoring.yml up -d
+            │     └── Lệnh: docker compose -f docker-compose.monitoring.yml up -d --remove-orphans
             │
-            └─► Job 2: Deploy Web Workload (Self-contained Image từ GHCR)
-                  └── Lệnh: INLANEWEB_IMAGE=<ghcr_uri> docker compose -f docker-compose.prod.yml up -d --no-deps web
+            └─► Job 2: Deploy Web Workload (Self-contained Images từ GHCR)
+                  ├── Kéo images Web & DB từ GHCR
+                  ├── Lệnh: INLANEWEB_IMAGE=<web_uri> INLANEWEB_DB_IMAGE=<db_uri> docker compose -f docker-compose.prod.yml up -d --remove-orphans
+                  └── Tự động kiểm tra nhịp tim /health (Retry loop 30 lần)
 ```
 
 ---
@@ -227,23 +230,21 @@ Với phương án này, máy chủ VPS chỉ chạy 2 container nhẹ nhàng: `
 ```bash
 cd /opt/inlaneweb
 
-# 1. Kéo Image InlaneWeb từ GHCR
+# 1. Kéo cả 2 Images InlaneWeb và MariaDB từ GHCR
 docker pull ghcr.io/wtfwhoyouare/inlaneweb:latest
+docker pull ghcr.io/wtfwhoyouare/inlaneweb-db:latest
 
-# 2. Khởi chạy MariaDB để nạp database init.sql
-docker compose -f docker-compose.prod.yml up -d db
+# 2. Khởi chạy cụm Web & Database bằng compose production
+docker compose -f docker-compose.prod.yml up -d
 
-# 3. Chờ DB khởi tạo (khoảng 10-15s), kiểm tra xem db đã "healthy" chưa
+# 3. Kiểm tra trạng thái các container (chờ db healthy và web running)
 docker compose -f docker-compose.prod.yml ps
 
-# 4. Khởi chạy Web InlaneWeb
-docker compose -f docker-compose.prod.yml up -d web
-
-# 5. Kiểm tra sức khỏe web ngay trên VPS
-curl -f -s http://localhost:8088/health
+# 4. Kiểm tra sức khỏe web ngay trên VPS
+curl -f -s http://127.0.0.1:8088/health
 # Hoặc mở trình duyệt truy cập: http://<IP_VPS>:8088/
 ```
-*(Khi pipeline tự động chạy qua GitHub Actions, lệnh deploy web cũng chỉ cập nhật container `web` qua `docker compose -f docker-compose.prod.yml up -d --no-deps web`, hoàn toàn độc lập và không đòi hỏi container monitoring phải bật).*
+*(Khi pipeline tự động chạy qua GitHub Actions, lệnh deploy web tự động kéo image theo commit SHA tương ứng và cập nhật container qua `docker compose -f docker-compose.prod.yml up -d --remove-orphans`, hoàn toàn độc lập và không đòi hỏi container monitoring phải bật).*
 
 ---
 
@@ -291,12 +292,14 @@ flowchart TD
    * GitHub Actions tự động kiểm thử build image, dựng stack tạm thời, gọi `/health`, xác nhận Loki nhận log và tag sẵn image GHCR.
 3. **Phê duyệt & Merge PR vào `main`:**
    * Ngay khi PR được merge (sự kiện `push` vào nhánh `main`), Stage 4 được kích hoạt.
-   * `production_deploy_monitoring` kiểm tra diff: nếu có cập nhật monitoring sẽ rollout Loki/Grafana.
-   * `production_deploy_web` SSH vào máy chủ VPS, thực thi kéo image mới nhất từ GHCR và kích hoạt:
+   * `production_deploy_monitoring` kiểm tra diff: nếu có cập nhật monitoring sẽ rollout Loki/Grafana (`docker compose -f docker-compose.monitoring.yml up -d --remove-orphans`).
+   * `production_deploy_web` SSH vào máy chủ VPS, thực thi kéo cả 2 images `inlaneweb` và `inlaneweb-db` từ GHCR và kích hoạt:
      ```bash
-     INLANEWEB_IMAGE=ghcr.io/wtfwhoyouare/inlaneweb:<commit_sha> docker compose -f docker-compose.prod.yml up -d --no-deps web
+     INLANEWEB_IMAGE=ghcr.io/wtfwhoyouare/inlaneweb:<commit_sha> \
+     INLANEWEB_DB_IMAGE=ghcr.io/wtfwhoyouare/inlaneweb-db:<commit_sha> \
+     docker compose -f docker-compose.prod.yml up -d --remove-orphans
      ```
-   * Tự động kiểm tra nhịp tim endpoint `http://localhost:8088/health` trên VPS. Nếu trả về HTTP 200, hoàn tất triển khai thành công!
+   * Tự động kiểm tra nhịp tim endpoint `http://127.0.0.1:8088/health` trên VPS với vòng lặp retry 30 lần (3s/lần) cho đến khi đạt HTTP 200 OK. Nếu sau 30 lần thử không đạt, pipeline tự động trích xuất 50 dòng log cuối của container để chẩn đoán.
 
 ---
 
@@ -312,28 +315,33 @@ flowchart TD
 ### 6.2. Lỗi GHCR: unauthorized / pull access denied
 * **Biểu hiện:** Step trên VPS báo lỗi `docker: Error response from daemon: unauthorized`.
 * **Biện pháp khắc phục:**
-  1. Kiểm tra Visibility của Package trên GitHub đã chuyển sang `Public` chưa.
+  1. Kiểm tra Visibility của Package trên GitHub đã chuyển sang `Public` chưa (cho cả `inlaneweb` và `inlaneweb-db`).
   2. Nếu là Private, đảm bảo lệnh `docker login ghcr.io` đã được thực thi thành công trên máy chủ với Personal Access Token hợp lệ.
 
-### 6.3. Lỗi Healthcheck: Endpoint /health không phản hồi HTTP 200
-* **Biểu hiện:** Step kiểm tra `curl -f -s http://localhost:8088/health` trả về lỗi HTTP 500 hoặc không kết nối được.
-* **Biện pháp khắc phục:**
-  1. Đăng nhập vào VPS và kiểm tra trạng thái container:
+### 6.3. Lỗi Healthcheck: Exit code 22 / Endpoint /health trả về 503
+* **Biểu hiện:** Lệnh `curl -f -s http://localhost:8088/health` trả về mã lỗi `exit code 22` (ứng với HTTP status 503 Service Unavailable hoặc 500).
+* **Nguyên nhân cốt lõi:**
+  1. Cơ sở dữ liệu MariaDB (`ilfreight_db`) đang trong tiến trình khởi tạo schema hoặc nạp buffer pool chưa kịp hoàn tất.
+  2. Đường truyền mạng nội bộ giữa container Web và MariaDB chưa thông suốt.
+* **Biện pháp khắc phục & Đã tự động hóa:**
+  1. Pipeline hiện tại đã tích hợp sẵn **Retry Loop 30 lần** (khoảng 90 giây tối đa), tự động chờ container MariaDB đạt trạng thái `healthy` trước khi đánh giá kết quả.
+  2. Nếu vẫn thất bại sau 30 lần, pipeline sẽ tự động dump 50 dòng log cuối của container lên console GitHub Actions.
+  3. Đăng nhập trực tiếp vào VPS tại `/opt/inlaneweb` để kiểm tra thủ công:
      ```bash
-     cd /opt/inlaneweb/InlaneWeb
+     cd /opt/inlaneweb
      docker compose -f docker-compose.prod.yml ps
      docker compose -f docker-compose.prod.yml logs web
      docker compose -f docker-compose.prod.yml logs db
      ```
-  2. Xác nhận cơ sở dữ liệu `ilfreight_db` đã hoàn tất khởi tạo schema và báo trạng thái `healthy`.
-  3. Kiểm tra biến môi trường kết nối database trong file `docker-compose.prod.yml`.
 
 ### 6.4. Rollback nhanh khi có sự cố nghiêm trọng
 Nếu phiên bản triển khai mới gặp lỗi, kỹ sư vận hành có thể rollback tức thì về phiên bản ổn định trước đó ngay trên VPS:
 ```bash
-cd /opt/inlaneweb/InlaneWeb
+cd /opt/inlaneweb
 
 # Rollback về commit sha ổn định trước đó
-INLANEWEB_IMAGE=ghcr.io/wtfwhoyouare/inlaneweb:<sha_on_dinh> docker compose -f docker-compose.prod.yml up -d --no-deps web
+INLANEWEB_IMAGE=ghcr.io/wtfwhoyouare/inlaneweb:<sha_on_dinh> \
+INLANEWEB_DB_IMAGE=ghcr.io/wtfwhoyouare/inlaneweb-db:<sha_on_dinh> \
+docker compose -f docker-compose.prod.yml up -d --remove-orphans
 ```
 Hoặc trên GitHub: Tạo Pull Request revert commit lỗi trên nhánh `main`, pipeline sẽ tự động deploy lại commit trước đó.

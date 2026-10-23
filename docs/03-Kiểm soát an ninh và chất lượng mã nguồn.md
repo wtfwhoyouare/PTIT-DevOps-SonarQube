@@ -193,16 +193,17 @@ Toàn bộ quy chuẩn an ninh và chất lượng được tích hợp trực t
               • Áp đặt Quality Gate khắt khe (Rating A, 0 Bugs, 0 Vulnerabilities)
               • Xuất báo cáo độc lập (HTML & JSON Artifacts)
 
- [Sự kiện Push/Merge vào nhánh main]
+ [Sự kiện Pull Request vào main & Push vào main]
    │
    ├──► STAGE 3: Production Gate (production_smoke_test)
    │     • Kiểm tra cú pháp cấu hình giám sát (validate_configs.py)
    │     • Build và triển khai kiểm thử môi trường chạy thực tế (Ephemeral Smoke Test)
    │     • Kiểm tra phản hồi HTTP 200 API /health và HTTP 200 Loki /ready
+   │     • Đóng gói và lưu trữ Images an toàn (Web & DB) lên GHCR
    │
-   └──► STAGE 4: Production CD (2 Jobs độc lập)
-         ├─► Job 1: Deploy Observability Platform (Loki, Promtail, Grafana, Autoheal)
-         └─► Job 2: Deploy Web Workload (Apache Web, MariaDB Database)
+   └──► STAGE 4: Production CD (2 Jobs độc lập - Kích hoạt khi Push vào main)
+         ├─► Job 1: Deploy Observability Platform (docker-compose.monitoring.yml)
+         └─► Job 2: Deploy Web Workload (Kéo image GHCR & chạy docker-compose.prod.yml)
 ```
 
 ### 5.2. Môi trường thực thi cô lập (Ephemeral Container Sandbox)
