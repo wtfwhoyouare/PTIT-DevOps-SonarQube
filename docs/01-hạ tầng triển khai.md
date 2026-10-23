@@ -247,3 +247,30 @@ curl -I http://localhost:8080/health
 # 3. Kiểm tra tính sẵn sàng của hệ thống lưu trữ log
 curl -s http://localhost:3100/ready
 ```
+
+---
+
+## 8. ĐẶC TẢ TỰ ĐỘNG HÓA TRIỂN KHAI PRODUCTION (CONTINUOUS DEPLOYMENT)
+
+Hệ thống hỗ trợ cơ chế triển khai tự động trực tiếp từ GitHub Actions lên máy chủ Production (`[STAGE 4: Production CD]`):
+
+### 8.1. Danh mục biến bí mật (GitHub Repository Secrets)
+
+Để kích hoạt tính năng tự động SSH và deploy lên máy chủ thật, quản trị viên cấu hình các Secrets sau tại **Settings → Secrets and variables → Actions**:
+
+| Tên Secret | Bắt buộc | Mô tả |
+| :--- | :---: | :--- |
+| `PROD_HOST` | Có | Địa chỉ IP hoặc tên miền FQDN của máy chủ Production |
+| `PROD_USER` | Có | Tên tài khoản người dùng có quyền quản trị Docker trên host |
+| `PROD_SSH_KEY` | Có | Khóa riêng tư SSH Private Key (OpenSSH RSA/Ed25519) |
+| `PROD_PORT` | Không | Cổng SSH máy chủ (Mặc định: `22`) |
+| `PROD_PATH` | Không | Đường dẫn thư mục cài đặt dự án trên máy chủ (Mặc định: `/opt/inlaneweb`) |
+
+### 8.2. Quy trình phân phát tự động theo đường dẫn (Path-based Selective Rollout)
+
+1. **Nhận diện thay đổi:** Pipeline tự động đối chiếu diff giữa commit trước và commit hiện tại.
+2. **Kích hoạt độc lập:**
+   - Nếu thay đổi tệp thuộc `InlaneWeb/web/` hoặc `InlaneWeb/db/`: Thực thi cập nhật Web workload (`--no-deps --build web`), bảo toàn 100% thời gian hoạt động của hạ tầng giám sát.
+   - Nếu thay đổi tệp thuộc `InlaneWeb/monitoring/`: Chỉ thực thi cập nhật cụm monitoring.
+3. **Hậu kiểm tra (Post-Deployment Verification):** Tự động ping API `/health` của máy chủ Production. Nếu phản hồi mã khác 200, pipeline lập tức ghi nhận lỗi để quản trị viên can thiệp rollback.
+
