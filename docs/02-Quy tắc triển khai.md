@@ -12,8 +12,8 @@ Tài liệu này quy định chi tiết và bắt buộc về chức năng, quy�
 
 ### Ba nguyên tắc bất biến (Inviolable Rules):
 1. 🚫 **KHÔNG commit và push trực tiếp** lên nhánh `main` và `dev`.
-2. 🔀 **CHỈ ĐƯỢC TẠO Pull Request** từ nhánh phát triển cá nhân/feature vào nhánh `dev`.
-3. ⛔ **TUYỆT ĐỐI CẤM tạo Pull Request** từ các nhánh đang phát triển cá nhân/feature trực tiếp lên `main`. Nhánh `main` **CHỈ DUY NHẤT** nhận mã nguồn từ nhánh `dev`.
+2. 🔀 **Pull Request của thành viên CHỈ hướng vào nhánh `dev`** với định dạng tiêu đề: `[<mã_nhánh>] <loại>(<phạm_vi>): <mô tả>`.
+3. ⛔ **TUYỆT ĐỐI CẤM tạo PR từ nhánh cá nhân lên `main`.** Nhánh `main` **CHỈ DUY NHẤT** nhận mã nguồn từ `dev` với định dạng Release: `release: vX.Y.Z - <mô tả>`.
 
 ---
 
@@ -21,23 +21,16 @@ Tài liệu này quy định chi tiết và bắt buộc về chức năng, quy�
 
 ```text
  ┌────────────────────────────────────────────────────────────────────────────────────────┐
- │                                   SƠ ĐỒ PHÂN CẤP NHÁNH                                 │
+ │                      SƠ ĐỒ PHÂN CẤP NHÁNH & LUỒNG PHÁT TRIỂN TỔNG QUAN                 │
  └────────────────────────────────────────────────────────────────────────────────────────┘
 
-    [Nhánh Tính Năng / Cá Nhân]
-     namng, haind, manhdx, anhld, mainp
-         │
-         │  (1) Tạo PR vào dev (Kiểm thử Shift-Left SAST tự động)
-         ▼
-    [Nhánh Tích Hợp Chung]
-     dev
-         │
-         │  (2) Duyệt & Merge sau khi Review
-         │
-         │  (3) Chỉ Admin/Lead mở PR từ dev vào main
-         ▼
-    [Nhánh Production - Ổn định tuyệt đối]
-     main
+    dev ── cập nhật mã mới ──> nhánh cá nhân (namng, haind, manhdx, anhld, mainp)
+                                  │
+                                  ├── commit + push lên nhánh cá nhân (theo Conventional Commits)
+                                  └── Pull Request ──> dev ── Pull Request (Release) ──> main
+                                          │               │           │                   │
+                                          └── CI/CD Guard ┴───────────┴── Smoke Test ─────┘
+                                              (Shift-Left SAST)           (Docker Preview)
 ```
 
 ### 2.1. Nhánh `main` — Nhánh Production (Phát hành chính thức)
@@ -86,31 +79,41 @@ Tài liệu này quy định chi tiết và bắt buộc về chức năng, quy�
 
 Để chính sách không dừng lại ở mức "lời nói", dự án áp dụng 2 tầng bảo vệ tự động:
 
-### Tầng 1: Tự động chặn bằng GitHub Actions CI/CD Pipeline (Phân tách 3 Stage độc lập)
+### Tầng 1: Tự động chặn bằng GitHub Actions CI/CD Pipeline (Phân tách 3 Stage độc lập & Tích hợp Monitoring)
 
-Trong pipeline `.github/workflows/sonarqube.yml`, quy trình kiểm soát được phân tách thành **3 Giai đoạn (Stages)** riêng biệt theo mô hình DAG (Directed Acyclic Graph) tuần tự, không gộp chung khối gây hiểu nhầm:
+Hệ thống CI/CD được thiết lập tự động hóa 100% trên **GitHub Actions** (`.github/workflows/sonarqube.yml`), phân tách thành **3 Giai đoạn (Stages)** riêng biệt theo mô hình DAG (Directed Acyclic Graph) tuần tự, tích hợp kiểm soát an ninh mã nguồn tĩnh và xác thực toàn diện cụm giám sát FOSS:
 
 ```text
-  ┌────────────────────────────────────────────────────────┐
-  │ [STAGE 1] Policy Guard — Kiểm tra Nhánh, Commit & PR   │  (Chạy nhanh 3-5s cho mọi Push & PR)
-  └───────────────────────────┬────────────────────────────┘
-                              │
-          ┌───────────────────┴───────────────────┐
-          ▼ (Khi PR hoặc Merge vào DEV)           ▼ (Khi PR hoặc Merge vào MAIN)
-  ┌────────────────────────────────────────┐      │
-  │ [STAGE 2: Dev Gate] Shift-Left SAST    │      │
-  │  ├── SonarQube SAST & Code Quality     │      │
-  │  └── Semgrep Security SAST (Taint Data)│      │
-  └───────────────────┬────────────────────┘      │
-                      │                           │
-                      ▼ (Sau khi hoàn tất Stage 2)▼
-  ┌────────────────────────────────────────────────────────┐
-  │ [STAGE 3: Production Gate] Docker Build & Smoke Test   │  (Chỉ mở cổng kiểm thử trước khi nạp vào MAIN)
-  │  ├── Build sạch toàn bộ Docker Images                  │
-  │  ├── Khởi chạy Preview trong Runner (Docker Compose)   │
-  │  ├── Healthcheck MariaDB đạt trạng thái healthy       │
-  │  └── Gọi API /health (HTTP 200) & Smoke Test Trang chủ │
-  └────────────────────────────────────────────────────────┘
+ ┌────────────────────────────────────────────────────────────────────────┐
+ │ [STAGE 1] Policy Guard — Kiểm tra Nhánh, Commit & PR                   │ (Kích hoạt nhanh 3-5s cho mọi Push & PR)
+ │  └── Chặn commit sai Conventional Commits & PR sai nhánh / tiêu đề     │
+ └───────────────────────────────────┬────────────────────────────────────┘
+                                     │
+                 ┌───────────────────┴───────────────────┐
+                 ▼ (Khi PR hoặc Merge vào DEV)           ▼ (Khi PR hoặc Merge vào MAIN)
+ ┌────────────────────────────────────────┐              │
+ │ [STAGE 2: Dev Gate] Shift-Left SAST    │              │
+ │  ├── SonarQube SAST & Code Quality     │              │
+ │  │   (Bugs, code smells, lỗ hổng)      │              │
+ │  ├── Semgrep Security SAST             │              │
+ │  │   (Taint data: SQLi, XSS, Misconfig)│              │
+ │  └── Lint Config & Rule Validation     │              │
+ │      (Kiểm tra cú pháp cấu hình FOSS)  │              │
+ └───────────────────┬────────────────────┘              │
+                     │                                   │
+                     ▼ (Sau khi hoàn tất Stage 2)        ▼
+ ┌────────────────────────────────────────────────────────────────────────┐
+ │ [STAGE 3: Production Gate] Docker Build & Monitoring Smoke Test        │ (Chỉ mở cổng kiểm thử trước khi nạp vào MAIN)
+ │  ├── 1. Build sạch toàn bộ Docker Images (App + Monitoring Stack)      │
+ │  ├── 2. Khởi chạy toàn bộ cụm: App + DB + Loki + Promtail + Grafana    │
+ │  ├── 3. Healthcheck dịch vụ (MariaDB healthy, Web /health HTTP 200)    │
+ │  ├── 4. E2E Logging & Alert Test (Kiểm thử thực tế luồng log):         │
+ │  │    • Bắn thử request gây lỗi 500 giả định                           │
+ │  │    • Truy vấn API Loki kiểm tra log lỗi đã được Promtail nhặt chưa  │
+ │  │    • Xác nhận Rule Alert phát hiện lỗi sẵn sàng hoạt động           │
+ │  ├── 5. E2E Autoheal Test: Giả lập crash container -> Docker tự cứu   │
+ │  └── 6. Ghi báo cáo Step Summary & Dọn dẹp sạch sẽ runner              │
+ └────────────────────────────────────────────────────────────────────────┘
 ```
 
 #### 📋 Bảng tổng hợp các Stage trong Pipeline:
@@ -119,7 +122,7 @@ Trong pipeline `.github/workflows/sonarqube.yml`, quy trình kiểm soát đư�
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **STAGE 1: Policy Guard** | `[STAGE 1] Policy Guard — Kiểm tra Nhánh, Commit & PR` | **Mọi sự kiện Push** lên nhánh cá nhân & **Mọi PR** vào `dev`/`main` *(3-5s)* | 1. **Kiểm tra Commit:** Quét toàn bộ commit trong payload đẩy lên, đối chiếu chuẩn Conventional Commits.<br>2. **Bảo vệ nhánh Main:** Ngăn chặn ngay lập tức nếu ai đó mở PR từ nhánh cá nhân vào `main`.<br>3. **Kiểm tra tiêu đề PR:** Xác thực cú pháp PR vào `dev` (`[<nhánh>] ...`) và PR vào `main` (`release: vX.Y.Z ...`). | - **100% commit** khớp regex Conventional Commits.<br>- Nhánh đích `main` chỉ nhận head từ `dev`.<br>- Tiêu đề PR khớp 100% regex theo tầng tương ứng. | ❌ **FAIL ngay lập tức (Exit 1)**.<br>Khóa lệnh commit/PR, in hộp hướng dẫn kèm câu lệnh sửa lỗi (`git commit --amend` hoặc đổi tên PR). |
 | **STAGE 2: Dev Gate** | `[STAGE 2: Dev Gate] SonarQube SAST & Code Quality`<br><br>`[STAGE 2: Dev Gate] Semgrep Security SAST` | **Chỉ kích hoạt khi:**<br>- Tạo Pull Request vào `dev`<br>- Merge/Push chính thức trên `dev` | 1. **SonarQube SAST:** Khởi tạo container SonarQube phân tích độ tin cậy, nợ kỹ thuật (Technical Debt), Code Smells, Bugs và tính chuẩn mực PSR-12 của PHP 8.2.<br>2. **Semgrep SAST:** Quét chuyên sâu bảo mật theo luồng dữ liệu Taint-Tracking (Source -> Sink), dò tìm các lỗ hổng Injection (SQLi, XSS), cấu hình sai bảo mật.<br>3. **Báo cáo:** Xuất Step Summary trực quan và đính kèm Artifacts báo cáo PDF/HTML/JSON. | - **Unit test CI:** 20/20 test cases chạy PASS (`exit 0`).<br>- **PHP Lint:** Cú pháp PHP 8.2 không có lỗi Fatal/Syntax.<br>- **Báo cáo SAST:** Quét hoàn tất, không phát hiện lỗi crash hệ thống, báo cáo được đính kèm vào Step Summary.<br>- **Reviewer duyệt:** Đạt tối thiểu 1 Approval từ Tech Lead sau khi đánh giá các phát hiện bảo mật. | ⚠️ **Cảnh báo chất lượng** trên giao diện PR.<br>Lead/Reviewer dựa vào kết quả kiểm tra để yêu cầu dev vá lỗ hổng trước khi phê duyệt merge vào nhánh `dev`. |
-| **STAGE 3: Production Gate** | `[STAGE 3: Production Gate] Docker Build & Smoke Test Healthcheck` | **Chỉ kích hoạt khi:**<br>- Tạo Pull Request từ `dev` vào `main`<br>- Merge/Push chính thức trên `main` | 1. **Docker Build Validation:** Tự động build sạch toàn bộ Dockerfile (Apache PHP 8.2 & MariaDB). Đảm bảo mã nguồn đóng gói thành container thành công 100%.<br>2. **Ephemeral Deployment:** Bung cụm container chạy thử nghiệm thật ngay trong GitHub Runner bằng `docker compose up -d`.<br>3. **Database Healthcheck:** Vòng lặp ping kiểm tra container `ilfreight_db` đạt trạng thái `healthy` (schema và dữ liệu khởi tạo xong).<br>4. **API Healthcheck:** Gọi `GET /health`, bắt buộc phản hồi HTTP 200 OK và xác nhận Database kết nối thông suốt.<br>5. **E2E Smoke Test:** Tải thử Trang chủ (`/`), kiểm tra nạp đủ nội dung thương hiệu IlFreight.<br>6. **Teardown:** Tự động dọn dẹp sạch sẽ cụm container trong runner sau khi kiểm thử xong. | - **Docker Build:** Mã thoát `exit 0`, không thiếu file/package.<br>- **MariaDB Status:** Báo `healthy` trong vòng tối đa 90 giây.<br>- **API /health:** Trả về HTTP Code đúng `200` và JSON `status: UP, database: connected`.<br>- **Smoke Test:** Trang chủ nạp thành công HTTP 200 và chứa nội dung `IlFreight`. | ⛔ **CHẶN ĐỨNG MERGE VÀO MAIN**.<br>Nếu Docker build gãy hoặc `/health` không trả về 200, PR lập tức bị khóa, không cho phép nạp mã nguồn lỗi lên môi trường Production! |
+| **STAGE 3: Production Gate** | `[STAGE 3: Production Gate] Docker Build & Smoke Test Healthcheck` | **Chỉ kích hoạt khi:**<br>- Tạo Pull Request từ `dev` vào `main`<br>- Merge/Push chính thức trên `main` | 1. **Docker Build Validation:** Tự động build sạch toàn bộ Dockerfile (Web PHP 8.2 & MariaDB + Stack giám sát). Đảm bảo mã nguồn đóng gói thành công 100%.<br>2. **Ephemeral Deployment:** Bung cụm container chạy thử nghiệm thật trong GitHub Runner bằng `docker compose up -d`.<br>3. **Database Healthcheck:** Vòng lặp ping kiểm tra container `ilfreight_db` đạt trạng thái `healthy`.<br>4. **API Healthcheck:** Gọi `GET /health`, bắt buộc phản hồi HTTP 200 OK và xác nhận Database kết nối thông suốt.<br>5. **E2E Smoke Test & Logging Validation:** Tải thử Trang chủ (`/`), đồng thời kiểm thử luồng log đẩy về Loki & cơ chế autoheal.<br>6. **Teardown:** Tự động dọn dẹp sạch sẽ cụm container trong runner sau khi kiểm thử xong. | - **Docker Build:** Mã thoát `exit 0`, không thiếu file/package.<br>- **MariaDB Status:** Báo `healthy` trong vòng tối đa 90 giây.<br>- **API /health:** Trả về HTTP Code đúng `200` và JSON `status: UP, database: connected`.<br>- **Monitoring Stack:** Loki phản hồi `/ready` và lưu trữ log thành công.<br>- **Smoke Test:** Trang chủ nạp thành công HTTP 200 và chứa nội dung `IlFreight`. | ⛔ **CHẶN ĐỨNG MERGE VÀO MAIN**.<br>Nếu Docker build gãy hoặc `/health` không trả về 200, PR lập tức bị khóa, không cho phép nạp mã nguồn lỗi lên môi trường Production! |
 
 ### Tầng 2: Thiết lập Branch Protection Rules trên GitHub Repository
 Admin repository kích hoạt cấu hình bảo vệ trên GitHub Web (**Settings → Branches / Rulesets**):
