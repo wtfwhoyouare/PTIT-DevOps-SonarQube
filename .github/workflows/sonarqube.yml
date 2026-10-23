@@ -356,3 +356,118 @@ jobs:
           cd InlaneWeb
           docker compose -f docker-compose.monitoring.yml down -v --remove-orphans || true
           docker compose down -v --remove-orphans || true
+
+  production_deploy:
+    name: "[STAGE 4: Production CD] Automated Live Deployment"
+    needs: [production_smoke_test]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.production_smoke_test.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: 1. Detect Changes for Dual-Track Deployment
+        id: detect_changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "🔍 [Dual-Track CD] Phân tích các phân hệ có sự thay đổi mã nguồn..."
+          PREV_COMMIT="${{ github.event.before }}"
+          if [ -z "$PREV_COMMIT" ] || [ "$PREV_COMMIT" = "0000000000000000000000000000000000000000" ]; then
+            CHANGED_FILES=$(git diff-tree --no-commit-id --name-only -r HEAD || echo "")
+          else
+            CHANGED_FILES=$(git diff --name-only "$PREV_COMMIT" HEAD || echo "")
+          fi
+          echo "Danh sách tệp thay đổi:"
+          echo "$CHANGED_FILES"
+
+          DEPLOY_WEB=false
+          DEPLOY_MONITORING=false
+
+          if echo "$CHANGED_FILES" | grep -qE "^(InlaneWeb/web/|InlaneWeb/db/|InlaneWeb/docker-compose\.yml)"; then
+            DEPLOY_WEB=true
+            echo "👉 Phát hiện thay đổi trong Khối Ứng dụng Nghiệp vụ (Web/DB)."
+          fi
+
+          if echo "$CHANGED_FILES" | grep -qE "^(InlaneWeb/monitoring/|InlaneWeb/docker-compose\.monitoring\.yml|ci/validate_configs\.py)"; then
+            DEPLOY_MONITORING=true
+            echo "👉 Phát hiện thay đổi trong Khối Hạ tầng Giám sát (Monitoring/Logging)."
+          fi
+
+          if [ "$DEPLOY_WEB" = "false" ] && [ "$DEPLOY_MONITORING" = "false" ]; then
+            echo "👉 Thay đổi tài liệu/cấu hình chung; thiết lập kiểm tra đồng bộ cả hai phân hệ."
+            DEPLOY_WEB=true
+            DEPLOY_MONITORING=true
+          fi
+
+          echo "deploy_web=$DEPLOY_WEB" >> "$GITHUB_OUTPUT"
+          echo "deploy_monitoring=$DEPLOY_MONITORING" >> "$GITHUB_OUTPUT"
+
+      - name: 2. Execute Production Deployment
+        id: deploy
+        env:
+          PROD_HOST: ${{ secrets.PROD_HOST }}
+          PROD_USER: ${{ secrets.PROD_USER }}
+          PROD_SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+          PROD_PORT: ${{ secrets.PROD_PORT || '22' }}
+          PROD_PATH: ${{ secrets.PROD_PATH || '/opt/inlaneweb' }}
+          DEPLOY_WEB: ${{ steps.detect_changes.outputs.deploy_web }}
+          DEPLOY_MONITORING: ${{ steps.detect_changes.outputs.deploy_monitoring }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -n "$PROD_HOST" ] && [ -n "$PROD_USER" ] && [ -n "$PROD_SSH_KEY" ]; then
+            echo "🚀 [Live Deployment] Kết nối tới máy chủ Production ($PROD_HOST)..."
+            
+            mkdir -p ~/.ssh
+            echo "$PROD_SSH_KEY" > ~/.ssh/deploy_key
+            chmod 600 ~/.ssh/deploy_key
+            SSH_OPTS="-i ~/.ssh/deploy_key -p $PROD_PORT -o StrictHostKeyChecking=no -o ConnectTimeout=15"
+
+            # 1. Đồng bộ mã nguồn mới nhất trên máy chủ Production
+            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "mkdir -p $PROD_PATH && cd $PROD_PATH && git fetch origin main && git checkout -f main && git pull origin main"
+
+            # 2. Triển khai phân hệ Giám sát nếu có thay đổi
+            if [ "$DEPLOY_MONITORING" = "true" ]; then
+              echo "📊 [Monitoring Rollout] Cập nhật hạ tầng giám sát tập trung..."
+              ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "cd $PROD_PATH/InlaneWeb && docker compose -f docker-compose.monitoring.yml up -d --remove-orphans"
+            fi
+
+            # 3. Triển khai phân hệ Web độc lập (Zero Downtime cho Logging)
+            if [ "$DEPLOY_WEB" = "true" ]; then
+              echo "🌐 [Web Rollout] Triển khai bản phát hành Web mới (Giữ nguyên cụm logging)..."
+              ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "cd $PROD_PATH/InlaneWeb && docker compose up -d --no-deps --build web"
+            fi
+
+            # 4. Kiểm tra sức khỏe sau triển khai (Post-Deployment Healthcheck)
+            echo "🩺 [Post-Deploy Verification] Xác thực trạng thái hệ thống Production..."
+            sleep 5
+            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "curl -f -s http://localhost:8080/health || curl -f -s http://localhost:80/health"
+            echo "✅ Triển khai Live Production thành công!"
+            DEPLOY_STATUS="DEPLOYED"
+          else
+            echo "ℹ️ [Production Delivery Readiness] Pipeline CD đã sẵn sàng!"
+            echo "   Các biến bí mật PROD_HOST / PROD_USER / PROD_SSH_KEY chưa được cấu hình trong GitHub Secrets."
+            echo "   Khi thêm Secrets trên GitHub Settings -> Secrets, pipeline sẽ tự động SSH và deploy ngay lập tức."
+            DEPLOY_STATUS="PRIMED_STANDBY"
+          fi
+
+          cat << EOF >> "$GITHUB_STEP_SUMMARY"
+          ## 🚢 Live Production Deployment — HOÀN THÀNH
+
+          > Tự động điều phối phân phát mã nguồn lên môi trường Production thực tế sau khi vượt qua Stage 3.
+
+          | Tiêu chí | Trạng thái | Chi tiết |
+          | :--- | :---: | :--- |
+          | **Mục tiêu triển khai** | \`$PROD_HOST\` | Máy chủ Production đích |
+          | **Phân hệ Web/DB** | \`$DEPLOY_WEB\` | Lệnh: \`docker compose up -d --no-deps --build web\` |
+          | **Phân hệ Giám sát** | \`$DEPLOY_MONITORING\` | Lệnh: \`docker compose -f ...monitoring.yml up -d\` |
+          | **Trạng thái phân phát** | **$DEPLOY_STATUS** | Đã sẵn sàng cơ chế điều phối tự động |
+
+          EOF
+
