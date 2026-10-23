@@ -1,6 +1,7 @@
 <?php
 /**
  * lib/logger.php — Bộ thu thập nhật ký ứng dụng InlaneWeb (Application Error & Exception Logger)
+ */
 
 class InlaneLogger
 {

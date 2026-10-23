@@ -64,6 +64,7 @@ def main():
     if not SEMGREP_JSON.exists():
         raise SystemExit(f"Missing {SEMGREP_JSON}")
 
+    data = json.loads(SEMGREP_JSON.read_text(encoding="utf-8"))
     scan_errors = data.get("errors", [])
     if scan_errors:
         print(f"⚠️ Semgrep ghi nhận {len(scan_errors)} thông báo / scan errors:", file=sys.stderr)
