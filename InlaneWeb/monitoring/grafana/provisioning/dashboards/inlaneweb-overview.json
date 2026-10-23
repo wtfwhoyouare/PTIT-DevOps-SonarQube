@@ -43,7 +43,7 @@
         {
           "datasource": { "type": "loki", "uid": "Loki" },
           "editorMode": "code",
-          "expr": "{container=\"ilfreight_web\"} |~ \"(?i)(HTTP-ATTACK-VECTOR|SQLI_|PATH_TRAVERSAL|XSS_INJECTION)\"",
+          "expr": "{container=\"ilfreight_web\"} |~ \"(?i)(union(\\\\s+|%20|\\\\+)select|sleep\\\\(|benchmark\\\\(|or(\\\\s+|%20|\\\\+)1=1|load_file|into(\\\\s+|%20|\\\\+)outfile|information_schema|\\\\.\\\\./|%2e%2e%2f|<script|%3cscript)\"",
           "queryType": "range",
           "refId": "A"
         }
@@ -66,7 +66,7 @@
         {
           "datasource": { "type": "loki", "uid": "Loki" },
           "editorMode": "code",
-          "expr": "{container=\"ilfreight_web\"} |~ \"(?i)(HTTP-ERROR-BASED-RESPONSE|SQL_ERROR_LEAK|SQL_SYNTAX_ERROR| 500 | 404 )\"",
+          "expr": "{container=\"ilfreight_web\"} |~ \"(?i)(syntax\\\\s+error|database_query_failure|mysqli_error|SQL\\\\s+Error|\\\\\"status\\\\\":50[0-9]|\\\\\"status\\\\\":40[0-9]| 500 | 404 )\"",
           "queryType": "range",
           "refId": "A"
         }
@@ -89,7 +89,7 @@
         {
           "datasource": { "type": "loki", "uid": "Loki" },
           "editorMode": "code",
-          "expr": "sum(rate({container=\"ilfreight_web\"} |~ \"(?i)(HTTP-ATTACK-VECTOR|HTTP-ERROR-BASED-RESPONSE)\"[1m]))",
+          "expr": "sum(rate({container=\"ilfreight_web\"} |~ \"(?i)(union(\\\\s+|%20|\\\\+)select|sleep\\\\(|benchmark\\\\(|or(\\\\s+|%20|\\\\+)1=1|load_file|into(\\\\s+|%20|\\\\+)outfile|information_schema|\\\\.\\\\./|%2e%2e%2f|<script|database_query_failure|syntax\\\\s+error)\"[1m]))",
           "legendFormat": "Attack & Error-Based Events",
           "queryType": "range",
           "refId": "A"
@@ -97,7 +97,7 @@
         {
           "datasource": { "type": "loki", "uid": "Loki" },
           "editorMode": "code",
-          "expr": "sum(rate({container=\"ilfreight_web\"} |= \" 500 \"[1m]))",
+          "expr": "sum(rate({container=\"ilfreight_web\"} |~ \"(?i)(\\\\\"status\\\\\":50[0-9]| 500 )\"[1m]))",
           "legendFormat": "HTTP 500 Errors",
           "queryType": "range",
           "refId": "B"

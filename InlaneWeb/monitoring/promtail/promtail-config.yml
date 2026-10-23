@@ -44,6 +44,7 @@ scrape_configs:
           stages:
             - labels:
                 log_category: app_exception
+                has_cause_exception: "true"
                 level: error
 
       # 3. Phân loại KHỐI 2: Log lưu lượng HTTP từ Web Server Apache
@@ -56,7 +57,7 @@ scrape_configs:
 
       # 4. Nhận diện các Vector tấn công xuất hiện trong lưu lượng HTTP (SQLi, Path Traversal, XSS)
       - match:
-          selector: '{container="ilfreight_web"} |~ "(?i)(union\\s+select|sleep\\(|benchmark\\(|or\\s+1=1|--|load_file|into\\s+outfile|information_schema|\\.\\./|<script)"'
+          selector: '{container="ilfreight_web"} |~ "(?i)(union(\\s+|%20|\\+)select|sleep\\(|benchmark\\(|or(\\s+|%20|\\+)1=1|--|load_file|into(\\s+|%20|\\+)outfile|information_schema|\\.\\./|%2e%2e%2f|<script|%3cscript)"'
           stages:
             - labels:
                 log_category: http_traffic
@@ -65,7 +66,7 @@ scrape_configs:
 
       # 5. Nhận diện phản hồi rò rỉ lỗi Error-Based và mã lỗi HTTP 4xx/5xx
       - match:
-          selector: '{container="ilfreight_web"} |~ "(?i)(SQL Error|syntax error|mysqli_sql_exception|Fatal error| 500 |\"status\":500|\"status\":404)"'
+          selector: '{container="ilfreight_web"} |~ "(?i)(SQL Error|syntax error|mysqli_sql_exception|database_query_failure|Fatal error| 500 |\"status\":50[0-9]|\"status\":40[0-9])"'
           stages:
             - labels:
                 log_category: http_traffic
