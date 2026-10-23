@@ -21,7 +21,7 @@ if hasattr(sys.stderr, "reconfigure"):
 # Cú pháp: <type>(<scope>): <mô tả> hoặc <type>: <mô tả>
 # Cho phép merge commit mặc định của Git: Merge branch... hoặc Merge pull request...
 COMMIT_REGEX = re.compile(
-    r"^(Merge\s.+|Revert\s.+|(feat|fix|sec|ci|docs|refactor|test|chore|style|perf|revert)(\([a-zA-Z0-9_\-\.\/]+\))?:\s.+)",
+    r"^(Merge\s.+|Revert\s.+|(release|RELEASE):\s+v[0-9]+\.[0-9]+\.[0-9]+.*|(feat|fix|sec|ci|docs|refactor|test|chore|style|perf|revert|release)(\([a-zA-Z0-9_\-\.\/]+\))?:\s.+)",
     re.IGNORECASE,
 )
 
