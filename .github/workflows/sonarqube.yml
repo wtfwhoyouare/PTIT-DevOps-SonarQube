@@ -360,7 +360,7 @@ jobs:
   production_deploy_monitoring:
     name: "[STAGE 4: Production CD] Deploy Observability Platform"
     needs: [production_smoke_test]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.production_smoke_test.result == 'success'
+    if: always() && needs.production_smoke_test.result == 'success' && github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -443,7 +443,7 @@ jobs:
   production_deploy_web:
     name: "[STAGE 4: Production CD] Deploy Web Workload"
     needs: [production_smoke_test]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.production_smoke_test.result == 'success'
+    if: always() && needs.production_smoke_test.result == 'success' && github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
