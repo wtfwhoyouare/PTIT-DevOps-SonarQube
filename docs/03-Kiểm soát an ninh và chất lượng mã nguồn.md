@@ -225,6 +225,25 @@ Khi một Pull Request được kích hoạt:
    * Tạo báo cáo tóm tắt các chỉ số cốt lõi (Bugs, Vulnerabilities, Hotspots, Rating).
    * Lưu trữ artifact độc lập `reports/sonarqube-report.html` và `reports/sonarqube-quality-gate.json` với thời hạn lưu trữ 30 ngày để phục vụ kiểm toán tuân thủ.
 
+### 5.5. Tiêu chuẩn ghi nhận nhật ký vận hành và chẩn đoán an ninh (Runtime Diagnostics & Security Logging Standard)
+Để đảm bảo khả năng điều tra số (Forensics) và phản ứng sự cố trong môi trường vận hành, hệ thống áp đặt quy chuẩn phân tách rõ ràng 2 luồng nhật ký:
+
+#### 1. Khối nhật ký sinh ra từ ứng dụng web (Application-Level Cause Exceptions):
+* **Yêu cầu kỹ thuật:** Bắt buộc phải capture toàn bộ chuỗi nguyên nhân ngoại lệ (*Cause Exceptions*) thông qua module `InlaneLogger`.
+* **Cấu trúc trường thông tin:**
+  * `timestamp`: Thời gian chuẩn ISO 8601 theo múi giờ UTC.
+  * `class`: Tên lớp ngoại lệ đầy đủ (ví dụ: `mysqli_sql_exception`, `TypeError`).
+  * `root_cause`: Thông điệp lỗi chi tiết từ tầng nguyên nhân gốc.
+  * `cause_chain`: Mảng các ngoại lệ tiền nhiệm được lồng nhau (`$e->getPrevious()`).
+  * `stack_trace`: Dấu vết ngăn xếp mã nguồn phục vụ xác định chính xác dòng lệnh lỗi.
+  * `failed_query`: Câu lệnh truy vấn SQL gây ra sự cố (được ghi nhận trong các sự cố cơ sở dữ liệu).
+
+#### 2. Khối nhật ký lưu lượng HTTP và an ninh mạng (HTTP Traffic, Attack Vectors & Error-Based Leaks):
+* **Yêu cầu kỹ thuật:** Bàn giao cho tầng máy chủ web Apache ghi nhận trực tiếp qua `CustomLog` định dạng JSON (`apache_json`), giúp giảm thiểu tải xử lý cho ứng dụng InlaneWeb.
+* **Các chỉ tiêu giám sát:**
+  * **Capture Vector tấn công:** Apache tự động ghi nhận Method, Client IP, Request URI, và toàn bộ Query String (`%q`) chứa các vector tấn công phổ biến (SQL Injection như `' OR 1=1`, `UNION SELECT`, `SLEEP()`, `load_file`; Path Traversal `../`; Command Injection `;`; XSS) để Promtail bóc tách nhãn `traffic_type="attack_vector"`.
+  * **Capture phản hồi lỗi hiển thị (Error-Based Response Inspection):** Ghi nhận trạng thái phản hồi HTTP (`%>s`) kết hợp các mã lỗi máy chủ (HTTP 4xx, HTTP 5xx) và chuỗi thông báo lỗi cú pháp rò rỉ (`SQL Error:`, `syntax error in your SQL`, `Fatal error:`) để Promtail bóc tách nhãn `traffic_type="error_based_leak"`.
+
 ---
 
 ## 6. QUY TRÌNH THAY ĐỔI, ĐỆ TRÌNH VÀ BẢO TRÌ BỘ QUY TẮC

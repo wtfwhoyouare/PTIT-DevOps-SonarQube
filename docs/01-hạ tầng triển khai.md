@@ -81,75 +81,109 @@ Mục tiêu thiết kế:
 
 ---
 
+---
+
 ### 3.2. Khối giám sát tập trung và thu thập log (Observability Engine)
 
-#### 1. Trình thu thập dữ liệu (Promtail 3.0):
-* **Vai trò:** Log Shipper thu thập luồng log từ các container đang chạy trên host.
-* **Cơ chế thu thập:** Gắn socket máy chủ `/var/run/docker.sock` ở chế độ chỉ đọc kết hợp cấu hình `user: root` để đảm bảo quyền truy cập file socket trên hệ điều hành Linux.
-* **Quy trình xử lý:** Promtail tự động gắn nhãn (labeling) dựa trên metadata của Docker (container_name, service_name) và áp dụng biểu thức chính quy để bóc tách mã lỗi HTTP, phát hiện stack trace của PHP.
+Hệ thống phân tách kiến trúc nhật ký thành **hai luồng chẩn đoán độc lập (Decoupled Dual-Stream Logging)**:
+
+#### 1. Luồng nhật ký ứng dụng web (Application-Level Exception & Runtime Diagnostics):
+* **Cơ chế thu thập:** Thực hiện qua module lõi `InlaneWeb/web/src/lib/logger.php` và đăng ký toàn cục tại `index.php`.
+* **Trọng tâm giám sát:** Bắt trọn vẹn mọi nguyên nhân ngoại lệ (*Cause Exceptions*), lỗi cú pháp cơ sở dữ liệu và chuỗi lỗi lồng nhau (*Nested Root Causes*).
+* **Các thuộc tính bắt buộc:**
+  * `class`: Định danh lớp ngoại lệ (ví dụ: `mysqli_sql_exception`, `TypeError`, `RuntimeException`).
+  * `root_cause`: Chuỗi thông điệp mô tả nguyên nhân cốt lõi phát sinh lỗi.
+  * `cause_chain`: Danh sách các ngoại lệ tiền nhiệm được liên kết qua phương thức `$e->getPrevious()`.
+  * `stack_trace`: Dấu vết ngăn xếp chi tiết hỗ trợ điều tra gỡ lỗi.
+  * `file` & `line`: Vị trí chính xác phát sinh ngoại lệ trong mã nguồn.
+
+#### 2. Luồng nhật ký lưu lượng HTTP và an ninh mạng (HTTP Traffic & Attack Diagnostics):
+* **Cơ chế thu thập:** Được bàn giao hoàn toàn cho máy chủ web Apache xử lý trực tiếp thông qua cấu hình `CustomLog` định dạng JSON (`apache_json` tại `InlaneWeb/web/apache/000-default.conf`). Giải pháp này giúp giải phóng tải cho ứng dụng PHP InlaneWeb, đảm bảo 100% mọi request được ghi nhận phi tập trung ngay tại tầng proxy/web server.
+* **Trọng tâm giám sát:**
+  * **Vector tấn công (Attack Vectors):** Ghi nhận đầy đủ Method, Client IP, Request URI, và toàn bộ Query String (`%q`) chứa các vector tấn công phổ biến (SQL Injection như `' OR 1=1`, `UNION SELECT`, `SLEEP()`, `load_file`; Path Traversal `../`; Command Injection `;`; XSS).
+  * **Phản hồi lỗi hiển thị (Error-Based Response Leaks):** Giám sát trạng thái phản hồi HTTP (`%>s`) kết hợp các mã lỗi máy chủ (HTTP 4xx, HTTP 5xx) và chuỗi thông báo lỗi cú pháp rò rỉ (`SQL Error:`, `syntax error in your SQL`, `Fatal error:`).
+
+#### 3. Trình thu thập dữ liệu (Promtail 3.0):
+* **Vai trò:** Log Shipper thu thập luồng log từ các container đang chạy trên host qua `/var/run/docker.sock`.
+* **Phân loại nhãn tự động:**
+  * Luồng ứng dụng: Gán nhãn `log_category="app_exception"`, `has_cause_exception="true"`.
+  * Luồng HTTP tấn công: Gán nhãn `log_category="http_traffic"`, `traffic_type="attack_vector"`.
+  * Luồng HTTP rò rỉ lỗi: Gán nhãn `log_category="http_traffic"`, `traffic_type="error_based_leak"`.
 * **Cấu hình chi tiết:** `InlaneWeb/monitoring/promtail/promtail-config.yml`.
 
-#### 2. Máy chủ lưu trữ và xử lý log (Grafana Loki 3.0):
-* **Vai trò:** Log Aggregation Server.
-* **Nguyên lý lưu trữ:** Chỉ đánh chỉ mục (index) metadata và labels, lưu trữ nội dung log nén thành các chunk nhị phân trên hệ thống tệp cục bộ (`filesystem`). Cấu trúc này giảm mức tiêu thụ bộ nhớ RAM xuống dưới 100MB, phù hợp với mọi quy mô phần cứng.
-* **Bộ quy tắc cảnh báo (Loki Ruler Engine):** Định kỳ đánh giá các truy vấn LogQL theo chu kỳ 10 giây.
+#### 4. Máy chủ lưu trữ và xử lý log (Grafana Loki 3.0):
+* **Vai trò:** Log Aggregation Server. Lưu trữ các chunk log nén trên filesystem và phân tách luồng truy vấn LogQL theo từng category độc lập.
 * **Cấu hình chi tiết:** `InlaneWeb/monitoring/loki/loki-config.yml`.
 
-#### 3. Bộ quy tắc cảnh báo phát hiện sự cố tự động (Alert Rules):
+#### 5. Bộ quy tắc cảnh báo phát hiện sự cố tự động (Alert Rules):
 Được định nghĩa tại `InlaneWeb/monitoring/loki/rules/fake/alert-rules.yml`:
-* **`HighHttp5xxRate`:** Kích hoạt cảnh báo mức `critical` khi số lượng lỗi HTTP 5xx vượt quá 5 lỗi trong vòng 1 phút.
-* **`DatabaseConnectionLost`:** Kích hoạt cảnh báo mức `critical` khi phát hiện các chuỗi thông báo mất kết nối MariaDB (`Access denied`, `Connection refused`, `Can't connect to MySQL server`) trong log của Apache/PHP.
-* **`PhpFatalCrash`:** Kích hoạt cảnh báo mức `warning` khi xuất hiện các sự kiện `Fatal error` hoặc `Uncaught Exception`.
+* **`ApplicationCauseExceptionDetected`:** Kích hoạt cảnh báo mức `critical` khi phát hiện chuỗi ngoại lệ nguyên nhân phát sinh trong container `ilfreight_web`.
+* **`HttpAttackVectorDetected`:** Kích hoạt cảnh báo mức `high` khi phát hiện payload chứa vector tấn công trong lưu lượng HTTP.
+* **`HttpErrorBasedResponseLeak`:** Kích hoạt cảnh báo mức `high` khi phát hiện phản hồi HTTP trả về client có chứa thông tin lỗi cú pháp SQL hoặc rò rỉ error-based.
+* **`HighHttp5xxRate`:** Cảnh báo mức `critical` khi tần suất lỗi HTTP 5xx tăng vọt.
+* **`DatabaseConnectionLost`:** Cảnh báo mức `critical` khi ứng dụng mất kết nối tới MariaDB.
 
-#### 4. Trực quan hóa và bảng điều khiển (Grafana 11.0):
-* **Cơ chế nạp tự động (Provisioning):** Tự động liên kết Loki Datasource và import Dashboard mẫu `inlaneweb-overview.json` tại thời điểm khởi động container.
-* **Nội dung hiển thị:**
-  * Giám sát trạng thái nhịp tim API `/health` thời gian thực.
-  * Biểu đồ đường phân bố lưu lượng phản hồi HTTP 2xx, 4xx, 5xx.
-  * Bộ lọc log stream tương tác trực tiếp theo từ khóa và mức độ cảnh báo.
-* **Cấu hình chi tiết:** `InlaneWeb/monitoring/grafana/provisioning/`.
+#### 6. Trực quan hóa và bảng điều khiển (Grafana 11.0):
+* Dashboard `inlaneweb-overview.json` được bố trí thành các khu vực giám sát chuyên biệt:
+  * Panel 1: Giám sát toàn bộ luồng Application Cause Exceptions & Stacktraces.
+  * Panel 2: Giám sát các vector tấn công xuất hiện trong lưu lượng HTTP.
+  * Panel 3: Giám sát các phản hồi rò rỉ lỗi Error-Based và mã lỗi HTTP 4xx/5xx.
+  * Panel 4: Biểu đồ biến động tần suất sự kiện tấn công và lỗi HTTP thời gian thực.
+  * Panel 5: Nhật ký truy vấn và kết nối cơ sở dữ liệu MariaDB.
 
-#### 5. Bộ điều phối tự phục hồi (Container Autoheal):
+#### 7. Bộ điều phối tự phục hồi (Container Autoheal):
 * **Nền tảng:** `willfarrell/autoheal`.
-* **Cơ chế vận hành:** Theo dõi trạng thái kiểm tra sức khỏe từ Docker Daemon. Khi container Web bị suy giảm chất lượng dịch vụ hoặc crash (chuyển trạng thái sang `unhealthy`), Autoheal sẽ lập tức ra lệnh khởi động lại container mục tiêu mà không cần can thiệp thủ công.
-* **Phạm vi giám sát:** Chỉ áp dụng cho các container được khai báo nhãn `autoheal: "true"`.
+* **Cơ chế:** Tự động kích hoạt khởi động lại container Web khi trạng thái sức khỏe chuyển sang `unhealthy`.
 
 ---
 
 ## 4. SƠ ĐỒ LUỒNG DỮ LIỆU TOÀN HỆ THỐNG
 
 ```text
- ┌──────────────────────────────────────────────────────────────────┐
- │                      TẦNG ỨNG DỤNG NGHIỆP VỤ                     │
- │                                                                  │
- │   [ilfreight_web]                     [ilfreight_db]             │
- │   - Apache Access Log (JSON)          - MariaDB Error Log        │
- │   - PHP Error Stream (stderr)         - Healthcheck Service      │
- │   - Healthcheck (/health)             - Volume: db_data          │
- └─────────────────┬─────────────────────────────────┬──────────────┘
-                   │                                 │
-                   │ Luồng Docker Logging            │
-                   ▼                                 ▼
- ┌──────────────────────────────────────────────────────────────────┐
- │                   TẦNG THU THẬP & LƯU TRỮ LOG                    │
- │                                                                  │
- │   [Promtail] (Docker Socket Scraper)                             │
- │   └── Bóc tách nhãn: service, level, http_status                 │
- │            │                                                     │
- │            ▼ Đẩy stream đã gắn nhãn                              │
- │   [Grafana Loki] (TSDB Index & Chunk Storage)                    │
- │   └── Ruler Engine: Thực thi truy vấn LogQL phát hiện lỗi        │
- └─────────────────┬─────────────────────────────────┬──────────────┘
-                   │                                 │
-                   │ Truy vấn LogQL                  │ Kích hoạt cảnh báo
-                   ▼                                 ▼
- ┌──────────────────────────────────────────────────────────────────┐
- │                  TẦNG TRỰC QUAN HÓA & PHẢN ỨNG                   │
- │                                                                  │
- │   [Grafana Dashboard]                 [Webhook & Autoheal]       │
- │   - Bảng theo dõi HTTP 5xx/4xx        - Thông báo Discord/Tele   │
- │   - Luồng Log trực tiếp               - Khởi động lại khi lỗi    │
- └──────────────────────────────────────────────────────────────────┘
+ ┌──────────────────────────────────────────────────────────────────────────────────┐
+ │                          TẦNG ỨNG DỤNG NGHIỆP VỤ & HTTP                          │
+ │                                                                                  │
+ │   [ilfreight_web]                                                                │
+ │    ├── LUỒNG 1: LOG ỨNG DỤNG (Application Exceptions & Cause Chains)             │
+ │    │    - Throwable Catching, Nested Causes ($e->getPrevious()), Stack Traces    │
+ │    │    - Database Query Failures (mysqli_error())                               │
+ │    │                                                                             │
+ │    └── LUỒNG 2: LOG HTTP (Traffic, Attack Vectors & Error-Based Leaks)           │
+ │         - Detailed Apache Access Log (URI, Query String, Duration, Status)       │
+ │         - Pre-Router Attack Vector Capture (SQLi, Traversal, XSS)                │
+ │         - Post-Execution Error-Based Inspection (Response Body Error Leaks)      │
+ └─────────────────────────┬────────────────────────────────────────────────────────┘
+                           │
+                           │ Docker Socket Log Streaming
+                           ▼
+ ┌──────────────────────────────────────────────────────────────────────────────────┐
+ │                          TẦNG THU THẬP & PHÂN LUỒNG LOG                          │
+ │                                                                                  │
+ │   [Promtail] (Docker Socket Scraper)                                             │
+ │    ├── Bóc tách nhãn Luồng 1: {log_category="app_exception", level="error"}      │
+ │    └── Bóc tách nhãn Luồng 2: {log_category="http_traffic", traffic_type="..."}  │
+ └─────────────────────────┬────────────────────────────────────────────────────────┘
+                           │
+                           │ Ingestion qua Loki HTTP Push API
+                           ▼
+ ┌──────────────────────────────────────────────────────────────────────────────────┐
+ │                         TẦNG LƯU TRỮ & CẢNH BÁO TẬP TRUNG                        │
+ │                                                                                  │
+ │   [Grafana Loki] (TSDB Index & Compressed Chunks)                                │
+ │    ├── Ruler Rule 1: ApplicationCauseExceptionDetected                           │
+ │    ├── Ruler Rule 2: HttpAttackVectorDetected                                    │
+ │    └── Ruler Rule 3: HttpErrorBasedResponseLeak                                  │
+ └─────────────────────────┬────────────────────────────────────────────────────────┘
+                           │
+                           ▼ Truy vấn LogQL phân tách
+ ┌──────────────────────────────────────────────────────────────────────────────────┐
+ │                          TẦNG TRỰC QUAN HÓA & PHẢN ỨNG                           │
+ │                                                                                  │
+ │   [Grafana Dashboard]                                                            │
+ │    ├── Khu vực 1: Application Cause Exceptions & Stacktraces                     │
+ │    ├── Khu vực 2: HTTP Attack Vectors & Parameter Inspection                     │
+ │    └── Khu vực 3: HTTP Error-Based Response Leaks & Status Rates                 │
+ └──────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
