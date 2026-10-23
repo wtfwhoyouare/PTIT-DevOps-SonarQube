@@ -1,3 +1,5 @@
+name: inlaneweb-monitoring
+
 services:
   loki:
     image: grafana/loki:3.0.0
