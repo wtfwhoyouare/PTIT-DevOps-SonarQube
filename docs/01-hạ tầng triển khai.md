@@ -55,10 +55,10 @@ Mục tiêu thiết kế:
 
 | Tiêu chí | Khối ứng dụng nghiệp vụ | Khối hạ tầng giám sát |
 | :--- | :--- | :--- |
-| **Tệp điều phối** | `InlaneWeb/docker-compose.yml` | `InlaneWeb/docker-compose.monitoring.yml` |
+| **Tệp điều phối** | `InlaneWeb/docker-compose.yml` (Dev/Runner)<br>`InlaneWeb/docker-compose.prod.yml` (Production VPS) | `InlaneWeb/docker-compose.monitoring.yml` |
 | **Các dịch vụ** | `ilfreight_web`, `ilfreight_db` | `ilfreight_loki`, `ilfreight_promtail`, `ilfreight_grafana`, `autoheal` |
 | **Tần suất cập nhật** | Liên tục theo các Pull Request vào nhánh `main` | Rất thấp (chỉ khi thay đổi quy tắc cảnh báo hoặc nâng cấp phiên bản) |
-| **Lệnh triển khai** | `docker compose up -d --no-deps --build web` | `docker compose -f docker-compose.monitoring.yml up -d` |
+| **Lệnh triển khai** | **Local/CI:** `docker compose up -d`<br>**Production:** Kéo image từ GHCR và chạy `docker compose -f docker-compose.prod.yml up -d` | `docker compose -f docker-compose.monitoring.yml up -d` |
 | **Mục tiêu SLA** | Phục vụ người dùng cuối | Sẵn sàng 24/7, ghi nhận log ngay cả khi web đang khởi động lại |
 
 ---
@@ -203,7 +203,7 @@ Hệ thống phân tách kiến trúc nhật ký thành **hai luồng chẩn đo
    * Tên định danh: `inlaneweb_net` (được thiết lập rõ ràng `name: inlaneweb_net` trong cả hai tệp compose).
    * Mọi trao đổi giữa Promtail, Loki, Grafana và Web diễn ra trong mạng cô lập này qua DNS nội bộ của Docker.
 2. **Cơ chế bảo vệ cổng (Port Exposure):**
-   * Môi trường Production chỉ mở công khai cổng dịch vụ Web (`8080` hoặc `80/443`).
+   * Môi trường Production chỉ mở công khai cổng dịch vụ Web (`8088` hoặc `80/443` qua reverse proxy).
    * Cổng cơ sở dữ liệu `3306` tuyệt đối không ánh xạ ra ngoài host, chỉ truy cập nội bộ từ container Web.
    * Cổng Loki `3100` và Grafana `3000` được quản lý truy cập nội bộ hoặc qua VPN quản trị.
 
@@ -213,15 +213,16 @@ Hệ thống phân tách kiến trúc nhật ký thành **hai luồng chẩn đo
 
 ```text
 InlaneWeb/
-├── docker-compose.yml                # Quản lý Web và Database
+├── docker-compose.yml                # Quản lý Web và Database (Local & Runner Smoke Test)
+├── docker-compose.prod.yml           # Quản lý Web và Database trên Production (Image từ GHCR)
 ├── docker-compose.monitoring.yml     # Quản lý cụm Giám sát & Tự phục hồi
 ├── web/
-│   ├── Dockerfile                    # Image Apache + PHP 8.2
+│   ├── Dockerfile                    # Image Apache + PHP 8.2 (Self-contained)
 │   ├── php.ini                       # Cấu hình log errors sang stderr
 │   └── src/                          # Mã nguồn ứng dụng Logistics
 ├── db/
-│   ├── Dockerfile                    # Image MariaDB 10.11
-│   └── init.sql                      # Dữ liệu khởi tạo hệ thống
+│   ├── Dockerfile                    # Image MariaDB 10.11 (Self-contained)
+│   └── init.sql                      # Dữ liệu khởi tạo hệ thống (Idempotent)
 └── monitoring/
     ├── loki/
     │   ├── loki-config.yml           # Cấu hình lưu trữ và ruler của Loki
@@ -285,7 +286,7 @@ docker compose -f docker-compose.monitoring.yml up -d --remove-orphans
 docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
 # 2. Kiểm tra sức khỏe API nội bộ
-curl -I http://localhost:8080/health
+curl -I http://localhost:8088/health
 
 # 3. Kiểm tra tính sẵn sàng của hệ thống lưu trữ log
 curl -s http://localhost:3100/ready
@@ -318,9 +319,9 @@ Giai đoạn Stage 4 được thiết kế phân tách hoàn toàn thành **2 Jo
    - **Lệnh điều phối:** `docker compose -f docker-compose.monitoring.yml up -d --remove-orphans`.
    - **Đặc tính:** Duy trì tính bền vững 24/7, chỉ tái nạp khi có thay đổi cấu hình giám sát hoặc rules.
 2. **Job `production_deploy_web` (`Deploy Web Workload`):**
-   - **Nhiệm vụ:** Độc lập build và thay thế container ứng dụng Web PHP 8.2 khi có phát hành mới.
-   - **Lệnh điều phối:** `docker compose up -d --no-deps --build web`.
-   - **Đặc tính:** Tham số `--no-deps` đảm bảo không tái khởi động database và không ảnh hưởng đến cụm logging đang hoạt động.
-3. **Hậu kiểm tra (Post-Deployment Verification):** Tự động ping API `/health` của máy chủ Production. Nếu phản hồi mã khác 200, pipeline lập tức ghi nhận lỗi để quản trị viên can thiệp rollback.
+   - **Nhiệm vụ:** Độc lập kéo Docker Images an toàn đã qua kiểm thử từ GHCR (`inlaneweb` và `inlaneweb-db`) và cập nhật container qua `docker-compose.prod.yml`.
+   - **Lệnh điều phối:** `INLANEWEB_IMAGE=<ghcr_web> INLANEWEB_DB_IMAGE=<ghcr_db> docker compose -f docker-compose.prod.yml up -d --remove-orphans`.
+   - **Đặc tính:** Không cần mã nguồn hay tiến trình build trên host (Self-contained Image), bảo toàn 100% dữ liệu database qua volume `db_data` và không gián đoạn cụm logging.
+3. **Hậu kiểm tra (Post-Deployment Healthcheck Loop):** Tự động thăm dò API `http://127.0.0.1:8088/health` với vòng lặp 30 lần (mỗi lần cách nhau 3s). Nếu đạt HTTP 200 thì hoàn tất triển khai thành công; nếu sau 30 lần không đạt, pipeline tự động trích xuất container logs chẩn đoán và báo lỗi.
 
 
