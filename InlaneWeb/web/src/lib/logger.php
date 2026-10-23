@@ -1,18 +1,6 @@
 <?php
 /**
  * lib/logger.php — Bộ thu thập nhật ký ứng dụng InlaneWeb (Application Error & Exception Logger)
- * 
- * Thiết kế chuẩn hóa theo định dạng JSON mà Promtail / Grafana Loki phân tích tự động:
- * - Bắt toàn bộ ngoại lệ chưa xử lý (Unhandled Throwable / Exceptions) kèm chuỗi nguyên nhân (Cause Chains).
- * - Bắt toàn bộ lỗi PHP runtime (Warnings, Notices, Core Errors).
- * - Bắt các lỗi nghiêm trọng gây crash/shutdown (Fatal Shutdown Errors qua register_shutdown_function).
- * - Bắt toàn bộ các lỗi thực thi câu lệnh SQL từ cơ sở dữ liệu.
- * 
- * Lưu ý: Lưu lượng HTTP (HTTP Traffic Access Log & Vector Parameters) được bàn giao cho Apache Web Server
- * ghi nhận trực tiếp qua CustomLog JSON nhằm tối ưu hiệu năng và độ ổn định của ứng dụng.
- */
-
-declare(strict_types=1);
 
 class InlaneLogger
 {
@@ -91,11 +79,13 @@ class InlaneLogger
      */
     public static function logPhpError(int $errno, string $errstr, string $errfile, int $errline): void
     {
-        $level = match ($errno) {
-            E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR => 'error',
-            E_WARNING, E_CORE_WARNING, E_COMPILE_WARNING, E_USER_WARNING => 'warning',
-            default => 'notice',
-        };
+        if ($errno === E_ERROR || $errno === E_CORE_ERROR || $errno === E_COMPILE_ERROR || $errno === E_USER_ERROR) {
+            $level = 'error';
+        } elseif ($errno === E_WARNING || $errno === E_CORE_WARNING || $errno === E_COMPILE_WARNING || $errno === E_USER_WARNING) {
+            $level = 'warning';
+        } else {
+            $level = 'notice';
+        }
 
         self::emit('APP-EXCEPTION', [
             'level'    => $level,
