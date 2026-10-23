@@ -238,11 +238,14 @@ Khi một Pull Request được kích hoạt:
   * `stack_trace`: Dấu vết ngăn xếp mã nguồn phục vụ xác định chính xác dòng lệnh lỗi.
   * `failed_query`: Câu lệnh truy vấn SQL gây ra sự cố (được ghi nhận trong các sự cố cơ sở dữ liệu).
 
-#### 2. Khối nhật ký lưu lượng HTTP và an ninh mạng (HTTP Traffic, Attack Vectors & Error-Based Leaks):
+#### 2. Khối nhật ký lưu lượng HTTP và an ninh mạng (HTTP Traffic & Granular Vulnerability Blocks):
 * **Yêu cầu kỹ thuật:** Bàn giao cho tầng máy chủ web Apache ghi nhận trực tiếp qua `CustomLog` định dạng JSON (`apache_json`), giúp giảm thiểu tải xử lý cho ứng dụng InlaneWeb.
-* **Các chỉ tiêu giám sát:**
-  * **Capture Vector tấn công:** Apache tự động ghi nhận Method, Client IP, Request URI, và toàn bộ Query String (`%q`) chứa các vector tấn công phổ biến (SQL Injection như `' OR 1=1`, `UNION SELECT`, `SLEEP()`, `load_file`; Path Traversal `../`; Command Injection `;`; XSS) để Promtail bóc tách nhãn `traffic_type="attack_vector"`.
-  * **Capture phản hồi lỗi hiển thị (Error-Based Response Inspection):** Ghi nhận trạng thái phản hồi HTTP (`%>s`) kết hợp các mã lỗi máy chủ (HTTP 4xx, HTTP 5xx) và chuỗi thông báo lỗi cú pháp rò rỉ (`SQL Error:`, `syntax error in your SQL`, `Fatal error:`) để Promtail bóc tách nhãn `traffic_type="error_based_leak"`.
+* **Cơ chế bóc tách theo từng khối lỗ hổng chuyên biệt (Granular Vulnerability Inspection):**
+  * **Khối SQL Injection (`vuln_category="sqli"`):** Nhận diện các vector tấn công UNION SELECT, Time-based (`SLEEP`, `BENCHMARK`), Boolean tautology (`OR 1=1`), Out-of-band file exfiltration (`load_file()`, `INTO OUTFILE`), truy vấn schema (`information_schema`, `database()`), và dấu hiệu automated scanners (`sqlmap`, `havij`).
+  * **Khối Path Traversal & LFI (`vuln_category="traversal_lfi"`):** Nhận diện các vector truy xuất ngược thư mục (`../`, `..\\`, `%2e%2e%2f`), các mục tiêu nhạy cảm hệ thống (`/etc/passwd`, `/proc/self`, `win.ini`, `system32`), và các PHP wrapper stream (`php://filter`, `php://input`, `data://`).
+  * **Khối Cross-Site Scripting (`vuln_category="xss"`):** Nhận diện các thẻ kịch bản (`<script>`, `%3cscript`), vector SVG/iframe, các event handlers độc hại (`onload=`, `onerror=`), pseudo-protocols (`javascript:`, `vbscript:`) và payload đánh cắp phiên (`alert()`, `document.cookie`).
+  * **Khối Remote Code Execution & Command Injection (`vuln_category="command_injection"`):** Nhận diện các ký tự nối lệnh shell (`;`, `|`, `&&`) đi kèm các lệnh thực thi nhạy cảm hệ điều hành (`whoami`, `cat`, `powershell`, `cmd.exe`, `curl`, `wget`).
+  * **Khối Phản hồi lỗi rò rỉ Error-Based (`vuln_category="error_based_leak"`):** Ghi nhận trạng thái phản hồi HTTP (`%>s`), mã lỗi 5xx/4xx kết hợp chuỗi thông báo rò rỉ lỗi cú pháp cơ sở dữ liệu (`SQL Error:`, `syntax error in your SQL`, `Fatal error:`).
 
 ---
 

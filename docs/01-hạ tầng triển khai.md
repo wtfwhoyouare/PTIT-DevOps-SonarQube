@@ -107,8 +107,11 @@ Hệ thống phân tách kiến trúc nhật ký thành **hai luồng chẩn đo
 * **Vai trò:** Log Shipper thu thập luồng log từ các container đang chạy trên host qua `/var/run/docker.sock`.
 * **Phân loại nhãn tự động:**
   * Luồng ứng dụng: Gán nhãn `log_category="app_exception"`, `has_cause_exception="true"`.
-  * Luồng HTTP tấn công: Gán nhãn `log_category="http_traffic"`, `traffic_type="attack_vector"`.
-  * Luồng HTTP rò rỉ lỗi: Gán nhãn `log_category="http_traffic"`, `traffic_type="error_based_leak"`.
+  * Luồng tấn công SQLi: Gán nhãn `log_category="http_traffic"`, `traffic_type="attack_vector"`, `vuln_category="sqli"`.
+  * Luồng tấn công Traversal/LFI: Gán nhãn `log_category="http_traffic"`, `traffic_type="attack_vector"`, `vuln_category="traversal_lfi"`.
+  * Luồng tấn công XSS: Gán nhãn `log_category="http_traffic"`, `traffic_type="attack_vector"`, `vuln_category="xss"`.
+  * Luồng tấn công Command Injection: Gán nhãn `log_category="http_traffic"`, `traffic_type="attack_vector"`, `vuln_category="command_injection"`.
+  * Luồng HTTP rò rỉ lỗi: Gán nhãn `log_category="http_traffic"`, `traffic_type="error_based_leak"`, `vuln_category="error_based_leak"`.
 * **Cấu hình chi tiết:** `InlaneWeb/monitoring/promtail/promtail-config.yml`.
 
 #### 4. Máy chủ lưu trữ và xử lý log (Grafana Loki 3.0):
@@ -118,18 +121,24 @@ Hệ thống phân tách kiến trúc nhật ký thành **hai luồng chẩn đo
 #### 5. Bộ quy tắc cảnh báo phát hiện sự cố tự động (Alert Rules):
 Được định nghĩa tại `InlaneWeb/monitoring/loki/rules/fake/alert-rules.yml`:
 * **`ApplicationCauseExceptionDetected`:** Kích hoạt cảnh báo mức `critical` khi phát hiện chuỗi ngoại lệ nguyên nhân phát sinh trong container `ilfreight_web`.
-* **`HttpAttackVectorDetected`:** Kích hoạt cảnh báo mức `high` khi phát hiện payload chứa vector tấn công trong lưu lượng HTTP.
+* **`HttpSqlInjectionDetected`:** Kích hoạt cảnh báo mức `critical` khi phát hiện payload SQL Injection (UNION SELECT, Time-based, Boolean, Out-of-band exfil).
+* **`HttpPathTraversalDetected`:** Kích hoạt cảnh báo mức `high` khi phát hiện payload Path Traversal / LFI (`../`, `/etc/passwd`, PHP wrappers).
+* **`HttpXssDetected`:** Kích hoạt cảnh báo mức `warning` khi phát hiện mã kịch bản XSS (`<script>`, event handlers, SVG injection).
+* **`HttpCommandInjectionDetected`:** Kích hoạt cảnh báo mức `critical` khi phát hiện ký tự nối lệnh hệ thống (`;`, `|`, `&&`, shell binaries).
 * **`HttpErrorBasedResponseLeak`:** Kích hoạt cảnh báo mức `high` khi phát hiện phản hồi HTTP trả về client có chứa thông tin lỗi cú pháp SQL hoặc rò rỉ error-based.
 * **`HighHttp5xxRate`:** Cảnh báo mức `critical` khi tần suất lỗi HTTP 5xx tăng vọt.
 * **`DatabaseConnectionLost`:** Cảnh báo mức `critical` khi ứng dụng mất kết nối tới MariaDB.
 
 #### 6. Trực quan hóa và bảng điều khiển (Grafana 11.0):
-* Dashboard `inlaneweb-overview.json` được bố trí thành các khu vực giám sát chuyên biệt:
+* Dashboard `inlaneweb-overview.json` được bố trí thành 8 panel chuyên biệt phân tách theo từng loại lỗ hổng:
   * Panel 1: Giám sát toàn bộ luồng Application Cause Exceptions & Stacktraces.
-  * Panel 2: Giám sát các vector tấn công xuất hiện trong lưu lượng HTTP.
-  * Panel 3: Giám sát các phản hồi rò rỉ lỗi Error-Based và mã lỗi HTTP 4xx/5xx.
-  * Panel 4: Biểu đồ biến động tần suất sự kiện tấn công và lỗi HTTP thời gian thực.
-  * Panel 5: Nhật ký truy vấn và kết nối cơ sở dữ liệu MariaDB.
+  * Panel 2: Giám sát chuyên sâu tấn công SQL Injection (SQLi).
+  * Panel 3: Giám sát chuyên sâu tấn công Path Traversal & Local File Inclusion (LFI/RFI).
+  * Panel 4: Giám sát chuyên sâu tấn công Cross-Site Scripting (XSS).
+  * Panel 5: Giám sát chuyên sâu tấn công Remote Code Execution & Command Injection (CMDi).
+  * Panel 6: Giám sát các phản hồi rò rỉ lỗi Error-Based và mã lỗi HTTP 4xx/5xx.
+  * Panel 7: Biểu đồ biến động tần suất sự kiện theo từng loại lỗ hổng (Multi-Vector Incident Rate).
+  * Panel 8: Nhật ký truy vấn và kết nối cơ sở dữ liệu MariaDB.
 
 #### 7. Bộ điều phối tự phục hồi (Container Autoheal):
 * **Nền tảng:** `willfarrell/autoheal`.
