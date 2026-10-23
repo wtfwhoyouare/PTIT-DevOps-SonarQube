@@ -87,9 +87,9 @@ Toàn bộ quy định kỹ thuật và hướng dẫn vận hành chi tiết đ
 
 ---
 
-## 4. KIẾN TRÚC PIPELINE CI/CD (3 GIAI ĐOẠN ĐỘC LẬP)
+## 4. KIẾN TRÚC PIPELINE CI/CD (4 GIAI ĐOẠN ĐỘC LẬP)
 
-Pipeline tự động hóa trên GitHub Actions (`.github/workflows/sonarqube.yml`) gồm 3 giai đoạn:
+Pipeline tự động hóa trên GitHub Actions (`.github/workflows/sonarqube.yml`) gồm 4 giai đoạn:
 
 ```text
 GitHub Actions Pipeline:
@@ -101,12 +101,18 @@ GitHub Actions Pipeline:
   │      ├── Semgrep SAST: Dò tìm lỗ hổng Taint-Tracking (SQLi, XSS, Misconfigurations)
   │      └── Config Validator: Kiểm tra cú pháp YAML/JSON và Alert Rules FOSS
   │
-  └── [STAGE 3: Production Gate] Dual-Track CD & Smoke Test (Khi PR hoặc Merge vào MAIN)
-         ├── Nhận diện thay đổi theo đường dẫn (Path-based selective execution)
-         ├── Kiểm tra tính độc lập: Deploy web không làm gián đoạn hạ tầng giám sát
-         ├── Khởi chạy môi trường thử nghiệm tạm thời
-         ├── Xác nhận MariaDB healthy và endpoint /health phản hồi HTTP 200
-         └── Thực hiện Smoke Test trang chủ trước khi hoàn tất triển khai
+  ├── [STAGE 3: Production Gate] Dual-Track CD & Smoke Test (Khi PR vào MAIN hoặc Push trên MAIN)
+  │      ├── Nhận diện thay đổi theo đường dẫn (Path-based selective execution)
+  │      ├── Khởi chạy môi trường thử nghiệm tạm thời (Ephemeral Preview Deployment)
+  │      ├── Xác nhận MariaDB healthy và endpoint /health phản hồi HTTP 200
+  │      ├── Kiểm tra Loki /ready và luồng log bóc tách từ Promtail
+  │      └── Smoke Test trang chủ trước khi cho phép nạp code vào Production
+  │
+  └── [STAGE 4: Production CD] Automated Live Deployment (Khi Merge chính thức vào MAIN)
+         ├── Kết nối SSH an toàn tới máy chủ Production qua GitHub Secrets
+         ├── Triển khai phân hệ Web độc lập: docker compose up -d --no-deps --build web
+         ├── Triển khai hạ tầng giám sát: docker compose -f ...monitoring.yml up -d
+         └── Hậu kiểm tra sức khỏe hệ thống (Post-Deployment Healthcheck)
 ```
 
 ---
