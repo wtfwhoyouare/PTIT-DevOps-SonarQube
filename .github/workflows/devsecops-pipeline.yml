@@ -18,6 +18,7 @@ on:
 
 permissions:
   contents: read
+  packages: write
 
 # Independent servers: a newer commit may replace an obsolete scan.
 concurrency:
@@ -344,7 +345,34 @@ jobs:
           **Kết luận:** Mã nguồn và hạ tầng giám sát sẵn sàng 100% để merge vào nhánh Production (\`main\`).
           EOF
 
-      - name: 5. Teardown Runner Containers
+      - name: 5. Push Validated Docker Images to GitHub Container Registry (GHCR)
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "🔐 [GHCR Auth] Đăng nhập GitHub Container Registry..."
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          IMAGE_BASE_WEB="ghcr.io/$REPO_OWNER/inlaneweb"
+          IMAGE_BASE_DB="ghcr.io/$REPO_OWNER/inlaneweb-db"
+
+          echo "🏷️ [GHCR Tag] Gắn tag image InlaneWeb & MariaDB đã kiểm định an toàn:"
+          echo "   👉 $IMAGE_BASE_WEB:${{ github.sha }}"
+          echo "   👉 $IMAGE_BASE_DB:${{ github.sha }}"
+          docker tag inlaneweb-web:latest "$IMAGE_BASE_WEB:${{ github.sha }}"
+          docker tag inlaneweb-web:latest "$IMAGE_BASE_WEB:latest"
+          docker tag inlaneweb-db:latest "$IMAGE_BASE_DB:${{ github.sha }}"
+          docker tag inlaneweb-db:latest "$IMAGE_BASE_DB:latest"
+
+          echo "🚀 [GHCR Push] Đang lưu trữ images lên GitHub Container Registry..."
+          docker push "$IMAGE_BASE_WEB:${{ github.sha }}"
+          docker push "$IMAGE_BASE_WEB:latest"
+          docker push "$IMAGE_BASE_DB:${{ github.sha }}"
+          docker push "$IMAGE_BASE_DB:latest"
+          echo "✅ Đã lưu trữ Docker Images InlaneWeb & InlaneWeb-DB an toàn trên GitHub Packages (GHCR)!"
+
+      - name: 6. Teardown Runner Containers
         if: always()
         shell: bash
         run: |
@@ -413,8 +441,10 @@ jobs:
             chmod 600 ~/.ssh/deploy_key
             SSH_OPTS="-i ~/.ssh/deploy_key -p $PROD_PORT -o StrictHostKeyChecking=no -o ConnectTimeout=15"
 
-            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "mkdir -p $PROD_PATH && cd $PROD_PATH && git fetch origin main && git checkout -f main && git pull origin main"
-            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "cd $PROD_PATH/InlaneWeb && docker compose -f docker-compose.monitoring.yml up -d --remove-orphans"
+            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "mkdir -p $PROD_PATH/monitoring"
+            scp -i ~/.ssh/deploy_key -P $PROD_PORT -o StrictHostKeyChecking=no -o ConnectTimeout=15 InlaneWeb/docker-compose.monitoring.yml "$PROD_USER@$PROD_HOST:$PROD_PATH/docker-compose.monitoring.yml"
+            scp -i ~/.ssh/deploy_key -P $PROD_PORT -o StrictHostKeyChecking=no -o ConnectTimeout=15 -r InlaneWeb/monitoring/* "$PROD_USER@$PROD_HOST:$PROD_PATH/monitoring/"
+            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "cd $PROD_PATH && docker compose -f docker-compose.monitoring.yml up -d --remove-orphans"
             
             sleep 3
             ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "curl -s http://localhost:3100/ready | grep -q ready"
@@ -496,12 +526,24 @@ jobs:
             chmod 600 ~/.ssh/deploy_key
             SSH_OPTS="-i ~/.ssh/deploy_key -p $PROD_PORT -o StrictHostKeyChecking=no -o ConnectTimeout=15"
 
-            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "mkdir -p $PROD_PATH && cd $PROD_PATH && git fetch origin main && git checkout -f main && git pull origin main"
-            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "cd $PROD_PATH/InlaneWeb && docker compose up -d --no-deps --build web"
+            REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+            IMAGE_URI_WEB="ghcr.io/$REPO_OWNER/inlaneweb:${{ github.sha }}"
+            IMAGE_URI_DB="ghcr.io/$REPO_OWNER/inlaneweb-db:${{ github.sha }}"
+
+            echo "📥 Kéo Images InlaneWeb & InlaneWeb-DB từ GHCR về máy chủ..."
+            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "echo '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin || true"
+            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "docker pull $IMAGE_URI_DB || docker pull ghcr.io/$REPO_OWNER/inlaneweb-db:latest"
+            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "docker pull $IMAGE_URI_WEB || docker pull ghcr.io/$REPO_OWNER/inlaneweb:latest"
+            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "docker tag $IMAGE_URI_DB inlaneweb-db:latest || true"
+            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "docker tag $IMAGE_URI_WEB inlaneweb-web:latest || true"
+
+            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "mkdir -p $PROD_PATH"
+            scp -i ~/.ssh/deploy_key -P $PROD_PORT -o StrictHostKeyChecking=no -o ConnectTimeout=15 InlaneWeb/docker-compose.prod.yml "$PROD_USER@$PROD_HOST:$PROD_PATH/docker-compose.prod.yml"
+            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "cd $PROD_PATH && INLANEWEB_IMAGE=$IMAGE_URI_WEB INLANEWEB_DB_IMAGE=$IMAGE_URI_DB docker compose -f docker-compose.prod.yml up -d --remove-orphans"
 
             sleep 5
-            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "curl -f -s http://localhost:8080/health || curl -f -s http://localhost:80/health"
-            echo "✅ Cập nhật ứng dụng Web thành công! Logging duy trì hoạt động liên tục."
+            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "curl -f -s http://localhost:8088/health || curl -f -s http://localhost:80/health"
+            echo "✅ Cập nhật ứng dụng Web & Database thành công từ GHCR! Logging duy trì hoạt động liên tục."
             STATUS="DEPLOYED"
           else
             echo "ℹ️ [Web CD Standby] Cấu hình sẵn sàng; đang chờ gán GitHub Secrets (PROD_HOST, PROD_USER, PROD_SSH_KEY)."
@@ -515,8 +557,9 @@ jobs:
 
           | Hạng mục | Trạng thái | Lệnh thực thi |
           | :--- | :---: | :--- |
-          | **Dịch vụ** | ilfreight_web (Apache + PHP 8.2) | \`docker compose up -d --no-deps --build web\` |
-          | **Kết quả** | **$STATUS** | Thay thế container Web độc lập |
+          | **Dịch vụ** | ilfreight_web (Apache + PHP 8.2) | \`docker pull ghcr.io/... && docker compose up -d --no-deps web\` |
+          | **Nguồn Image** | GHCR (Đã qua kiểm định Stage 3) | \`ghcr.io/$REPO_OWNER/inlaneweb:${{ github.sha }}\` |
+          | **Kết quả** | **$STATUS** | Triển khai nhanh gọn không cần build trên host |
           EOF
 
 
