@@ -13,14 +13,14 @@
       "collapsed": false,
       "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
       "id": 1,
-      "title": "🔴 Real-time Error Log Stream (Apache & PHP 8.2)",
+      "title": "Application Cause Exceptions & Runtime Stacktraces (Web Application Log)",
       "type": "logs",
       "datasource": { "type": "loki", "uid": "Loki" },
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "Loki" },
           "editorMode": "code",
-          "expr": "{container=\"ilfreight_web\"} |~ \"(?i)(500|Fatal error|Warning|Exception|Access denied)\"",
+          "expr": "{container=\"ilfreight_web\"} |~ \"(?i)(APP-EXCEPTION|cause_chain|database_query_failure|Fatal error|Uncaught Exception|mysqli_sql_exception)\"",
           "queryType": "range",
           "refId": "A"
         }
@@ -36,25 +36,79 @@
       "collapsed": false,
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
       "id": 2,
-      "title": "📊 Tần suất phản hồi HTTP 5xx (Lỗi Server / Crash)",
+      "title": "HTTP Attack Vectors (SQLi, Traversal, XSS in HTTP Traffic)",
+      "type": "logs",
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "Loki" },
+          "editorMode": "code",
+          "expr": "{container=\"ilfreight_web\"} |~ \"(?i)(HTTP-ATTACK-VECTOR|SQLI_|PATH_TRAVERSAL|XSS_INJECTION)\"",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showLabels": true,
+        "wrapLogMessage": true,
+        "enableLogDetails": true,
+        "sortOrder": "Descending"
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "id": 3,
+      "title": "HTTP Error-Based Response Leaks & 4xx/5xx Errors",
+      "type": "logs",
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "Loki" },
+          "editorMode": "code",
+          "expr": "{container=\"ilfreight_web\"} |~ \"(?i)(HTTP-ERROR-BASED-RESPONSE|SQL_ERROR_LEAK|SQL_SYNTAX_ERROR| 500 | 404 )\"",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showLabels": true,
+        "wrapLogMessage": true,
+        "enableLogDetails": true,
+        "sortOrder": "Descending"
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "id": 4,
+      "title": "HTTP Error-Based & Attack Vector Rate (Events/sec)",
       "type": "timeseries",
       "datasource": { "type": "loki", "uid": "Loki" },
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "Loki" },
           "editorMode": "code",
-          "expr": "sum by (container) (rate({container=\"ilfreight_web\"} |= \" 500 \"[1m]))",
-          "legendFormat": "Lỗi 500",
+          "expr": "sum(rate({container=\"ilfreight_web\"} |~ \"(?i)(HTTP-ATTACK-VECTOR|HTTP-ERROR-BASED-RESPONSE)\"[1m]))",
+          "legendFormat": "Attack & Error-Based Events",
           "queryType": "range",
           "refId": "A"
+        },
+        {
+          "datasource": { "type": "loki", "uid": "Loki" },
+          "editorMode": "code",
+          "expr": "sum(rate({container=\"ilfreight_web\"} |= \" 500 \"[1m]))",
+          "legendFormat": "HTTP 500 Errors",
+          "queryType": "range",
+          "refId": "B"
         }
       ]
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
-      "id": 3,
-      "title": "🗄️ Nhật ký cơ sở dữ liệu MariaDB (Slow Query & Connections)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "id": 5,
+      "title": "MariaDB Database Diagnostics (Queries & Connections)",
       "type": "logs",
       "datasource": { "type": "loki", "uid": "Loki" },
       "targets": [
@@ -76,7 +130,7 @@
   "refresh": "5s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["inlaneweb", "devops", "monitoring"],
+  "tags": ["inlaneweb", "devops", "monitoring", "security"],
   "time": {
     "from": "now-15m",
     "to": "now"
@@ -87,5 +141,5 @@
   "timezone": "browser",
   "title": "InlaneWeb Logistics — Centralized Observability & Anomaly Dashboard",
   "uid": "inlaneweb-observability",
-  "version": 1
+  "version": 2
 }

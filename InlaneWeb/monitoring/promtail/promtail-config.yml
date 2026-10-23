@@ -9,7 +9,7 @@ clients:
   - url: http://loki:3100/loki/api/v1/push
 
 scrape_configs:
-  # Thu thap log truc tiep tu cac container docker qua Docker daemon socket
+  # Thu thập và phân tích trực tiếp từ Docker Socket Scraper
   - job_name: docker_containers
     docker_sd_configs:
       - host: unix:///var/run/docker.sock
@@ -21,19 +21,53 @@ scrape_configs:
       - source_labels: ['container']
         regex: '(ilfreight_web|ilfreight_db)'
         action: keep
+
     pipeline_stages:
-      # Nhan dien status code va gan tag loi neu gap 5xx hoac fatal error
-      - regex:
-          expression: '.*(?P<status_code>\b[45]\d\d\b).*'
-      - labels:
-          status_code:
+      # 1. Trích xuất tự động các trường JSON từ InlaneWeb App và Apache Access Log
+      - json:
+          expressions:
+            source: source
+            channel: channel
+            level: level
+            type: type
+            class: class
+            message: message
+            failed_query: failed_query
+            method: method
+            uri: uri
+            query: query
+            status: status
+
+      # 2. Phân loại KHỐI 1: Log lỗi ứng dụng web (InlaneWeb Cause Exceptions, Database & Runtime Errors)
       - match:
-          selector: '{container="ilfreight_web"} |= " 500 "'
+          selector: '{container="ilfreight_web"} |~ "(?i)(inlaneweb_app|APP-EXCEPTION|cause_chain|database_query_failure|Fatal error|Uncaught Exception|mysqli_error)"'
           stages:
             - labels:
+                log_category: app_exception
                 level: error
+
+      # 3. Phân loại KHỐI 2: Log lưu lượng HTTP từ Web Server Apache
       - match:
-          selector: '{container="ilfreight_web"} |~ "(?i)(Fatal error|error)"'
+          selector: '{container="ilfreight_web"} |~ "(?i)(apache_http_traffic|\"source\":\"apache_http_traffic\"|\"status\":)"'
           stages:
             - labels:
-                level: error
+                log_category: http_traffic
+                traffic_type: access_flow
+
+      # 4. Nhận diện các Vector tấn công xuất hiện trong lưu lượng HTTP (SQLi, Path Traversal, XSS)
+      - match:
+          selector: '{container="ilfreight_web"} |~ "(?i)(union\\s+select|sleep\\(|benchmark\\(|or\\s+1=1|--|load_file|into\\s+outfile|information_schema|\\.\\./|<script)"'
+          stages:
+            - labels:
+                log_category: http_traffic
+                traffic_type: attack_vector
+                level: warning
+
+      # 5. Nhận diện phản hồi rò rỉ lỗi Error-Based và mã lỗi HTTP 4xx/5xx
+      - match:
+          selector: '{container="ilfreight_web"} |~ "(?i)(SQL Error|syntax error|mysqli_sql_exception|Fatal error| 500 |\"status\":500|\"status\":404)"'
+          stages:
+            - labels:
+                log_category: http_traffic
+                traffic_type: error_based_leak
+                level: high

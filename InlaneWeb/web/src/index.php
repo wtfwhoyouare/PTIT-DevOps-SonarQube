@@ -5,8 +5,32 @@
  */
 session_start();
 
-require __DIR__ . '/lib/db.php';
-require __DIR__ . '/lib/layout.php';
+require_once __DIR__ . '/lib/logger.php';
+require_once __DIR__ . '/lib/db.php';
+require_once __DIR__ . '/lib/layout.php';
+
+// 1. Kích hoạt cơ chế bắt trọn vẹn Cause Exceptions & Mọi lỗi hệ thống (Application Logging)
+set_exception_handler(function (\Throwable $e): void {
+    InlaneLogger::logException($e, ['request_uri' => $_SERVER['REQUEST_URI'] ?? '']);
+    http_response_code(500);
+    if (!headers_sent()) {
+        header('Content-Type: text/html; charset=utf-8');
+    }
+    echo '<div class="sql-error"><strong>Application Unhandled Exception:</strong> '
+        . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') . '</div>';
+    exit(1);
+});
+
+set_error_handler(function (int $errno, string $errstr, string $errfile, int $errline): bool {
+    if (!(error_reporting() & $errno)) {
+        return false;
+    }
+    InlaneLogger::logPhpError($errno, $errstr, $errfile, $errline);
+    return false;
+});
+
+// Bắt các lỗi nghiêm trọng gây crash / halt tiến trình tại thời điểm shutdown
+register_shutdown_function([InlaneLogger::class, 'logShutdown']);
 
 // Lay path (bo query string), bo dau '/' cuoi
 $uri  = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
