@@ -31,13 +31,38 @@ Hệ thống tài liệu chi tiết được tổ chức trong thư mục [`docs
 Dự án áp dụng mô hình phân nhánh nghiêm ngặt:
 
 ```text
-  dev ── cập nhật mã mới ──> nhánh cá nhân (namng, haind, manhdx, anhld, mainp)
-                                │
-                                ├── commit + push lên nhánh cá nhân (theo Conventional Commits)
-                                └── Pull Request ──> dev ── Pull Request (Release) ──> main
-                                        │               │           │                   │
-                                        └── CI/CD Guard ┴───────────┴── Smoke Test ─────┘
-                                            (Shift-Left SAST)           (Docker Preview)
+ ┌──────────────────────────────────────────────────────────────────┐
+ │                  SO DO PHAN CAP NHANH & CI/CD LUONG              │
+ └──────────────────────────────────────────────────────────────────┘
+
+     [1. NHANH CA NHAN / TINH NANG]
+      namng, haind, manhdx, anhld, mainp
+         │
+         │  • git commit (Theo chuan Conventional Commits)
+         │  • git push origin <ten_nhanh_ca_nhan>
+         │
+         ▼  (1) Mo PR vao dev: [<ma_nhanh>] <loai>(<pham_vi>): <mo ta>
+     ┌──────────────────────────────────────────────────────────────┐
+     │ [CI/CD Shift-Left Gate] Kiem tra tu dong chat luong ma nguon:│
+     │   ├── [Stage 1] Policy Guard (Commit format & PR Title)      │
+     │   └── [Stage 2] SonarQube & Semgrep SAST Scanner             │
+     └──────────────────────────────┬───────────────────────────────┘
+                                    │
+                                    │  [PASS SAST & Lead phe duyet]
+                                    ▼
+     [2. NHANH TICH HOP CHUNG - DEV]
+      dev (Tong hop, ket noi va kiem thu toan bo tinh nang)
+         │
+         ▼  (2) Mo PR vao main: release: vX.Y.Z - <mo ta phat hanh>
+     ┌──────────────────────────────────────────────────────────────┐
+     │ [CI/CD Production Gate] Kiem thu thuc te truoc release:      │
+     │   └── [Stage 3] Dual-Track CD & Smoke Test Healthcheck       │
+     └──────────────────────────────┬───────────────────────────────┘
+                                    │
+                                    │  [PASS Smoke Test & Lead merge]
+                                    ▼
+     [3. NHANH PRODUCTION - ON DINH TUYET DOI]
+      main (San sang trien khai phuc vu nguoi dung)
 ```
 
 ### Ba nguyên tắc cốt lõi:
