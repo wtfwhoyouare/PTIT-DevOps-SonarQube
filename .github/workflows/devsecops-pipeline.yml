@@ -221,11 +221,48 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: 0. Evaluate Changes for Production Gate
+        id: eval_stage3
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "🔍 [Production Gate] Kiểm tra phạm vi thay đổi..."
+          PREV_COMMIT="${{ github.event.before }}"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_REF="${{ github.base_ref }}"
+            CHANGED_FILES=$(git -c core.quotepath=off diff --name-only "origin/$BASE_REF"...HEAD || echo "")
+          elif [ -z "$PREV_COMMIT" ] || [ "$PREV_COMMIT" = "0000000000000000000000000000000000000000" ]; then
+            CHANGED_FILES=$(git -c core.quotepath=off diff-tree --no-commit-id --name-only -r HEAD || echo "")
+          else
+            CHANGED_FILES=$(git -c core.quotepath=off diff --name-only "$PREV_COMMIT" HEAD || echo "")
+          fi
+          echo "Danh sách tệp thay đổi:"
+          echo "$CHANGED_FILES"
+
+          DOCS_ONLY=true
+          while IFS= read -r raw_file; do
+            file=$(echo "$raw_file" | sed 's/^"//; s/"$//' | xargs)
+            [ -z "$file" ] && continue
+            if ! echo "$file" | grep -qE "^(docs/|\.github/.*\.md$|.*\.md$|.*\.docx$|\.gitignore$|LICENSE$)"; then
+              DOCS_ONLY=false
+              break
+            fi
+          done <<< "$CHANGED_FILES"
+
+          if [ "$DOCS_ONLY" = "true" ] && [ -n "$CHANGED_FILES" ]; then
+            echo "ℹ️ Phát hiện commit chỉ bao gồm tài liệu (docs / markdown). Bỏ qua Docker Build và Ephemeral Smoke Test."
+            echo "skip_stage3=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "👉 Phát hiện có thay đổi mã nguồn hoặc cấu hình hệ thống. Tiến hành kiểm định Production Gate."
+            echo "skip_stage3=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: 1. Validate Monitoring Configurations
         id: validate_configs
         run: python3 ci/validate_configs.py
 
       - name: 2. Build Production Docker Images
+        if: steps.eval_stage3.outputs.skip_stage3 != 'true'
         id: build_images
         shell: bash
         run: |
@@ -235,6 +272,7 @@ jobs:
           docker compose build --progress=plain
 
       - name: 3. Deploy Preview & Monitoring Environment in Runner
+        if: steps.eval_stage3.outputs.skip_stage3 != 'true'
         id: deploy_preview
         shell: bash
         run: |
@@ -249,6 +287,22 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if [ "${{ steps.eval_stage3.outputs.skip_stage3 }}" = "true" ]; then
+            echo "ℹ️ Bỏ qua kiểm thử nhịp tim đầu cuối do bản cập nhật chỉ thay đổi tài liệu kỹ thuật."
+            cat << EOF >> "$GITHUB_STEP_SUMMARY"
+          ## 📚 Production Gate: Bỏ qua kiểm định Build (Chỉ cập nhật tài liệu)
+
+          > Bản cập nhật chỉ thay đổi tài liệu kỹ thuật (\`docs/**\`, \`*.md\`). Không phát sinh thay đổi trong mã nguồn ứng dụng web hoặc cấu hình vùng chứa.
+
+          | Hạng mục | Trạng thái | Chi tiết |
+          | :--- | :---: | :--- |
+          | **Phạm vi commit** | 📚 **Tài liệu thuần túy** | Bỏ qua đóng gói Docker Image |
+          | **Docker Build** | ⏩ **BỎ QUA** | Tối ưu 100% thời gian chạy CI |
+          | **Smoke Test** | ⏩ **BỎ QUA** | Không tốn tài nguyên máy ảo |
+          EOF
+            exit 0
+          fi
+
           echo "⏳ Chờ đợi MariaDB khởi tạo và sẵn sàng (service_healthy)..."
           
           # 1. Đợi database container đạt trạng thái healthy
@@ -346,7 +400,7 @@ jobs:
           EOF
 
       - name: 5. Push Validated Docker Images to GitHub Container Registry (GHCR)
-        if: success()
+        if: steps.eval_stage3.outputs.skip_stage3 != 'true' && success()
         shell: bash
         run: |
           set -euo pipefail
@@ -373,7 +427,7 @@ jobs:
           echo "✅ Đã lưu trữ Docker Images InlaneWeb & InlaneWeb-DB an toàn trên GitHub Packages (GHCR)!"
 
       - name: 6. Teardown Runner Containers
-        if: always()
+        if: steps.eval_stage3.outputs.skip_stage3 != 'true' && always()
         shell: bash
         run: |
           echo "🧹 Dọn dẹp môi trường kiểm thử tạm thời..."
@@ -402,24 +456,41 @@ jobs:
           echo "🔍 [Monitoring Gate] Kiểm tra thay đổi trong hạ tầng giám sát..."
           PREV_COMMIT="${{ github.event.before }}"
           if [ -z "$PREV_COMMIT" ] || [ "$PREV_COMMIT" = "0000000000000000000000000000000000000000" ]; then
-            CHANGED_FILES=$(git diff-tree --no-commit-id --name-only -r HEAD || echo "")
+            CHANGED_FILES=$(git -c core.quotepath=off diff-tree --no-commit-id --name-only -r HEAD || echo "")
           else
-            CHANGED_FILES=$(git diff --name-only "$PREV_COMMIT" HEAD || echo "")
+            CHANGED_FILES=$(git -c core.quotepath=off diff --name-only "$PREV_COMMIT" HEAD || echo "")
           fi
           echo "Danh sách tệp thay đổi:"
           echo "$CHANGED_FILES"
 
+          DOCS_ONLY=true
+          while IFS= read -r raw_file; do
+            file=$(echo "$raw_file" | sed 's/^"//; s/"$//' | xargs)
+            [ -z "$file" ] && continue
+            if ! echo "$file" | grep -qE "^(docs/|\.github/.*\.md$|.*\.md$|.*\.docx$|\.gitignore$|LICENSE$)"; then
+              DOCS_ONLY=false
+              break
+            fi
+          done <<< "$CHANGED_FILES"
+
           DEPLOY_MONITORING=false
-          if echo "$CHANGED_FILES" | grep -qE "^(InlaneWeb/monitoring/|InlaneWeb/docker-compose\.monitoring\.yml|ci/validate_configs\.py)"; then
+          if [ "$DOCS_ONLY" = "true" ] && [ -n "$CHANGED_FILES" ]; then
+            echo "ℹ️ Chỉ có thay đổi tài liệu (docs / markdown). Bỏ qua cập nhật hạ tầng giám sát."
+            STATUS="SKIPPED_DOCS_ONLY"
+          elif echo "$CHANGED_FILES" | grep -qE "^(InlaneWeb/monitoring/|InlaneWeb/docker-compose\.monitoring\.yml|ci/validate_configs\.py)"; then
             DEPLOY_MONITORING=true
             echo "👉 Phát hiện thay đổi cấu hình hoặc rules giám sát."
-          elif ! echo "$CHANGED_FILES" | grep -qE "^(InlaneWeb/web/|InlaneWeb/db/|InlaneWeb/docker-compose\.yml)"; then
+            STATUS="DEPLOYED"
+          elif ! echo "$CHANGED_FILES" | grep -qE "^(InlaneWeb/web/|InlaneWeb/db/|InlaneWeb/docker-compose\.prod\.yml|InlaneWeb/docker-compose\.yml)"; then
             DEPLOY_MONITORING=true
             echo "👉 Thay đổi toàn cục / bản phát hành; kiểm tra đồng bộ hạ tầng giám sát."
+            STATUS="DEPLOYED"
           else
             echo "ℹ️ Không có thay đổi trong hạ tầng giám sát. Bỏ qua cập nhật để đảm bảo Zero-Downtime."
+            STATUS="SKIPPED_ZERO_DOWNTIME"
           fi
           echo "deploy_monitoring=$DEPLOY_MONITORING" >> "$GITHUB_OUTPUT"
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
 
       - name: 2. Rollout Observability Platform (Loki, Promtail, Grafana, Autoheal)
         if: steps.eval_monitoring.outputs.deploy_monitoring == 'true'
@@ -491,27 +562,38 @@ jobs:
             ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "docker exec ilfreight_grafana grafana-cli admin reset-admin-password 'keTMheOR73x3vrijcLDCmMfJ' 2>/dev/null || docker exec ilfreight_grafana grafana cli admin reset-admin-password 'keTMheOR73x3vrijcLDCmMfJ' 2>/dev/null || true"
             echo "🔒 Đã cập nhật mật khẩu quản trị viên Grafana và tắt chế độ Anonymous thành công!"
             echo "✅ Cập nhật hạ tầng giám sát Loki/Grafana/Promtail/Autoheal thành công!"
-            STATUS="DEPLOYED"
           else
             echo "ℹ️ [Monitoring CD Standby] Cấu hình sẵn sàng; đang chờ gán GitHub Secrets (PROD_HOST, PROD_USER, PROD_SSH_KEY)."
-            STATUS="PRIMED_STANDBY"
           fi
 
+      - name: 3. Summary for Monitoring Deployment
+        if: always()
+        run: |
+          STATUS="${{ steps.eval_monitoring.outputs.status }}"
+          if [ "$STATUS" = "SKIPPED_DOCS_ONLY" ]; then
+            DESC="Bỏ qua (Chỉ cập nhật tài liệu docs/markdown)"
+          elif [ "$STATUS" = "SKIPPED_ZERO_DOWNTIME" ]; then
+            DESC="Bỏ qua (Không có thay đổi trong hạ tầng giám sát)"
+          elif [ "$STATUS" = "DEPLOYED" ]; then
+            DESC="Đã cập nhật và đồng bộ thành công lên VPS"
+          else
+            DESC="Chế độ chờ hoặc chưa cấu hình"
+          fi
           cat << EOF >> "$GITHUB_STEP_SUMMARY"
           ## 📊 Production CD: Observability Platform
 
           > Triển khai độc lập hạ tầng giám sát tập trung FOSS (24/7 Zero-Downtime).
 
-          | Hạng mục | Trạng thái | Lệnh thực thi |
+          | Hạng mục | Trạng thái | Chi tiết |
           | :--- | :---: | :--- |
-          | **Dịch vụ** | Loki, Promtail, Grafana, Autoheal | \`docker compose -p inlaneweb-monitoring -f docker-compose.monitoring.yml up -d\` |
-          | **Kết quả** | **$STATUS** | Hạ tầng giám sát bền vững |
+          | **Dịch vụ** | Loki, Promtail, Grafana, Autoheal | \`docker compose -p inlaneweb-monitoring up -d\` |
+          | **Kết quả** | **$STATUS** | $DESC |
           EOF
 
   production_deploy_web:
     name: "[STAGE 4: Production CD] Deploy Web Workload"
-    needs: [production_smoke_test, production_deploy_monitoring]
-    if: always() && needs.production_smoke_test.result == 'success' && (needs.production_deploy_monitoring.result == 'success' || needs.production_deploy_monitoring.result == 'skipped') && github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [production_smoke_test]
+    if: always() && needs.production_smoke_test.result == 'success' && github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -529,24 +611,41 @@ jobs:
           echo "🔍 [Web Workload Gate] Kiểm tra thay đổi trong ứng dụng Web/DB..."
           PREV_COMMIT="${{ github.event.before }}"
           if [ -z "$PREV_COMMIT" ] || [ "$PREV_COMMIT" = "0000000000000000000000000000000000000000" ]; then
-            CHANGED_FILES=$(git diff-tree --no-commit-id --name-only -r HEAD || echo "")
+            CHANGED_FILES=$(git -c core.quotepath=off diff-tree --no-commit-id --name-only -r HEAD || echo "")
           else
-            CHANGED_FILES=$(git diff --name-only "$PREV_COMMIT" HEAD || echo "")
+            CHANGED_FILES=$(git -c core.quotepath=off diff --name-only "$PREV_COMMIT" HEAD || echo "")
           fi
           echo "Danh sách tệp thay đổi:"
           echo "$CHANGED_FILES"
 
+          DOCS_ONLY=true
+          while IFS= read -r raw_file; do
+            file=$(echo "$raw_file" | sed 's/^"//; s/"$//' | xargs)
+            [ -z "$file" ] && continue
+            if ! echo "$file" | grep -qE "^(docs/|\.github/.*\.md$|.*\.md$|.*\.docx$|\.gitignore$|LICENSE$)"; then
+              DOCS_ONLY=false
+              break
+            fi
+          done <<< "$CHANGED_FILES"
+
           DEPLOY_WEB=false
-          if echo "$CHANGED_FILES" | grep -qE "^(InlaneWeb/web/|InlaneWeb/db/|InlaneWeb/docker-compose\.yml)"; then
+          if [ "$DOCS_ONLY" = "true" ] && [ -n "$CHANGED_FILES" ]; then
+            echo "ℹ️ Chỉ có thay đổi tài liệu (docs / markdown). Bỏ qua cập nhật ứng dụng Web lên Production."
+            STATUS="SKIPPED_DOCS_ONLY"
+          elif echo "$CHANGED_FILES" | grep -qE "^(InlaneWeb/web/|InlaneWeb/db/|InlaneWeb/docker-compose\.prod\.yml|InlaneWeb/docker-compose\.yml)"; then
             DEPLOY_WEB=true
             echo "👉 Phát hiện thay đổi trong mã nguồn ứng dụng Web / DB."
+            STATUS="DEPLOYED"
           elif ! echo "$CHANGED_FILES" | grep -qE "^(InlaneWeb/monitoring/|InlaneWeb/docker-compose\.monitoring\.yml|ci/validate_configs\.py)"; then
             DEPLOY_WEB=true
             echo "👉 Thay đổi toàn cục / bản phát hành; triển khai bản build mới của Web."
+            STATUS="DEPLOYED"
           else
             echo "ℹ️ Không có thay đổi trong Web workload. Bỏ qua rebuild để tối ưu tài nguyên."
+            STATUS="SKIPPED_ZERO_DOWNTIME"
           fi
           echo "deploy_web=$DEPLOY_WEB" >> "$GITHUB_OUTPUT"
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
 
       - name: 2. Rollout Web Application (Zero Impact on Logging)
         if: steps.eval_web.outputs.deploy_web == 'true'
@@ -579,18 +678,27 @@ jobs:
             ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "docker tag $IMAGE_URI_DB inlaneweb-db:latest || true"
             ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "docker tag $IMAGE_URI_WEB inlaneweb-web:latest || true"
 
-            # Dọn dẹp an toàn container web/db từ project cũ nếu chưa gắn nhãn inlaneweb-prod
-            for c in ilfreight_web ilfreight_db; do
-              LABEL=$(ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "docker inspect -f '{{index .Config.Labels \"com.docker.compose.project\"}}' \$c 2>/dev/null || echo ''")
-              if [ -n "$LABEL" ] && [ "$LABEL" != "inlaneweb-prod" ]; then
-                echo "Dọn dẹp container \$c từ project cũ (\$LABEL)..."
-                ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "docker rm -f \$c 2>/dev/null || true"
-              fi
-            done
+            # Dọn dẹp an toàn container web/db từ project cũ nếu chưa gắn đúng nhãn inlaneweb-prod
+            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "
+              for c in ilfreight_web ilfreight_db; do
+                CID=\$(docker ps -a --filter name=^/\${c}\$ --format '{{.ID}}')
+                if [ -n \"\$CID\" ]; then
+                  CPROJ=\$(docker inspect --format '{{index .Config.Labels \"com.docker.compose.project\"}}' \"\$CID\" 2>/dev/null || echo '')
+                  if [ \"\$CPROJ\" != 'inlaneweb-prod' ]; then
+                    echo \"Dọn dẹp container \$c (\$CID) từ project cũ (\$CPROJ)...\"
+                    docker rm -f \"\$CID\" || true
+                  fi
+                fi
+              done
+            "
 
             ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "mkdir -p $PROD_PATH"
             scp -i ~/.ssh/deploy_key -P $PROD_PORT -o StrictHostKeyChecking=no -o ConnectTimeout=15 InlaneWeb/docker-compose.prod.yml "$PROD_USER@$PROD_HOST:$PROD_PATH/docker-compose.prod.yml"
-            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "cd $PROD_PATH && INLANEWEB_IMAGE=$IMAGE_URI_WEB INLANEWEB_DB_IMAGE=$IMAGE_URI_DB docker compose -p inlaneweb-prod -f docker-compose.prod.yml up -d --remove-orphans"
+            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "cd $PROD_PATH && INLANEWEB_IMAGE=$IMAGE_URI_WEB INLANEWEB_DB_IMAGE=$IMAGE_URI_DB docker compose -p inlaneweb-prod -f docker-compose.prod.yml up -d --remove-orphans || {
+              echo '⚠️ Phát hiện xung đột tên container hoặc cấu hình cũ, tiến hành dọn dẹp và tái tạo an toàn...'
+              docker rm -f ilfreight_web ilfreight_db 2>/dev/null || true
+              cd $PROD_PATH && INLANEWEB_IMAGE=$IMAGE_URI_WEB INLANEWEB_DB_IMAGE=$IMAGE_URI_DB docker compose -p inlaneweb-prod -f docker-compose.prod.yml up -d --remove-orphans
+            }"
 
             echo "⏳ Đang kiểm tra nhịp tim Web workload (Healthcheck)..."
             WEB_HEALTHY=false
@@ -612,22 +720,31 @@ jobs:
               exit 1
             fi
             echo "✅ Cập nhật ứng dụng Web & Database thành công từ GHCR! Logging duy trì hoạt động liên tục."
-            STATUS="DEPLOYED"
           else
             echo "ℹ️ [Web CD Standby] Cấu hình sẵn sàng; đang chờ gán GitHub Secrets (PROD_HOST, PROD_USER, PROD_SSH_KEY)."
-            STATUS="PRIMED_STANDBY"
           fi
 
+      - name: 3. Summary for Web Deployment
+        if: always()
+        run: |
+          STATUS="${{ steps.eval_web.outputs.status }}"
+          if [ "$STATUS" = "SKIPPED_DOCS_ONLY" ]; then
+            DESC="Bỏ qua (Chỉ cập nhật tài liệu docs/markdown)"
+          elif [ "$STATUS" = "SKIPPED_ZERO_DOWNTIME" ]; then
+            DESC="Bỏ qua (Không có thay đổi trong ứng dụng web)"
+          elif [ "$STATUS" = "DEPLOYED" ]; then
+            DESC="Triển khai nhanh gọn không cần build trên host"
+          else
+            DESC="Chế độ chờ hoặc chưa cấu hình"
+          fi
           cat << EOF >> "$GITHUB_STEP_SUMMARY"
           ## 🌐 Production CD: Web Application Workload
 
           > Triển khai độc lập ứng dụng Web PHP 8.2 (Bảo toàn 100% cụm Logging đang chạy).
 
-          | Hạng mục | Trạng thái | Lệnh thực thi |
+          | Hạng mục | Trạng thái | Chi tiết |
           | :--- | :---: | :--- |
-          | **Dịch vụ** | ilfreight_web (Apache + PHP 8.2) | \`docker pull ghcr.io/... && docker compose up -d --no-deps web\` |
-          | **Nguồn Image** | GHCR (Đã qua kiểm định Stage 3) | \`ghcr.io/$REPO_OWNER/inlaneweb:${{ github.sha }}\` |
-          | **Kết quả** | **$STATUS** | Triển khai nhanh gọn không cần build trên host |
+          | **Dịch vụ** | ilfreight_web (Apache + PHP 8.2) | \`docker compose -p inlaneweb-prod up -d\` |
+          | **Nguồn Image** | GHCR | \`ghcr.io/$REPO_OWNER/inlaneweb:${{ github.sha }}\` |
+          | **Kết quả** | **$STATUS** | $DESC |
           EOF
-
-
