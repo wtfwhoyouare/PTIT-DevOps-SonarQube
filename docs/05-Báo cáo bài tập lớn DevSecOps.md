@@ -12,7 +12,7 @@
 | **Học phần:** | Thực hành Kỹ thuật DevOps & DevSecOps Nâng cao |
 | **Mã định danh công trình:** | PTIT-DEVSECOPS-2026-REP05 |
 | **Nhóm tác giả:** | Nguyễn Giang Nam<br>Nguyễn Đình Hải<br>Đào Xuân Mạnh<br>Lê Đức Anh<br>Nguyễn Phương Mai |
-| **Môi trường thực nghiệm:** | `https://inlaneweb.ecotools.online` (Production VPS / Cloudflare Origin CA) |
+| **Môi trường thực nghiệm:** | **Web Portal:** `https://inlaneweb.ecotools.online`<br>**Grafana Observability:** `https://grafana.ecotools.online`<br>(Production VPS / Cloudflare Full SSL / Nginx Proxy Manager) |
 | **Kho lưu trữ mã nguồn:** | `https://github.com/wtfwhoyouare/PTIT-DevOps-SonarQube` |
 | **Thời gian hoàn thành:** | Tháng 10 năm 2026 |
 
@@ -31,22 +31,31 @@
   - [1.2. Thiết kế tách riêng ứng dụng và cụm giám sát](#12-thiết-kế-tách-riêng-ứng-dụng-và-cụm-giám-sát)
   - [1.3. Thiết kế mạng nội bộ và Reverse Proxy bảo mật](#13-thiết-kế-mạng-nội-bộ-và-reverse-proxy-bảo-mật)
   - [1.4. Năm kịch bản triển khai hệ thống trong thực tế](#14-năm-kịch-bản-triển-khai-hệ-thống-trong-thực-tế)
-- [CHƯƠNG 2: QUẢN LÝ MÃ NGUỒN VÀ QUÉT LỖ HỔNG BẢO MẬT (STAGE 1 & 2)](#chương-2-quản-lý-mã-nguồn-và-quét-lỗ-hổng-bảo-mật-stage-1--2)
+- [CHƯƠNG 2: QUẢN LÝ MÃ NGUỒN VÀ QUÉT LỖ HỔNG BẢO MẬT (STAGE 1 & 2)](#chương-2-quản-lý-mã-nguồn-và-quét-lỗ-hổng-bảo-mật-stage-1-2)
   - [2.1. Chặn lỗi commit từ máy lập trình viên bằng Git Hooks](#21-chặn-lỗi-commit-từ-máy-lập-trình-viên-bằng-git-hooks)
   - [2.2. Kiểm tra quy tắc nhánh và Pull Request (Stage 1: Policy Guard)](#22-kiểm-tra-quy-tắc-nhánh-và-pull-request-stage-1-policy-guard)
   - [2.3. Quét lỗ hổng mã nguồn bằng SonarQube và Semgrep (Stage 2: SAST)](#23-quét-lỗ-hổng-mã-nguồn-bằng-sonarqube-và-semgrep-stage-2-sast)
-- [CHƯƠNG 3: ĐÓNG GÓI VÀ TỰ ĐỘNG TRIỂN KHAI LÊN PRODUCTION (STAGE 3 & 4)](#chương-3-đóng-gói-và-tự-động-triển-khai-lên-production-stage-3--4)
+- [CHƯƠNG 3: ĐÓNG GÓI VÀ TỰ ĐỘNG TRIỂN KHAI LÊN PRODUCTION (STAGE 3 & 4)](#chương-3-đóng-gói-và-tự-động-triển-khai-lên-production-stage-3-4)
   - [3.1. Chạy thử nghiệm hệ thống trên môi trường tạm thời (Stage 3)](#31-chạy-thử-nghiệm-hệ-thống-trên-môi-trường-tạm-thời-stage-3)
   - [3.2. Đóng gói Docker Image và lưu trữ trên GitHub (GHCR)](#32-đóng-gói-docker-image-và-lưu-trữ-trên-github-ghcr)
   - [3.3. Tự động triển khai lên máy chủ Production VPS (Stage 4)](#33-tự-động-triển-khai-lên-máy-chủ-production-vps-stage-4)
-  - [3.4. Cấu hình tên miền, SSL và Reverse Proxy](#34-cấu-hình-tên-miền-ssl-và-reverse-proxy)
+  - [3.4. Cấu hình tên miền, SSL và Reverse Proxy kép qua Nginx Proxy Manager](#34-cấu-hình-tên-miền-ssl-và-reverse-proxy-kép-qua-nginx-proxy-manager)
 - [CHƯƠNG 4: HỆ THỐNG GIÁM SÁT VÀ TỰ ĐỘNG KHÔI PHỤC](#chương-4-hệ-thống-giám-sát-và-tự-động-khôi-phục)
   - [4.1. Tách biệt log ứng dụng và log truy cập web](#41-tách-biệt-log-ứng-dụng-và-log-truy-cập-web)
-  - [4.2. Thu thập và xem log tập trung trên Grafana (Promtail & Loki)](#42-thu-thập-và-xem-log-tập-trung-trên-grafana-promtail--loki)
+  - [4.2. Thu thập và xem log tập trung trên Grafana (Promtail & Loki)](#42-thu-thập-và-xem-log-tập-trung-trên-grafana-promtail-loki)
+    - [4.2.1. Kiến trúc lưu trữ và tối ưu tài nguyên của Loki](#421-kiến-trúc-lưu-trữ-và-tối-ưu-tài-nguyên-của-loki)
+    - [4.2.2. Bảng điều khiển trực quan hóa 8 phân vùng giám sát an ninh](#422-bảng-điều-khiển-trực-quan-hóa-8-phân-vùng-giám-sát-an-ninh)
+    - [4.2.3. Thắt chặt an ninh Grafana Dashboard (Security Hardening)](#423-thắt-chặt-an-ninh-grafana-dashboard-security-hardening)
   - [4.3. Tự động khởi động lại container khi gặp sự cố (Autoheal)](#43-tự-động-khởi-động-lại-container-khi-gặp-sự-cố-autoheal)
 - [CHƯƠNG 5: CÁC TÌNH HUỐNG SỰ CỐ VÀ TẤN CÔNG THỰC TẾ](#chương-5-các-tình-huống-sự-cố-và-tấn-công-thực-tế)
   - [5.1. Các lỗi mã nguồn bị SonarQube chặn khi lập trình](#51-các-lỗi-mã-nguồn-bị-sonarqube-chặn-khi-lập-trình)
-  - [5.2. Các sự cố web trên môi trường Production](#52-các-sự-cố-web-trên-môi-trường-production)
+  - [5.2. Các sự cố web và hạ tầng trên môi trường Production](#52-các-sự-cố-web-và-hạ-tầng-trên-môi-trường-production)
+    - [5.2.1. Sự cố mất kết nối cơ sở dữ liệu (HTTP 500 / 503)](#521-sự-cố-mất-kết-nối-cơ-sở-dữ-liệu-http-500-503)
+    - [5.2.2. Lỗi truy cập trang không tồn tại (HTTP 404)](#522-lỗi-truy-cập-trang-không-tồn-tại-http-404)
+    - [5.2.3. Sự cố sập ứng dụng do tràn bộ nhớ (Fatal Error)](#523-sự-cố-sập-ứng-dụng-do-tràn-bộ-nhớ-fatal-error)
+    - [5.2.4. Sự cố xung đột Orphan Containers giữa hai Compose Projects song song](#524-sự-cố-xung-đột-orphan-containers-giữa-hai-compose-projects-song-song)
+    - [5.2.5. Sự cố đứt gãy kết nối mạng nội bộ giữa Reverse Proxy và Web (502 Bad Gateway)](#525-sự-cố-đứt-gãy-kết-nối-mạng-nội-bộ-giữa-reverse-proxy-và-web-502-bad-gateway)
+    - [5.2.6. Sự cố phân giải tên miền phụ Grafana (ERR_NAME_NOT_RESOLVED)](#526-sự-cố-phân-giải-tên-miền-phụ-grafana-err_name_not_resolved)
   - [5.3. Các kịch bản tấn công thực tế và cách phát hiện qua log](#53-các-kịch-bản-tấn-công-thực-tế-và-cách-phát-hiện-qua-log)
   - [5.4. Biện pháp vá lỗi và phòng thủ an toàn](#54-biện-pháp-vá-lỗi-và-phòng-thủ-an-toàn)
 - [CHƯƠNG 6: KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN](#chương-6-kết-luận-và-hướng-phát-triển)
@@ -446,16 +455,16 @@ sequenceDiagram
     Note over Runner, VPS: Kết nối SSH Ed25519 an toàn qua GitHub Secrets
     Runner->>VPS: Đánh giá thay đổi đường dẫn (Path-based Selective Trigger)
     alt Có thay đổi cấu hình Giám sát
-        Runner->>VPS: Job 1: docker compose -f docker-compose.monitoring.yml up -d
-        VPS-->>Runner: Khối Standing Observability hoạt động ổn định 24/7
+        Runner->>VPS: Job 1: docker compose -p inlaneweb-monitoring -f docker-compose.monitoring.yml up -d --remove-orphans
+        VPS-->>Runner: Khối Standing Observability (Loki + Grafana + Promtail) sẵn sàng 24/7
     end
-    Note over Runner, VPS: Triển khai Khối Ứng dụng Nghiệp vụ Web (Job 2)
+    Note over Runner, VPS: Triển khai Khối Ứng dụng Nghiệp vụ Web tuần tự (Job 2 - needs Job 1)
     Runner->>VPS: Kéo (Pull) Images mới nhất từ GHCR
-    VPS->>GHCR: Kéo ghcr.io/.../inlaneweb:latest & inlaneweb-db:latest
-    Runner->>VPS: Thực thi docker-compose.prod.yml up -d --remove-orphans
+    VPS->>GHCR: Kéo ghcr.io/.../inlaneweb:${SHA} & inlaneweb-db:${SHA}
+    Runner->>VPS: Thực thi docker compose -p inlaneweb-prod -f docker-compose.prod.yml up -d --remove-orphans
     VPS->>MariaDB: Gắn kết Docker Volume db_data (Bảo toàn 100% dữ liệu)
-    loop Thăm dò nhịp tim thích ứng (Tối đa 30 lần x 2s)
-        Runner->>VPS: curl -f http://127.0.0.1:8080/health
+    loop Thăm dò nhịp tim thích ứng (Tối đa 30 lần x 3s)
+        Runner->>VPS: curl -f http://127.0.0.1:8088/health
         VPS-->>Runner: Phản hồi HTTP 200 OK
     end
     Runner-->>Runner: Xác nhận triển khai thành công Zero-Downtime!
@@ -471,12 +480,28 @@ Trong tệp [`InlaneWeb/docker-compose.prod.yml`](file:///d:/PTIT-DevOps-SonarQu
 
 #### 3.3.3. Kiểm tra web hoạt động ổn định trước khi hoàn tất
 Trong các hệ thống phân tán, cơ sở dữ liệu thường cần từ 5 đến 20 giây để khởi động các tiến trình quản lý trang nhớ và kiểm tra bảng dữ liệu. Nếu kiểm tra trạng thái ngay lập tức, tiến trình kiểm tra sẽ báo lỗi giả. Pipeline đã cài đặt thuật toán kiểm tra nhịp tim vòng lặp:
-* Thực hiện gửi tín hiệu thăm dò liên tục tới endpoint `http://127.0.0.1:8080/health` trên máy chủ VPS.
-* Khoảng cách giữa các lần thăm dò là $T = 2\text{s}$, với số lần thử tối đa $N = 30$ (tổng thời gian chịu lỗi tối đa 60 giây).
-* Nếu nhận được phản hồi HTTP 200, tiến trình triển khai được công nhận thành công ngay lập tức. Nếu sau 60 giây endpoint vẫn không phản hồi, quy trình tự động trích xuất toàn bộ log của container `ilfreight_web` và `ilfreight_db` để lập tức thông báo sự cố cho kỹ sư vận hành.
+* Thực hiện gửi tín hiệu thăm dò liên tục tới endpoint `http://127.0.0.1:8088/health` trên máy chủ VPS.
+* Khoảng cách giữa các lần thăm dò là $T = 3\text{s}$, với số lần thử tối đa $N = 30$ (tổng thời gian chịu lỗi tối đa 90 giây).
+* Nếu nhận được phản hồi HTTP 200, tiến trình triển khai được công nhận thành công ngay lập tức. Nếu sau 90 giây endpoint vẫn không phản hồi, quy trình tự động trích xuất toàn bộ log của container `ilfreight_web` và `ilfreight_db` để lập tức thông báo sự cố cho kỹ sư vận hành.
 
-### 3.4. Cấu hình tên miền, SSL và Reverse Proxy
-Tại máy chủ Production VPS, công cụ Nginx Proxy Manager đóng vai trò là Reverse Proxy trung tâm. Hệ thống cấu hình định tuyến tên miền công khai `inlaneweb.ecotools.online` tới địa chỉ nội bộ của container web trên cổng `80`. Bằng việc sử dụng chứng chỉ số do Cloudflare cấp phát với chế độ mã hóa Full Strict SSL, toàn bộ luồng thông tin truyền nhận qua mạng Internet đều được mã hóa theo tiêu chuẩn mật mã tiên tiến, bảo vệ dữ liệu trước các cuộc tấn công nghe lén và can thiệp trên đường truyền Man-in-the-Middle.
+#### 3.3.4. Phân lập không gian Compose Projects tránh xung đột Orphan Containers
+Khi đặt cả hai tệp `docker-compose.monitoring.yml` và `docker-compose.prod.yml` trong cùng thư mục `/opt/inlaneweb`, mặc định Docker Compose sẽ gán tên project theo tên thư mục (`inlaneweb`). Do đó, cờ `--remove-orphans` của khối web sẽ hiểu nhầm các container giám sát là "mồ côi" và tiêu hủy chúng. Hệ thống giải quyết triệt để vấn đề này bằng cách:
+* Khối giám sát: Khai báo `name: inlaneweb-monitoring` và chạy với `-p inlaneweb-monitoring`.
+* Khối web: Khai báo `name: inlaneweb-prod` và chạy với `-p inlaneweb-prod`.
+* Cấu hình ràng buộc phụ thuộc tuần tự (`needs: [..., production_deploy_monitoring]`), đảm bảo cụm giám sát khởi động ổn định trước rồi mới triển khai ứng dụng nghiệp vụ.
+
+### 3.4. Cấu hình tên miền, SSL và Reverse Proxy kép qua Nginx Proxy Manager
+Tại máy chủ Production VPS, công cụ **Nginx Proxy Manager (NPM)** đóng vai trò là Reverse Proxy trung tâm, tiếp nhận lưu lượng truy cập Internet qua các cổng tiêu chuẩn `80` (HTTP) và `443` (HTTPS) và điều phối vào mạng nội bộ Docker `inlaneweb_net`:
+
+1. **Cổng thông tin logistics (`inlaneweb.ecotools.online`):**
+   * Định tuyến lưu lượng vào container `ilfreight_web` trên cổng `80`.
+   * Cấu hình kết nối Docker Network: Container `proxy-manager-app-1` được kết nối trực tiếp vào mạng `inlaneweb_net` (`docker network connect inlaneweb_net proxy-manager-app-1`), cho phép Nginx phân giải hostname container nội bộ mà không cần phụ thuộc vào IP tĩnh của máy chủ.
+2. **Cổng giám sát an ninh tập trung (`grafana.ecotools.online`):**
+   * Định tuyến lưu lượng vào container `ilfreight_grafana` trên cổng `3000`.
+   * Kích hoạt tùy chọn **Websockets Support** trong Nginx Proxy Manager để duy trì kết nối WebSocket bền vững hai chiều giữa trình duyệt quản trị viên và máy chủ Grafana, phục vụ việc đẩy dữ liệu log và biểu đồ thời gian thực (Live Stream Logs) mà không gây trễ.
+3. **Mô hình bảo vệ SSL đa lớp:**
+   * Sử dụng chứng chỉ số SSL do Cloudflare cấp phát phối hợp cùng chứng chỉ số Let's Encrypt / Custom SSL trên Nginx Proxy Manager.
+   * Kích hoạt chế độ mã hóa **Full (Strict) SSL**, bật cờ bảo vệ **HSTS** (`max-age=63072000; includeSubDomains; preload`) và chuyển hướng bắt buộc toàn bộ lưu lượng HTTP sang HTTPS (Force SSL). Toàn bộ dữ liệu truyền nhận qua mạng Internet đều được mã hóa tuyệt đối, ngăn chặn triệt để nguy cơ tấn công trung gian Man-in-the-Middle.
 
 ---
 
@@ -521,10 +546,11 @@ Tại máy chủ Production VPS, công cụ Nginx Proxy Manager đóng vai trò 
    Việc chuẩn hóa này cho phép các tác tử thu thập nhật ký phân tích cú pháp trực tiếp mà không cần sử dụng các biểu thức chính quy phức tạp, giảm thiểu tối đa tải tính toán trên máy chủ.
 
 ### 4.2. Thu thập và xem log tập trung trên Grafana (Promtail & Loki)
-* **Promtail 3.0:** Đóng vai trò là tác tử thu thập nhật ký. Promtail kết nối trực tiếp vào tệp socket của Docker Daemon `/var/run/docker.sock`, tự động phát hiện các vùng chứa có nhãn giám sát, bóc tách cấu trúc JSON và đính kèm các nhãn định danh `container="ilfreight_web"` và `environment="production"`.
-* **Grafana Loki 3.0:** Khác với các hệ thống Elasticsearch tiêu tốn dung lượng RAM lớn, Loki chỉ thực hiện đánh chỉ mục trên các nhãn siêu dữ liệu và nén các đoạn nhật ký thành các khối dữ liệu nhị phân lưu trữ trên ổ đĩa. Cách tiếp cận này giúp giảm thiểu 80% dung lượng lưu trữ cần thiết.
-* **Ngôn ngữ truy vấn LogQL và Bảng điều khiển Grafana 11.0:**
-  Hệ thống xây dựng sẵn các bảng hiển thị phân vùng giám sát, sử dụng các câu truy vấn LogQL nâng cao để trích xuất các dấu hiệu bất thường:
+
+#### 4.2.1. Kiến trúc lưu trữ và tối ưu tài nguyên của Loki
+* **Promtail 3.0 Collector:** Đóng vai trò là tác tử thu thập nhật ký. Promtail kết nối trực tiếp vào tệp socket của Docker Daemon `/var/run/docker.sock`, tự động phát hiện các vùng chứa có nhãn giám sát, bóc tách cấu trúc JSON và đính kèm các nhãn định danh `container="ilfreight_web"` và `service_name="ilfreight_web"`.
+* **Grafana Loki 3.0 Engine:** Khác với các hệ thống Elasticsearch tiêu tốn dung lượng RAM lớn (thường đòi hỏi từ 4GB đến 8GB RAM chỉ cho tầng chỉ mục), Loki chỉ thực hiện đánh chỉ mục trên các nhãn siêu dữ liệu (metadata labels) và nén các đoạn nhật ký thành các khối dữ liệu nhị phân (chunks) lưu trữ trên ổ đĩa. Cách tiếp cận này giúp giảm thiểu hơn 80% dung lượng lưu trữ cần thiết, cho phép triển khai bền vững trên các máy chủ VPS cấu hình tiết kiệm tài nguyên.
+* **Ngôn ngữ truy vấn LogQL:** Sử dụng cú pháp tương đồng với PromQL, kết hợp bộ lọc nhãn và bộ lọc nội dung:
   ```logql
   # Đếm tần suất các yêu cầu có dấu hiệu tấn công SQL Injection trong 5 phút
   sum by (client_ip) (
@@ -535,6 +561,26 @@ Tại máy chủ Production VPS, công cụ Nginx Proxy Manager đóng vai trò 
     )
   )
   ```
+
+#### 4.2.2. Bảng điều khiển trực quan hóa 8 phân vùng giám sát an ninh
+Bảng điều khiển trung tâm mang tên *"InlaneWeb Logistics — Centralized Observability & Anomaly Dashboard"* (`inlaneweb-observability`) được nạp tự động qua cơ chế Provisioning của Grafana, chia tách thành 8 bảng hiển thị độc lập:
+1. **Panel 1 — Application Cause Exceptions & Runtime Stacktraces:** Trực quan hóa toàn bộ chuỗi lỗi nghiệp vụ PHP, Root Cause, tên file, số dòng và Stack Trace khi ứng dụng phát sinh lỗi.
+2. **Panel 2 — SQL Injection (SQLi) Attacks in HTTP Traffic:** Lọc vết các truy vấn chứa payload tấn công cơ sở dữ liệu (`UNION SELECT`, `SLEEP`, `extractvalue`, `load_file`, `into outfile`).
+3. **Panel 3 — Path Traversal & Local File Inclusion (LFI/RFI):** Bắt các hành vi dò tìm tệp hệ thống (`../`, `/etc/passwd`, `win.ini`, `php://filter`).
+4. **Panel 4 — Cross-Site Scripting (XSS) in HTTP Traffic:** Nhận diện các thẻ kịch bản độc hại và sự kiện JavaScript (`<script>`, `onerror=`, `onload=`, `document.cookie`).
+5. **Panel 5 — Remote Code Execution & Command Injection (CMDi):** Bắt các ký tự ghép lệnh shell Linux (`; cat`, `| whoami`, `&& nc`, `/bin/sh`).
+6. **Panel 6 — HTTP Error-Based Response Leaks & 4xx/5xx Server Faults:** Giám sát lưu lượng lỗi HTTP 404, 500, 503 và các thông báo lỗi cơ sở dữ liệu bị rò rỉ ra phía người dùng.
+7. **Panel 7 — Multi-Vector Security Incident Rate (Events/sec):** Biểu đồ chuỗi thời gian (Timeseries) phân tầng mức độ nghiêm trọng của các vector tấn công theo thời gian thực.
+8. **Panel 8 — MariaDB Database Diagnostics:** Theo dõi nhật ký hoạt động nội bộ và chẩn đoán truy vấn của container cơ sở dữ liệu `ilfreight_db`.
+
+#### 4.2.3. Thắt chặt an ninh Grafana Dashboard (Security Hardening)
+Do bảng điều khiển chứa toàn bộ nhật ký ứng dụng nhạy cảm (thông tin truy vấn cơ sở dữ liệu, địa chỉ IP máy khách, dấu vết payload và tài khoản người dùng), việc bảo vệ cổng giám sát là yêu cầu an ninh tối thượng:
+* **Vô hiệu hóa truy cập nặc danh (Disable Anonymous Access):**
+  Cấu hình `GF_AUTH_ANONYMOUS_ENABLED=false` trong tệp điều phối [`InlaneWeb/docker-compose.monitoring.yml`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/docker-compose.monitoring.yml). Mọi yêu cầu truy cập giao diện web đều bắt buộc phải vượt qua bước xác thực tài khoản quản trị.
+* **Chính sách mật khẩu quản trị viên ngẫu nhiên (Strong Random Admin Password):**
+  Thay thế hoàn toàn mật khẩu mặc định bằng chuỗi ký tự ngẫu nhiên có độ dài 24 ký tự có độ phức tạp cao, triệt tiêu nguy cơ tấn công brute-force hoặc chiếm quyền thông qua tài khoản mặc định.
+* **Tự động hóa đồng bộ và làm sạch cơ sở dữ liệu xác thực:**
+  Khi thay đổi mật khẩu trong biến môi trường, cơ sở dữ liệu SQLite hiện hữu của Grafana không tự động cập nhật bảng người dùng cũ. Do đó, đường ống CD tự động xóa bỏ volume lưu trữ SQLite cũ (`docker volume rm inlaneweb-monitoring_grafana_data`) và thực thi lệnh cập nhật mật khẩu trực tiếp qua `grafana cli admin reset-admin-password` ngay sau khi container khởi động thành công, bảo đảm 100% chính sách mật khẩu mới có hiệu lực tức thời.
 
 ### 4.3. Tự động khởi động lại container khi gặp sự cố (Autoheal)
 Một hệ thống tự vận hành an toàn bắt buộc phải có khả năng tự phục hồi khi xảy ra sự cố đột ngột:
@@ -601,7 +647,7 @@ Dưới đây là 4 tình huống vi phạm điển hình mà SonarQube phát hi
 
 ---
 
-### 5.2. Các sự cố web trên môi trường Production
+### 5.2. Các sự cố web và hạ tầng trên môi trường Production
 
 Trong môi trường vận hành thực tế tại `https://inlaneweb.ecotools.online`, các sự cố hệ thống có thể phát sinh từ cơ sở hạ tầng hoặc lỗi logic phần mềm. Sự phối hợp giữa [`InlaneLogger`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/lib/logger.php), Promtail và Grafana Loki đảm bảo mọi lỗi đều được bắt trọn vẹn:
 
@@ -655,6 +701,40 @@ Trong môi trường vận hành thực tế tại `https://inlaneweb.ecotools.o
   ```logql
   {container="ilfreight_web", log_category="app_exception"} | json | type == "fatal_shutdown_error" or level == "fatal"
   ```
+
+#### 5.2.4. Sự cố xung đột Orphan Containers giữa hai Compose Projects song song
+* **Triệu chứng sự cố:** Trong lượt chạy Production CD (Run #39985446211), Job `Deploy Observability Platform` bị thất bại khẩn cấp với thông báo lỗi: `dependency failed to start: Error response from daemon: No such container...`.
+* **Phân tích nguyên nhân gốc rễ (Root Cause Analysis - RCA):**
+  1. Hai tệp điều phối [`InlaneWeb/docker-compose.monitoring.yml`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/docker-compose.monitoring.yml) và [`InlaneWeb/docker-compose.prod.yml`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/docker-compose.prod.yml) cùng thực thi trong thư mục `/opt/inlaneweb` nhưng không chỉ định tên project rõ ràng.
+  2. Mặc định Docker Compose gán tên project theo tên thư mục làm việc (`inlaneweb`).
+  3. Khi Job Giám sát chạy lệnh `docker compose ... up -d --remove-orphans`, Docker Compose xem xét toàn bộ container thuộc project `inlaneweb`. Do `ilfreight_web` và `ilfreight_db` không nằm trong tệp monitoring, Docker xem chúng là container mồ côi (orphans) và tiến hành dừng/xóa chúng.
+  4. Đồng thời, Job Web chạy song song với cờ `--remove-orphans` lại xem `ilfreight_loki` và `ilfreight_grafana` là mồ côi và xóa bỏ `ilfreight_loki` ngay thời điểm Promtail và Grafana đang chờ Loki đạt trạng thái healthy. Hai tiến trình tranh chấp tài nguyên và tiêu diệt lẫn nhau.
+* **Giải pháp khắc phục triệt để:**
+  1. *Phân lập không gian định danh Project:* Khối giám sát được gán `name: inlaneweb-monitoring` (cờ `-p inlaneweb-monitoring`), khối web được gán `name: inlaneweb-prod` (cờ `-p inlaneweb-prod`). Nhờ đó, cờ `--remove-orphans` chỉ dọn dẹp các container trong phạm vi nội bộ của chính project đó.
+  2. *Chuyển đổi luồng thực thi tuần tự:* Cấu hình `production_deploy_web` phụ thuộc vào `production_deploy_monitoring` (`needs: [production_smoke_test, production_deploy_monitoring]`), đảm bảo cụm giám sát khởi động và vượt qua kiểm tra nhịp tim trước rồi mới triển khai ứng dụng web.
+
+#### 5.2.5. Sự cố đứt gãy kết nối mạng nội bộ giữa Reverse Proxy và Web (502 Bad Gateway)
+* **Triệu chứng sự cố:** Người dùng truy cập tên miền `https://inlaneweb.ecotools.online/` bị Cloudflare chặn lại và hiển thị trang lỗi **Bad Gateway (Error code 502)**. Trong khi đó, lệnh kiểm tra `docker ps` trên máy chủ VPS xác nhận container `ilfreight_web` vẫn đang ở trạng thái `Up (healthy)`.
+* **Phân tích nguyên nhân gốc rễ (RCA):**
+  1. Hệ thống Reverse Proxy sử dụng container `proxy-manager-app-1` (Nginx Proxy Manager) thuộc mạng Docker riêng biệt (`proxy-manager_default`).
+  2. Cấu hình Nginx Proxy Host định tuyến tên miền `inlaneweb.ecotools.online` tới upstream hostname là `ilfreight_web` trên cổng 80.
+  3. Khi mạng Docker `inlaneweb_net` được tái tạo hoặc cập nhật trong quá trình triển khai, container `proxy-manager-app-1` bị ngắt kết nối khỏi mạng này.
+  4. Động cơ phân giải tên miền nội bộ của Nginx trong container NPM không thể tìm thấy địa chỉ IP của container `ilfreight_web`, dẫn tới lỗi không thể kết nối tới upstream server và Cloudflare trả về mã lỗi 502 Bad Gateway.
+* **Giải pháp khắc phục triệt để:**
+  1. Thực thi lệnh gắn kết container Reverse Proxy vào mạng bridge của ứng dụng:
+     ```bash
+     docker network connect inlaneweb_net proxy-manager-app-1
+     ```
+  2. Nginx ngay lập tức phân giải được hostname `ilfreight_web`, lưu lượng HTTP được phục hồi thông suốt và mã phản hồi trả về trạng thái **HTTP 200 OK**.
+
+#### 5.2.6. Sự cố phân giải tên miền phụ Grafana (ERR_NAME_NOT_RESOLVED)
+* **Triệu chứng sự cố:** Quản trị viên truy cập vào địa chỉ `https://grafana.ecotools.online/` nhưng trình duyệt thông báo lỗi không thể tìm thấy máy chủ: `ERR_NAME_NOT_RESOLVED`.
+* **Phân tích nguyên nhân gốc rễ (RCA):**
+  Tên miền gốc `ecotools.online` được ủy quyền quản lý DNS tại Cloudflare. Khi nhóm nghiên cứu khởi tạo Proxy Host trong Nginx Proxy Manager cho subdomain `grafana.ecotools.online`, bản ghi DNS `A` hoặc `CNAME` tương ứng cho tiền tố `grafana` chưa được khai báo trên bảng quản lý DNS của Cloudflare.
+* **Giải pháp khắc phục triệt để:**
+  1. *Cấu hình bản ghi DNS trên Cloudflare:* Tạo bản ghi loại `A` với tên (Name) là `grafana`, giá trị nội dung trỏ về địa chỉ máy chủ VPS, kích hoạt trạng thái bảo vệ đám mây cam (Proxied).
+  2. *Cấu hình Proxy Host trên Nginx Proxy Manager:* Định tuyến `grafana.ecotools.online` tới container `ilfreight_grafana` trên cổng `3000`. Kích hoạt tính năng **Websockets Support** và chứng chỉ SSL để bảo mật kênh truyền telemetry thời gian thực.
+  3. Sau khi DNS phân giải toàn cầu (thời gian lan truyền dưới 30 giây), quản trị viên có thể truy cập cổng giám sát bảo mật hoàn chỉnh qua giao thức HTTPS.
 
 ---
 
@@ -849,3 +929,5 @@ Nghiên cứu đã hoàn thành toàn diện các mục tiêu học thuật và 
 * **Minh chứng 6:** Tệp điều phối triển khai sản xuất bảo toàn dữ liệu MariaDB: [`InlaneWeb/docker-compose.prod.yml`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/docker-compose.prod.yml).
 * **Minh chứng 7:** Tệp điều phối hạ tầng giám sát tập trung bền vững 24/7: [`InlaneWeb/docker-compose.monitoring.yml`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/docker-compose.monitoring.yml).
 * **Minh chứng 8:** Toàn văn hồ sơ thực nghiệm và phân tích 14 vector tấn công SQL Injection: [InlaneWeb/writeup.md](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/writeup.md).
+* **Minh chứng 9:** Cổng giám sát an ninh tập trung trực tuyến thời gian thực: `https://grafana.ecotools.online` (Bảo mật qua xác thực tài khoản quản trị viên, vô hiệu hóa hoàn toàn Anonymous Access).
+* **Minh chứng 10:** Kiến trúc điều phối mạng Docker nội bộ (`inlaneweb_net`) và cơ chế định tuyến Reverse Proxy Nginx Proxy Manager đa cổng độc lập.
