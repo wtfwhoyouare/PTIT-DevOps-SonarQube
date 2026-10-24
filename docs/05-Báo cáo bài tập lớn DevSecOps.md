@@ -498,27 +498,40 @@ sequenceDiagram
     participant MariaDB as MariaDB Engine (Persistent)
 
     Note over Runner, VPS: Kết nối SSH Ed25519 an toàn qua GitHub Secrets
-    Runner->>VPS: Phân tích đường dẫn tệp thay đổi
-    alt Có thay đổi cấu hình Giám sát
-        Runner->>VPS: Chạy lệnh cập nhật khối giám sát qua docker compose up -d
-        VPS-->>Runner: Cụm giám sát sẵn sàng hoạt động liên tục 24/7
+    Note over Runner, VPS: Kết nối SSH Ed25519 an toàn qua GitHub Secrets
+    Note over Runner, VPS: Hai Job triển khai chạy song song độc lập (Parallel DAG Execution)
+    par Triển khai khối Giám sát (Job 1)
+        Runner->>VPS: Phân tích thay đổi trong InlaneWeb/monitoring/
+        alt Có thay đổi cấu hình Giám sát
+            Runner->>VPS: docker compose -p inlaneweb-monitoring up -d
+            VPS-->>Runner: Cụm giám sát sẵn sàng hoạt động liên tục 24/7
+        else Bỏ qua nếu không có thay đổi hoặc chỉ sửa tài liệu
+            Runner-->>Runner: Bỏ qua cập nhật để đảm bảo Zero-Downtime
+        end
+    and Triển khai khối Web Workload (Job 2)
+        Runner->>VPS: Phân tích thay đổi trong InlaneWeb/web/ hoặc InlaneWeb/db/
+        alt Có thay đổi mã nguồn Web / DB
+            Runner->>VPS: Kéo hình ảnh mới nhất từ GHCR
+            VPS->>GHCR: Kéo inlaneweb:${SHA} & inlaneweb-db:${SHA}
+            Runner->>VPS: docker compose -p inlaneweb-prod up -d --remove-orphans
+            VPS->>MariaDB: Gắn kết Docker Volume db_data bảo toàn dữ liệu
+            loop Vòng lặp thăm dò thích ứng (Tối đa 30 lần x 3s)
+                Runner->>VPS: Gửi yêu cầu curl tới http://127.0.0.1:8088/health
+                VPS-->>Runner: Phản hồi mã HTTP 200 OK
+            end
+        else Bỏ qua nếu không có thay đổi hoặc chỉ sửa tài liệu
+            Runner-->>Runner: Bỏ qua rebuild để tiết kiệm tài nguyên máy chủ
+        end
     end
-    Note over Runner, VPS: Triển khai khối ứng dụng web tuần tự sau khối giám sát
-    Runner->>VPS: Kéo hình ảnh mới nhất từ GHCR
-    VPS->>GHCR: Kéo inlaneweb:${SHA} & inlaneweb-db:${SHA}
-    Runner->>VPS: Thực thi docker compose -p inlaneweb-prod up -d --remove-orphans
-    VPS->>MariaDB: Gắn kết Docker Volume db_data bảo toàn dữ liệu
-    loop Vòng lặp thăm dò thích ứng (Tối đa 30 lần x 3s)
-        Runner->>VPS: Gửi yêu cầu curl tới http://127.0.0.1:8088/health
-        VPS-->>Runner: Phản hồi mã HTTP 200 OK
-    end
-    Runner-->>Runner: Xác nhận triển khai thành công không gián đoạn dịch vụ
+    Runner-->>Runner: Hoàn tất chuyển giao liên tục mà không làm gián đoạn dịch vụ
 ```
 
 #### 3.3.1. Chỉ cập nhật container có mã nguồn thay đổi
-Pipeline phân tích danh sách các tệp tin có sự thay đổi giữa commit hiện tại và commit liền trước:
-* Nếu thay đổi chỉ xảy ra trong thư mục `InlaneWeb/monitoring/`, chỉ có Job 1 được kích hoạt để cập nhật hạ tầng quan sát.
-* Nếu thay đổi xảy ra trong mã nguồn ứng dụng `InlaneWeb/web/` hoặc `InlaneWeb/db/`, chỉ có Job 2 được kích hoạt. Nhờ đó, máy chủ không phải lãng phí tài nguyên CPU và RAM để tái khởi động các dịch vụ không liên quan.
+Pipeline phân tích danh sách các tệp tin có sự thay đổi giữa commit hiện tại và commit liền trước theo từng phạm vi độc lập:
+* **Commit chỉ chứa tài liệu kỹ thuật (`docs/**`, `*.md`, `*.docx`):** Đường ống tự động phát hiện và bỏ qua toàn bộ công đoạn đóng gói tại Stage 3 và triển khai tại Stage 4, tiết kiệm 100% tài nguyên máy chủ và thời gian chạy CI.
+* **Thay đổi hạ tầng quan sát:** Nếu thay đổi chỉ xảy ra trong thư mục `InlaneWeb/monitoring/`, chỉ có Job triển khai giám sát được kích hoạt.
+* **Thay đổi mã nguồn ứng dụng web:** Nếu thay đổi xảy ra trong `InlaneWeb/web/` hoặc `InlaneWeb/db/`, chỉ có Job triển khai ứng dụng web được kích hoạt.
+* **Thay đổi đồng thời hoặc bản phát hành lớn:** Cả hai Job đều được kích hoạt và chạy **song song đồng thời** (Parallel Execution), rút ngắn một nửa thời gian chờ đợi so với mô hình chạy tuần tự.
 
 #### 3.3.2. Giữ an toàn dữ liệu cơ sở dữ liệu bằng Docker Volume
 Trong tệp [`InlaneWeb/docker-compose.prod.yml`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/docker-compose.prod.yml), vùng lưu trữ dữ liệu `/var/lib/mysql` của MariaDB được gắn kết cố định vào một Docker Named Volume mang tên `db_data`. Trong suốt quá trình kéo image mới và tái tạo container, Docker Engine chỉ thực hiện tiêu hủy tầng tính toán tạm thời của container, toàn bộ dữ liệu vật lý trên ổ đĩa được bảo toàn nguyên vẹn 100%, loại bỏ nguy cơ mất mát dữ liệu khách hàng.
@@ -533,7 +546,7 @@ Trong các hệ thống phân tán, cơ sở dữ liệu thường cần từ 5 
 Khi đặt cả hai tệp `docker-compose.monitoring.yml` và `docker-compose.prod.yml` trong cùng thư mục `/opt/inlaneweb`, mặc định Docker Compose sẽ gán tên project theo tên thư mục (`inlaneweb`). Do đó, cờ `--remove-orphans` của khối web sẽ hiểu nhầm các container giám sát là mồ côi và tiêu hủy chúng. Hệ thống giải quyết triệt để vấn đề này bằng cách:
 * Khối giám sát: Khai báo `name: inlaneweb-monitoring` và chạy với `-p inlaneweb-monitoring`.
 * Khối web: Khai báo `name: inlaneweb-prod` và chạy với `-p inlaneweb-prod`.
-* Cấu hình ràng buộc phụ thuộc tuần tự (`needs: [..., production_deploy_monitoring]`), đảm bảo cụm giám sát khởi động ổn định trước rồi mới triển khai ứng dụng nghiệp vụ.
+* Cấu hình thực thi song song độc lập (`needs: [production_smoke_test]` cho cả hai Job): Tách biệt hoàn toàn luồng chuyển giao của hai khối dịch vụ, cho phép hệ thống triển khai chỉ ứng dụng web, chỉ cụm giám sát, hoặc đồng thời cả hai mà không gây phụ thuộc chéo hay xung đột định danh.
 
 ### 3.4. Cấu hình tên miền, SSL và Reverse Proxy kép qua Nginx Proxy Manager
 Tại máy chủ Production VPS, công cụ Nginx Proxy Manager đóng vai trò là Reverse Proxy trung tâm, tiếp nhận lưu lượng truy cập Internet qua các cổng tiêu chuẩn `80` và `443` rồi điều phối vào mạng nội bộ Docker `inlaneweb_net`:
