@@ -164,7 +164,7 @@ Thiết lập các Secrets sau:
 
 | Tên Secret | Bắt buộc | Giá trị mẫu | Giải thích chi tiết |
 | :--- | :---: | :--- | :--- |
-| `PROD_HOST` | **Có** | `103.176.179.88` (hoặc domain VPS) | Địa chỉ IP Public hoặc FQDN của máy chủ Production. |
+| `PROD_HOST` | **Có** | `<vps-ip-address>` (hoặc domain VPS) | Địa chỉ IP Public hoặc FQDN của máy chủ Production. |
 | `PROD_USER` | **Có** | `ubuntu` hoặc `deploy` | Tên tài khoản Linux trên VPS có quyền thực thi Docker. |
 | `PROD_SSH_KEY` | **Có** | `-----BEGIN OPENSSH PRIVATE KEY-----...` | Toàn bộ nội dung Private Key (`~/.ssh/id_ed25519_inlaneweb`). Copy từ dòng đầu đến dòng cuối. |
 | `PROD_PORT` | Không | `22` (Mặc định: 22) | Cổng dịch vụ SSH nếu VPS đổi cổng tùy biến. |
