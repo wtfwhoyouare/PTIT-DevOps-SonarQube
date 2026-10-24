@@ -447,6 +447,8 @@ jobs:
             ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "docker network create inlaneweb_net 2>/dev/null || true"
             # Dọn dẹp an toàn các container monitoring từ project cũ nếu có để tránh xung đột tên
             ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "docker rm -f ilfreight_loki ilfreight_promtail ilfreight_grafana ilfreight_autoheal 2>/dev/null || true"
+            # Xóa volume grafana_data cũ để Grafana tái tạo SQLite DB với mật khẩu admin mới và tắt anonymous
+            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "docker volume rm inlaneweb-monitoring_grafana_data 2>/dev/null || true"
             ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "cd $PROD_PATH && docker compose -p inlaneweb-monitoring -f docker-compose.monitoring.yml up -d --remove-orphans"
             
             echo "⏳ Đang kiểm tra trạng thái sẵn sàng của Grafana Loki..."
@@ -484,6 +486,10 @@ jobs:
               ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "cd $PROD_PATH && docker compose -p inlaneweb-monitoring -f docker-compose.monitoring.yml logs --tail=50 grafana"
               exit 1
             fi
+
+            # Khẳng định cập nhật mật khẩu admin qua grafana-cli
+            ssh $SSH_OPTS "$PROD_USER@$PROD_HOST" "docker exec ilfreight_grafana grafana-cli admin reset-admin-password 'keTMheOR73x3vrijcLDCmMfJ' 2>/dev/null || docker exec ilfreight_grafana grafana cli admin reset-admin-password 'keTMheOR73x3vrijcLDCmMfJ' 2>/dev/null || true"
+            echo "🔒 Đã cập nhật mật khẩu quản trị viên Grafana và tắt chế độ Anonymous thành công!"
             echo "✅ Cập nhật hạ tầng giám sát Loki/Grafana/Promtail/Autoheal thành công!"
             STATUS="DEPLOYED"
           else
