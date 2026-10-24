@@ -112,26 +112,50 @@ Thực tế công nghiệp cho thấy việc phát hiện lỗ hổng muộn t�
 
 Để giải quyết bài toán mâu thuẫn giữa tốc độ phát hành liên tục và tính an toàn hệ thống, triết lý **Shift-Left Security** ra đời, thúc đẩy việc tích hợp an ninh vào mọi khâu của vòng đời phát triển phần mềm, hình thành nên mô hình DevSecOps. Tuy nhiên, việc áp dụng DevSecOps trong thực tế doanh nghiệp thường gặp phải hai rào cản lớn:
 1. **Chi phí bản quyền và tính khép kín:** Các giải pháp thương mại thường có chi phí rất cao, khó tùy biến sâu vào hạ tầng nội bộ.
-2. **Xung đột vòng đời và điểm mù giám sát:** Việc thiếu phân tách giữa chu kỳ cập nhật của ứng dụng nghiệp vụ và chu kỳ vận hành của hạ tầng quan sát thường gây ra hiện tượng gián đoạn dịch vụ (Downtime) hoặc làm mất dữ liệu nhật ký kiểm toán trong các đợt phát hành mới.
+2. **Xung đột vòng đời và điểm mù giám sát:** Việc thiếu phân tách giữa chu kỳ cập nhật của ứng dụng nghiệp vụ và chu kỳ vận hành của hạ tầng quan sát thường gây ra hiện tượng gián đoạn dịch vụ hoặc làm thất thoát dữ liệu nhật ký kiểm toán trong các đợt phát hành phiên bản mới.
 
-Xuất phát từ thực tiễn trên, công trình này tập trung nghiên cứu, thiết kế và hiện thực hóa một khung kiến trúc DevSecOps CI/CD tự động hóa toàn diện, ứng dụng công nghệ nguồn mở (FOSS), kết hợp kỹ thuật phân tích mã nguồn tĩnh đa tầng với hạ tầng giám sát tập trung bền vững và cơ chế triển khai sản xuất Zero-Downtime cho hệ thống cổng thông tin logistics thực tế InlaneWeb Logistics.
+Xuất phát từ thực tiễn trên, công trình này tập trung thiết kế và triển khai một quy trình DevSecOps CI/CD tự động hóa hoàn chỉnh cho hệ thống InlaneWeb Logistics, vận hành trên nền tảng các công nghệ nguồn mở miễn phí, kết hợp quét an ninh mã nguồn nhiều tầng với cụm giám sát tập trung và cơ chế cập nhật không làm gián đoạn người dùng trên máy chủ sản xuất.
 
 ### 2. Mục tiêu nghiên cứu
 
 #### 2.1. Mục tiêu tổng quát
-Xây dựng một khung kiến trúc DevSecOps hoàn chỉnh, độc lập về chi phí bản quyền, có khả năng tự động hóa kiểm định an ninh tại pha phát triển (Dev Gate), kiểm tra tính toàn vẹn cấu hình tại môi trường thử nghiệm tạm thời (Ephemeral Preview Stack), triển khai sản xuất Zero-Downtime có khả năng tự phục hồi (Auto-Healing) và giám sát tập trung 24/7 trên môi trường Production thực tế.
+Mục tiêu cốt lõi của đề tài là xây dựng một hệ thống phát triển, đóng gói, triển khai và giám sát tự động hóa toàn diện từ đầu đến cuối cho ứng dụng web InlaneWeb Logistics. Hệ thống giải quyết trọn vẹn 3 yêu cầu thực tế trong vận hành phần mềm:
+1. **Bảo mật ngay từ khâu viết code:** Tự động phát hiện và chặn đứng các lỗ hổng mã nguồn nguy hiểm (đặc biệt là lỗi chèn câu lệnh SQL trái phép và thực thi mã độc) ngay trong quá trình lập trình, trước khi mã được đưa vào hệ thống chung.
+2. **Triển khai an toàn và liên tục:** Đóng gói ứng dụng thành các Docker image chuẩn hóa, tự động kiểm thử trên môi trường tạm và triển khai lên máy chủ VPS thật mà không làm gián đoạn dịch vụ của người dùng, đồng thời giữ an toàn toàn bộ dữ liệu cơ sở dữ liệu.
+3. **Giám sát và tự phục hồi:** Thiết lập trung tâm giám sát tập trung để ghi lại mọi hành vi bất thường, phát hiện các đợt tấn công web theo thời gian thực và tự động khởi động lại dịch vụ nếu ứng dụng gặp sự cố.
 
 #### 2.2. Mục tiêu cụ thể
-1. **Kiểm soát mã nguồn cục bộ và thực thi chính sách tự động:** Xây dựng cơ chế lọc lỗi ngay tại máy trạm lập trình viên qua githooks và động cơ Policy Guard thực thi dưới 5 giây tại Stage 1 trên GitHub Actions.
-2. **Kiểm định an ninh tĩnh đa tầng (SAST Gate):** Tích hợp song song SonarQube Community 26.9 (đo nợ kỹ thuật, PSR-12, Quality Gate Rating A) và Semgrep Security SAST (phân tích luồng dữ liệu ô nhiễm Taint Analysis cho OWASP Top 10 và CWE-89) tại Stage 2.
-3. **Thẩm định cấu hình và đóng gói bất biến:** Thiết lập bộ kiểm thử cấu hình tĩnh 21/21 test cases và khởi tạo Ephemeral Preview Stack tại Stage 3, tự động kiểm tra nhịp tim đầu cuối trước khi đóng gói và lưu trữ hình ảnh Docker lên GitHub Container Registry (GHCR).
-4. **Triển khai sản xuất Zero-Downtime:** Hiện thực hóa cơ chế Continuous Deployment qua kết nối SSH Ed25519 tại Stage 4, bảo toàn 100% dữ liệu cơ sở dữ liệu MariaDB qua Docker Volume và thích ứng độ trễ khởi tạo qua thuật toán thăm dò nhịp tim.
-5. **Hạ tầng quan sát tập trung FOSS và phòng thủ thời gian thực:** Triển khai ngăn xếp Promtail, Loki và Grafana với kiến trúc phân luồng nhật ký kép (Dual-Stream Logging), bóc tách chính xác các dấu hiệu tấn công web và kích hoạt cơ chế tự phục hồi dịch vụ container qua Docker Healthcheck và Autoheal.
+Để đạt được mục tiêu tổng quát nêu trên, nhóm tập trung thực hiện 5 nhiệm vụ kỹ thuật cụ thể:
 
-#### 2.3. Câu hỏi nghiên cứu (Research Questions - RQ)
-* **RQ1:** *Làm thế nào để kết hợp kỹ thuật phân tích cú pháp tĩnh AST và phân tích luồng dữ liệu ô nhiễm Taint Analysis nhằm triệt tiêu lỗ hổng bảo mật ngay tại giai đoạn phát triển mà không làm suy giảm hiệu năng đường ống CI/CD?*
-* **RQ2:** *Làm thế nào để thiết kế cơ chế chuyển giao liên tục (CD) đảm bảo Zero-Downtime và bảo toàn toàn vẹn trạng thái cơ sở dữ liệu phân tán trong các điều kiện trễ khởi tạo dịch vụ?*
-* **RQ3:** *Mô hình phân luồng nhật ký kép (Dual-Stream Logging) kết hợp với các quy tắc bóc tách dữ liệu JSON của Promtail và Loki có đáp ứng được yêu cầu nhận diện và truy vết các kỹ thuật tấn công cơ sở dữ liệu thời gian thực trên môi trường sản xuất hay không?*
+1. **Kiểm soát mã nguồn ngay tại máy lập trình viên và trên nhánh làm việc:**
+   - Cài đặt công cụ kiểm tra tự động trước khi commit: tự động quét lỗi cú pháp, ngăn lập trình viên vô tình để lộ mật khẩu, API key hoặc khóa kết nối nhạy cảm.
+   - Xây dựng bộ quy tắc kiểm tra tự động trên GitHub Actions: bắt buộc tên nhánh và nội dung commit phải đúng quy ước chuẩn thì mới cho phép tạo Pull Request.
+
+2. **Chặn lỗi bảo mật và kiểm tra chất lượng code tự động bằng SonarQube và Semgrep:**
+   - Dùng SonarQube để tự động đo chất lượng code: kiểm tra cú pháp, tính toán thời gian cần bỏ ra để sửa các đoạn mã viết cẩu thả hoặc khó bảo trì (nợ kỹ thuật), và chỉ cho phép đưa code vào nhánh phát triển khi đạt chuẩn chất lượng loại A cao nhất.
+   - Dùng Semgrep để rà soát chuyên sâu các lỗi logic: truy vết dữ liệu do người dùng nhập vào xem có bị nối thẳng vào câu lệnh SQL hoặc lệnh hệ thống hay không, chặn đứng 100% các điểm yếu bảo mật phổ biến (như SQL Injection, đọc file trái phép, thực thi lệnh trên máy chủ).
+
+3. **Tự động kiểm thử trên môi trường tạm trước khi đóng gói:**
+   - Xây dựng bộ kiểm tra tự động 21 tiêu chí cho toàn bộ các file cấu hình Docker và hệ thống giám sát.
+   - Tự động dựng một cụm web và database tạm thời trên máy ảo GitHub Actions để chạy thử. Chỉ khi web phản hồi bình thường (HTTP 200) thì hệ thống mới đóng gói thành Docker image hoàn chỉnh và lưu trữ lên GitHub Container Registry.
+
+4. **Triển khai tự động lên máy chủ VPS không gián đoạn dịch vụ và giữ an toàn dữ liệu:**
+   - Kết nối an toàn từ GitHub Actions tới máy chủ VPS qua SSH với cặp khóa mã hóa Ed25519.
+   - Tách riêng việc quản lý giữa ứng dụng web và cụm giám sát thành hai dự án Docker Compose độc lập, tránh việc triển khai ứng dụng làm xóa nhầm hoặc xung đột với hệ thống giám sát.
+   - Lưu trữ dữ liệu database trên volume riêng biệt để không bao giờ bị mất dữ liệu khi cập nhật phiên bản mới.
+   - Thêm cơ chế tự động thăm dò: sau khi cập nhật, hệ thống tự động kiểm tra liên tục cho đến khi web sẵn sàng phục vụ rồi mới xác nhận triển khai thành công.
+
+5. **Giám sát an ninh tập trung và tự phục hồi khi gặp sự cố:**
+   - Triển khai cụm công cụ Promtail, Loki và Grafana trên VPS. Tách riêng 2 luồng log: log lỗi nội bộ của ứng dụng PHP và log truy cập HTTP của web server để dễ dàng điều tra.
+   - Xây dựng bảng điều khiển Grafana với 8 biểu đồ trực quan, giúp người quản trị nhìn thấy ngay địa chỉ IP của kẻ tấn công, đường link bị khai thác và câu lệnh độc hại khi web bị tấn công bằng SQL Injection hay XSS.
+   - Thắt chặt an toàn cho trang quản trị Grafana: tắt chế độ xem nặc danh, đặt mật khẩu quản trị phức tạp và ngẫu nhiên.
+   - Tích hợp công cụ Autoheal để tự động kiểm tra nhịp tim của web: nếu ứng dụng bị treo hoặc tràn bộ nhớ quá 90 giây, hệ thống sẽ tự động khởi động lại container trong vài giây mà không cần người quản trị can thiệp thủ công.
+
+#### 2.3. Các câu hỏi cần giải quyết trong đề tài
+Trong quá trình thực hiện, đề tài tập trung trả lời 3 câu hỏi thực tế:
+1. *Làm thế nào để quét lỗi bảo mật thật kỹ mà pipeline vẫn chạy nhanh (dưới 3 phút), không làm lập trình viên phải chờ đợi quá lâu mỗi khi mở Pull Request?*
+2. *Làm thế nào để cập nhật phiên bản mới lên VPS mà web không bị sập hay gián đoạn, và dữ liệu database cũ vẫn an toàn 100%?*
+3. *Làm thế nào để phân tách và thu thập log hiệu quả, giúp người quản trị phát hiện ngay lập tức khi máy chủ bị tấn công thực tế mà không làm tốn tài nguyên VPS?*
 
 ### 3. Đối tượng và phạm vi nghiên cứu
 
