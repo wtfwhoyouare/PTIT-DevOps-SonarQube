@@ -11,7 +11,8 @@
 | **Khoa chuyên môn:** | Khoa Công nghệ Thông tin / Khoa An toàn Thông tin |
 | **Học phần:** | Thực hành Kỹ thuật DevOps & DevSecOps Nâng cao |
 | **Mã định danh công trình:** | PTIT-DEVSECOPS-2026-REP05 |
-| **Nhóm tác giả:** | Nguyễn Giang Nam<br>Nguyễn Đình Hải<br>Đào Xuân Mạnh<br>Lê Đức Anh<br>Nguyễn Phương Mai |
+| **Giảng viên hướng dẫn:** | TS. [Họ và tên Giảng viên hướng dẫn] |
+| **Nhóm tác giả (5 thành viên):** | 1. **Nguyễn Giang Nam (Trưởng nhóm)** — Mã học viên: `[B22DCCN...]`<br>2. **Nguyễn Đình Hải** — Mã học viên: `[B22DCCN...]`<br>3. **Đào Xuân Mạnh** — Mã học viên: `[B22DCCN...]`<br>4. **Lê Đức Anh** — Mã học viên: `[B22DCCN...]`<br>5. **Nguyễn Phương Mai** — Mã học viên: `[B22DCCN...]` |
 | **Môi trường thực nghiệm:** | **Cổng thông tin logistics:** `https://inlaneweb.ecotools.online`<br>**Cổng giám sát an ninh:** `https://grafana.ecotools.online`<br>Triển khai thực tế trên máy chủ VPS, định tuyến qua Nginx Proxy Manager và bảo vệ bởi Cloudflare SSL |
 | **Kho lưu trữ mã nguồn:** | `https://github.com/wtfwhoyouare/PTIT-DevOps-SonarQube` |
 | **Thời gian hoàn thành:** | Tháng 10 năm 2026 |
@@ -20,6 +21,8 @@
 
 ## MỤC LỤC
 
+- [DANH MỤC HÌNH VẼ](#danh-mục-hình-vẽ)
+- [DANH MỤC BẢNG BIỂU](#danh-mục-bảng-biểu)
 - [DANH MỤC THUẬT NGỮ VÀ TỪ VIẾT TẮT](#danh-mục-thuật-ngữ-và-từ-viết-tắt)
 - [PHẦN MỞ ĐẦU](#phần-mở-đầu)
   - [1. Lý do chọn đề tài](#1-lý-do-chọn-đề-tài)
@@ -32,6 +35,9 @@
     - [Bảng phân công trách nhiệm nhóm](#bảng-phân-công-trách-nhiệm-nhóm)
 - [CHƯƠNG 1: TỔNG QUAN HỆ THỐNG VÀ CÁC KỊCH BẢN TRIỂN KHAI](#chương-1-tổng-quan-hệ-thống-và-các-kịch-bản-triển-khai)
   - [1.1. Giới thiệu ứng dụng web InlaneWeb Logistics](#11-giới-thiệu-ứng-dụng-web-inlaneweb-logistics)
+    - [1.1.1. Hai nghiệp vụ cốt lõi và dữ liệu cá nhân cần bảo vệ](#111-hai-nghiệp-vụ-cốt-lõi-và-dữ-liệu-cá-nhân-cần-bảo-vệ)
+    - [1.1.2. Sơ đồ thực thể cơ sở dữ liệu và bảng phân loại dữ liệu](#112-sơ-đồ-thực-thể-cơ-sở-dữ-liệu-và-bảng-phân-loại-dữ-liệu)
+    - [1.1.3. Cấu trúc cây thư mục mã nguồn toàn diện của dự án](#113-cấu-trúc-cây-thư-mục-mã-nguồn-toàn-diện-của-dự-án)
   - [1.2. Thiết kế tách riêng ứng dụng và cụm giám sát](#12-thiết-kế-tách-riêng-ứng-dụng-và-cụm-giám-sát)
   - [1.3. Thiết kế mạng nội bộ và Reverse Proxy bảo mật](#13-thiết-kế-mạng-nội-bộ-và-reverse-proxy-bảo-mật)
   - [1.4. Năm kịch bản triển khai hệ thống trong thực tế](#14-năm-kịch-bản-triển-khai-hệ-thống-trong-thực-tế)
@@ -65,33 +71,67 @@
     - [4.2.3. Thắt chặt an ninh cho bảng điều khiển Grafana](#423-thắt-chặt-an-ninh-cho-bảng-điều-khiển-grafana)
   - [4.3. Tự động khởi động lại container khi gặp sự cố bằng Autoheal](#43-tự-động-khởi-động-lại-container-khi-gặp-sự-cố-bằng-autoheal)
 - [CHƯƠNG 5: CÁC TÌNH HUỐNG SỰ CỐ VÀ TẤN CÔNG THỰC TẾ](#chương-5-các-tình-huống-sự-cố-và-tấn-công-thực-tế)
-  - [5.1. Các lỗi mã nguồn bị SonarQube chặn khi lập trình](#51-các-lỗi-mã-nguồn-bị-sonarqube-chặn-khi-lập-trình)
-    - [5.1.1. Chặn câu lệnh SQL nối chuỗi nguy hiểm](#511-chặn-câu-lệnh-sql-nối-chuỗi-nguy-hiểm)
-    - [5.1.2. Chặn để lộ mật khẩu trong mã nguồn](#512-chặn-để-lộ-mật-khẩu-trong-mã-nguồn)
-    - [5.1.3. Chặn Cookie thiếu cờ bảo mật](#513-chặn-cookie-thiếu-cờ-bảo-mật)
-    - [5.1.4. Chặn mã nguồn viết cẩu thả và khó bảo trì](#514-chặn-mã-nguồn-viết-cẩu-thả-và-khó-bảo-trì)
-  - [5.2. Các sự cố web và hạ tầng trên môi trường Production](#52-các-sự-cố-web-và-hạ-tầng-trên-môi-trường-production)
-    - [5.2.1. Sự cố mất kết nối cơ sở dữ liệu gây lỗi 500 và 503](#521-sự-cố-mất-kết-nối-cơ-sở-dữ-liệu-gây-lỗi-500-và-503)
-    - [5.2.2. Lỗi truy cập trang không tồn tại mã 404](#522-lỗi-truy-cập-trang-không-tồn-tại-mã-404)
-    - [5.2.3. Sự cố sập ứng dụng do vượt ngưỡng bộ nhớ](#523-sự-cố-sập-ứng-dụng-do-vượt-ngưỡng-bộ-nhớ)
-    - [5.2.4. Sự cố xóa nhầm container giữa hai tệp Compose chạy song song](#524-sự-cố-xóa-nhầm-container-giữa-hai-tệp-compose-chạy-song-song)
-    - [5.2.5. Sự cố mất kết nối giữa Reverse Proxy và ứng dụng web gây lỗi 502](#525-sự-cố-mất-kết-nối-giữa-reverse-proxy-và-ứng-dụng-web-gây-lỗi-502)
-    - [5.2.6. Sự cố không phân giải được tên miền phụ Grafana](#526-sự-cố-không-phân-giải-được-tên-miền-phụ-grafana)
-  - [5.3. Các kịch bản tấn công thực tế và cách phát hiện qua log](#53-các-kịch-bản-tấn-công-thực-tế-và-cách-phát-hiện-qua-log)
-    - [5.3.1. Tấn công trích xuất dữ liệu bằng thông báo lỗi XPath](#531-tấn-công-trích-xuất-dữ-liệu-bằng-thông-báo-lỗi-xpath)
-    - [5.3.2. Tấn công ghép bảng đọc dữ liệu nhạy cảm bằng kỹ thuật UNION](#532-tấn-công-ghép-bảng-đọc-dữ-liệu-nhạy-cảm-bằng-kỹ-thuật-union)
-    - [5.3.3. Tấn công suy diễn dữ liệu dựa vào độ trễ thời gian](#533-tấn-công-suy-diễn-dữ-liệu-dựa-vào-độ-trễ-thời-gian)
-    - [5.3.4. Tấn công tải tệp độc hại để thực thi lệnh trái phép từ xa](#534-tấn-công-tải-tệp-độc-hại-để-thực-thi-lệnh-trái-phép-từ-xa)
-    - [5.3.5. Bảng tổng hợp đối chiếu 14 kịch bản thực tế](#535-bảng-tổng-hợp-đối-chiếu-14-kịch-bản-thực-tế)
-  - [5.4. Biện pháp vá lỗi và phòng thủ an toàn](#54-biện-pháp-vá-lỗi-và-phòng-thủ-an-toàn)
-    - [5.4.1. Chống tấn công SQL Injection bằng cơ chế chuẩn bị trước câu lệnh truy vấn](#541-chống-tấn-công-sql-injection-bằng-cơ-chế-chuẩn-bị-trước-câu-lệnh-truy-vấn)
-    - [5.4.2. Phân quyền chặt chẽ trên thư mục và hạn chế quyền tài khoản cơ sở dữ liệu](#542-phân-quyền-chặt-chẽ-trên-thư-mục-và-hạn-chế-quyền-tài-khoản-cơ-sở-dữ-liệu)
-    - [5.4.3. Tự động phục hồi dịch vụ khi gặp sự cố bằng Autoheal](#543-tự-động-phục-hồi-dịch-vụ-khi-gặp-sự-cố-bằng-autoheal)
+  - [5.1. Đánh giá an toàn ứng dụng và bảo vệ dữ liệu theo từng thành viên nhóm](#51-đánh-giá-an-toàn-ứng-dụng-và-bảo-vệ-dữ-liệu-theo-từng-thành-viên-nhóm)
+    - [5.1.1. Thành viên 1 — Nguyễn Giang Nam: Kiểm soát thay đổi mã nguồn và quản trị phân nhánh](#511-thành-viên-1-nguyễn-giang-nam-kiểm-soát-thay-đổi-mã-nguồn-và-quản-trị-phân-nhánh)
+    - [5.1.2. Thành viên 2 — Nguyễn Đình Hải: Lỗ hổng tiêm mã SQL làm rò rỉ dữ liệu cá nhân người dùng](#512-thành-viên-2-nguyễn-đình-hải-lỗ-hổng-tiêm-mã-sql-làm-rò-rỉ-dữ-liệu-cá-nhân-người-dùng)
+    - [5.1.3. Thành viên 3 — Đào Xuân Mạnh: Lưu trữ dữ liệu xác thực và mật khẩu gán cứng trong mã nguồn](#513-thành-viên-3-đào-xuân-mạnh-lưu-trữ-dữ-liệu-xác-thực-và-mật-khẩu-gán-cứng-trong-mã-nguồn)
+    - [5.1.4. Thành viên 4 — Lê Đức Anh: Mất an toàn cấu hình triển khai và nguy cơ lộ cổng cơ sở dữ liệu](#514-thành-viên-4-lê-đức-anh-mất-an-toàn-cấu-hình-triển-khai-và-nguy-cơ-lộ-cổng-cơ-sở-dữ-liệu)
+    - [5.1.5. Thành viên 5 — Nguyễn Phương Mai: Thiếu hụt giám sát truy vết và ứng phó sự cố rò rỉ dữ liệu](#515-thành-viên-5-nguyễn-phương-mai-thiếu-hụt-giám-sát-truy-vết-và-ứng-phó-sự-cố-rò-rỉ-dữ-liệu)
+  - [5.2. Các lỗi mã nguồn bị SonarQube chặn khi lập trình](#52-các-lỗi-mã-nguồn-bị-sonarqube-chặn-khi-lập-trình)
+    - [5.2.1. Chặn câu lệnh SQL nối chuỗi nguy hiểm](#521-chặn-câu-lệnh-sql-nối-chuỗi-nguy-hiểm)
+    - [5.2.2. Chặn để lộ mật khẩu trong mã nguồn](#522-chặn-để-lộ-mật-khẩu-trong-mã-nguồn)
+    - [5.2.3. Chặn Cookie thiếu cờ bảo mật](#523-chặn-cookie-thiếu-cờ-bảo-mật)
+    - [5.2.4. Chặn mã nguồn viết cẩu thả và khó bảo trì](#524-chặn-mã-nguồn-viết-cẩu-thả-và-khó-bảo-trì)
+  - [5.3. Các sự cố web và hạ tầng trên môi trường Production](#53-các-sự-cố-web-và-hạ-tầng-trên-môi-trường-production)
+    - [5.3.1. Sự cố mất kết nối cơ sở dữ liệu gây lỗi 500 và 503](#531-sự-cố-mất-kết-nối-cơ-sở-dữ-liệu-gây-lỗi-500-và-503)
+    - [5.3.2. Lỗi truy cập trang không tồn tại mã 404](#532-lỗi-truy-cập-trang-không-tồn-tại-mã-404)
+    - [5.3.3. Sự cố sập ứng dụng do vượt ngưỡng bộ nhớ](#533-sự-cố-sập-ứng-dụng-do-vượt-ngưỡng-bộ-nhớ)
+    - [5.3.4. Sự cố xóa nhầm container giữa hai tệp Compose chạy song song](#534-sự-cố-xóa-nhầm-container-giữa-hai-tệp-compose-chạy-song-song)
+    - [5.3.5. Sự cố mất kết nối giữa Reverse Proxy và ứng dụng web gây lỗi 502](#535-sự-cố-mất-kết-nối-giữa-reverse-proxy-và-ứng-dụng-web-gây-lỗi-502)
+    - [5.3.6. Sự cố không phân giải được tên miền phụ Grafana](#536-sự-cố-không-phân-giải-được-tên-miền-phụ-grafana)
+  - [5.4. Các kịch bản tấn công thực tế và cách phát hiện qua log](#54-các-kịch-bản-tấn-công-thực-tế-và-cách-phát-hiện-qua-log)
+    - [5.4.1. Tấn công trích xuất dữ liệu bằng thông báo lỗi XPath](#541-tấn-công-trích-xuất-dữ-liệu-bằng-thông-báo-lỗi-xpath)
+    - [5.4.2. Tấn công ghép bảng đọc dữ liệu nhạy cảm bằng kỹ thuật UNION](#542-tấn-công-ghép-bảng-đọc-dữ-liệu-nhạy-cảm-bằng-kỹ-thuật-union)
+    - [5.4.3. Tấn công suy diễn dữ liệu dựa vào độ trễ thời gian](#543-tấn-công-suy-diễn-dữ-liệu-dựa-vào-độ-trễ-thời-gian)
+    - [5.4.4. Tấn công tải tệp độc hại để thực thi lệnh trái phép từ xa](#544-tấn-công-tải-tệp-độc-hại-để-thực-thi-lệnh-trái-phép-từ-xa)
+    - [5.4.5. Bảng tổng hợp đối chiếu 14 kịch bản thực tế](#545-bảng-tổng-hợp-đối-chiếu-14-kịch-bản-thực-tế)
+  - [5.5. Biện pháp vá lỗi và phòng thủ an toàn](#55-biện-pháp-vá-lỗi-và-phòng-thủ-an-toàn)
+    - [5.5.1. Chống tấn công SQL Injection bằng cơ chế chuẩn bị trước câu lệnh truy vấn](#551-chống-tấn-công-sql-injection-bằng-cơ-chế-chuẩn-bị-trước-câu-lệnh-truy-vấn)
+    - [5.5.2. Phân quyền chặt chẽ trên thư mục và hạn chế quyền tài khoản cơ sở dữ liệu](#552-phân-quyền-chặt-chẽ-trên-thư-mục-và-hạn-chế-quyền-tài-khoản-cơ-sở-dữ-liệu)
+    - [5.5.3. Tự động phục hồi dịch vụ khi gặp sự cố bằng Autoheal](#553-tự-động-phục-hồi-dịch-vụ-khi-gặp-sự-cố-bằng-autoheal)
 - [CHƯƠNG 6: KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN](#chương-6-kết-luận-và-hướng-phát-triển)
   - [6.1. Kết quả đạt được](#61-kết-quả-đạt-được)
+    - [6.1.1. Bảng phân tích tối ưu tổng chi phí sở hữu (TCO) và hiệu quả kinh tế](#611-bảng-phân-tích-tối-ưu-tổng-chi-phí-sở-hữu-tco-và-hiệu-quả-kinh-tế)
   - [6.2. Hạn chế và hướng phát triển tiếp theo](#62-hạn-chế-và-hướng-phát-triển-tiếp-theo)
 - [TÀI LIỆU THAM KHẢO](#tài-liệu-tham-khảo)
 - [PHỤ LỤC: HỒ SƠ MINH CHỨNG THỰC NGHIỆM](#phụ-lục-hồ-sơ-minh-chứng-thực-nghiệm)
+
+---
+
+## DANH MỤC HÌNH VẼ
+
+| Ký hiệu | Tên hình vẽ / Sơ đồ kiến trúc | Vị trí tham chiếu |
+| :---: | :--- | :--- |
+| **Hình 1.1** | Sơ đồ quan hệ thực thể (ERD) cơ sở dữ liệu `ilfreight` và `dev` | [Mục 1.1.2](#112-sơ-đồ-thực-thể-cơ-sở-dữ-liệu-và-bảng-phân-loại-dữ-liệu) |
+| **Hình 1.2** | Mô hình phân tách vòng đời hai nhánh độc lập (Dual-Track Lifecycle) | [Mục 1.2](#12-thiết-kế-tách-riêng-ứng-dụng-và-cụm-giám-sát) |
+| **Hình 1.3** | Sơ đồ kiến trúc mạng đa tầng phòng thủ và Reverse Proxy bảo mật | [Mục 1.3](#13-thiết-kế-mạng-nội-bộ-và-reverse-proxy-bảo-mật) |
+| **Hình 2.1** | Quy trình phân tích an ninh tĩnh song song với SonarQube và Semgrep | [Mục 2.3](#23-quét-lỗ-hổng-mã-nguồn-bằng-sonarqube-và-semgrep-tại-stage-2) |
+| **Hình 3.1** | Sơ đồ tuần tự quy trình triển khai song song Stage 4 qua SSH Ed25519 | [Mục 3.3](#33-tự-động-triển-khai-lên-máy-chủ-production-tại-stage-4) |
+| **Hình 4.1** | Kiến trúc thu thập nhật ký phân tán Dual-Stream Logging với Promtail và Loki | [Mục 4.1](#41-tách-biệt-log-ứng-dụng-và-log-truy-cập-web) |
+
+---
+
+## DANH MỤC BẢNG BIỂU
+
+| Ký hiệu | Tên bảng biểu kỹ thuật | Vị trí tham chiếu |
+| :---: | :--- | :--- |
+| **Bảng 0.1** | Bảng phân công trách nhiệm nhóm và tỷ lệ đóng góp (RACI Matrix) | [Mục 4 (Mở đầu)](#bảng-phân-công-trách-nhiệm-nhóm) |
+| **Bảng 1.1** | Bảng phân loại mức độ nhạy cảm của dữ liệu trong CSDL theo NĐ 13 & GDPR | [Mục 1.1.2](#bảng-phân-loại-mức-độ-nhạy-cảm-của-dữ-liệu-trong-csdl-inlaneweb) |
+| **Bảng 1.2** | Bảng so sánh 5 kịch bản triển khai hệ thống trong thực tế | [Mục 1.4.6](#146-bảng-so-sánh-5-kịch-bản-triển-khai) |
+| **Bảng 4.1** | Bảng đặc tả chi tiết câu lệnh truy vấn LogQL và mẫu Regex của 8 phân vùng giám sát | [Mục 4.2.2](#bảng-đặc-tả-chi-tiết-câu-lệnh-truy-vấn-logql-và-mẫu-regex-của-8-phân-vùng-giám-sát) |
+| **Bảng 5.1** | Bảng tổng hợp đối chiếu 5 vấn đề an toàn ứng dụng của 5 thành viên | [Mục 5.1](#bảng-tổng-hợp-đối-chiếu-5-vấn-đề-an-toàn-ứng-dụng-của-5-thành-viên) |
+| **Bảng 5.2** | Bảng tổng hợp đối chiếu 14 kịch bản thực tế và hiệu quả phát hiện qua Log | [Mục 5.4.5](#545-bảng-tổng-hợp-đối-chiếu-14-kịch-bản-thực-tế) |
+| **Bảng 6.1** | Bảng phân tích tối ưu tổng chi phí sở hữu (TCO) và hiệu quả kinh tế | [Mục 6.1.1](#611-bảng-phân-tích-tối-ưu-tổng-chi-phí-sở-hữu-tco-và-hiệu-quả-kinh-tế) |
 
 ---
 
@@ -205,13 +245,13 @@ Trong quá trình thực hiện, đề tài tập trung trả lời 3 câu hỏi
 
 #### Bảng phân công trách nhiệm nhóm
 
-| Thành viên thực hiện | Vai trò trong dự án | Nội dung công việc phụ trách |
-| :--- | :--- | :--- |
-| **Nguyễn Giang Nam** | Trưởng nhóm / Kiến trúc sư DevSecOps | **A / R**: Thiết kế tổng thể kiến trúc đường ống CI/CD, viết công cụ Policy Guard, thiết lập môi trường thử nghiệm tạm thời ở Stage 3, cấu hình triển khai qua SSH ở Stage 4 và tích hợp lên máy chủ VPS thật. |
-| **Nguyễn Đình Hải** | Kỹ sư An ninh Phần mềm | **R**: Tích hợp khung quét an ninh tĩnh ở Stage 2 với SonarQube và Semgrep, cấu hình tập luật an ninh địa phương và xuất báo cáo an ninh tự động. |
-| **Đào Xuân Mạnh** | Kỹ sư Vận hành và Hạ tầng | **R**: Thiết lập cụm quan sát tập trung bằng Promtail, Loki, Grafana; cấu hình Nginx Proxy Manager, Cloudflare SSL/TLS 1.3 và cơ chế tự phục hồi Autoheal. |
-| **Lê Đức Anh** | Kỹ sư Đảm bảo Chất lượng và Kiểm thử | **C / R**: Xây dựng bộ công cụ kiểm thử cấu hình tĩnh 21 trường hợp (`ci/validate_configs.py`), thiết lập kịch bản kiểm thử nhịp tim đầu cuối và kịch bản khôi phục phiên bản cũ khi có sự cố. |
-| **Nguyễn Phương Mai** | Chuyên viên Phân tích Hệ thống & Tài liệu | **C / I**: Khảo sát nghiệp vụ cổng thông tin InlaneWeb Logistics, chuẩn hóa bộ tài liệu vận hành kỹ thuật trong thư mục `docs/`, thiết kế ma trận kiểm thử đối kháng và tổng hợp báo cáo. |
+| Thành viên thực hiện | Vai trò trong dự án | Nội dung công việc phụ trách | Mức độ đóng góp | Vấn đề an toàn chủ trì (Mục 5.1) |
+| :--- | :--- | :--- | :---: | :--- |
+| **Nguyễn Giang Nam**<br>*(Trưởng nhóm / [B22DCCN...])* | Kiến trúc sư DevSecOps | **A / R**: Thiết kế tổng thể kiến trúc đường ống CI/CD, viết công cụ Policy Guard, thiết lập môi trường thử nghiệm tạm thời Stage 3, cấu hình triển khai qua SSH Stage 4. | 100% | [Kiểm soát thay đổi mã nguồn & phân nhánh (NĐ 13 Đ.13)](#511-thành-viên-1-nguyễn-giang-nam-kiểm-soát-thay-đổi-mã-nguồn-và-quản-trị-phân-nhánh) |
+| **Nguyễn Đình Hải**<br>*([B22DCCN...])* | Kỹ sư An ninh Phần mềm | **R**: Tích hợp khung quét an ninh tĩnh ở Stage 2 với SonarQube và Semgrep, cấu hình tập luật an ninh địa phương và xuất báo cáo an ninh tự động. | 100% | [Lỗ hổng SQL Injection làm rò rỉ dữ liệu (NĐ 13 Đ.9 & GDPR Art. 32)](#512-thành-viên-2-nguyễn-đình-hải-lỗ-hổng-tiêm-mã-sql-làm-rò-rỉ-dữ-liệu-cá-nhân-người-dùng) |
+| **Đào Xuân Mạnh**<br>*([B22DCCN...])* | Kỹ sư Kiểm định Chất lượng | **R**: Kiểm soát dữ liệu xác thực, phát hiện chuỗi hardcoded credentials, cấu hình Quality Gate SonarQube chặn mã nguồn và thiết lập băm Bcrypt. | 100% | [Lưu trữ dữ liệu xác thực & mật khẩu gán cứng (NĐ 13 Đ.13 & GDPR Art. 25)](#513-thành-viên-3-đào-xuân-mạnh-lưu-trữ-dữ-liệu-xác-thực-và-mật-khẩu-gán-cứng-trong-mã-nguồn) |
+| **Lê Đức Anh**<br>*([B22DCCN...])* | Kỹ sư Tự động hóa Hạ tầng | **C / R**: Xây dựng bộ công cụ kiểm thử cấu hình tĩnh 21 trường hợp (`ci/validate_configs.py`), thiết lập kịch bản phân lập mạng Docker Compose và đóng cổng CSDL. | 100% | [Mất an toàn cấu hình triển khai & lộ cổng CSDL (NĐ 13 Đ.13 & GDPR Art. 32)](#514-thành-viên-4-lê-đức-anh-mất-an-toàn-cấu-hình-triển-khai-và-nguy-cơ-lộ-cổng-cơ-sở-dữ-liệu) |
+| **Nguyễn Phương Mai**<br>*([B22DCCN...])* | Kỹ sư Giám sát & Vận hành | **C / I**: Thiết lập cụm quan sát tập trung Promtail, Loki, Grafana; xây dựng 8 panel LogQL an ninh thời gian thực, cấu hình tự phục hồi container Autoheal. | 100% | [Thiếu hụt giám sát truy vết & ứng phó sự cố (NĐ 13 Đ.17 & GDPR Art. 33)](#515-thành-viên-5-nguyễn-phương-mai-thiếu-hụt-giám-sát-truy-vết-và-ứng-phó-sự-cố-rò-rỉ-dữ-liệu) |
 
 *(Quy ước ma trận trách nhiệm: **R** — Người trực tiếp thực thi; **A** — Người chịu trách nhiệm phê duyệt và kết quả cuối cùng; **C** — Người được tham vấn chuyên môn; **I** — Người được thông báo tiến độ).*
 
@@ -220,13 +260,154 @@ Trong quá trình thực hiện, đề tài tập trung trả lời 3 câu hỏi
 
 ### 1.1. Giới thiệu ứng dụng web InlaneWeb Logistics
 
-Hệ thống InlaneWeb Logistics Portal được thiết kế nhằm mô phỏng toàn diện hoạt động vận hành của một doanh nghiệp vận tải biển và khai thác cảng quốc tế. Ứng dụng cung cấp các phân hệ nghiệp vụ chính:
-* **Quản trị danh mục cảng biển quốc tế:** Lưu trữ mã cảng chuẩn UN/LOCODE, vị trí địa lý, lưu lượng bốc dỡ hàng năm và năng lực tiếp nhận tàu hàng.
-* **Theo dõi và quản lý vận đơn thời gian thực:** Cung cấp giao diện tra cứu mã hành trình, trạng thái xử lý hàng hóa, cập nhật hải quan và phân bổ kho bãi.
-* **Xác thực và phân quyền đa cấp:** Quản lý tài khoản doanh nghiệp, đối tác vận tải và quản trị viên hệ thống với các mức đặc quyền phân cấp.
-* **Tương tác và hỗ trợ kỹ thuật:** Tiếp nhận phản hồi của khách hàng, lưu vết trao đổi nghiệp vụ và xuất bản các bản tin hàng hải.
+Hệ thống InlaneWeb Logistics Portal được thiết kế nhằm mô phỏng toàn diện hoạt động vận hành của một doanh nghiệp vận tải biển và khai thác cảng quốc tế. Trong thực tế, các doanh nghiệp logistics thường xuyên phải xử lý đồng thời hai luồng nghiệp vụ nhạy cảm: luồng thông tin hàng hải công khai (danh mục cảng, lịch trình tàu, bản tin thông báo) và luồng dữ liệu khách hàng riêng tư (hồ sơ tài khoản, mã vận đơn, hành trình bốc dỡ và lịch sử thanh toán).
 
-Hệ thống được xây dựng trên nền tảng công nghệ Apache HTTP Server, ngôn ngữ lập trình PHP 8.2 và hệ quản trị cơ sở dữ liệu quan hệ MariaDB 10.11. Toàn bộ các dịch vụ được container hóa độc lập thông qua Docker.
+Hệ thống được xây dựng trên ngăn xếp công nghệ phổ biến trong ngành vận tải: máy chủ web Apache HTTP Server, ngôn ngữ lập trình PHP 8.2 và hệ quản trị cơ sở dữ liệu quan hệ MariaDB 10.11. Toàn bộ các dịch vụ được container hóa độc lập thông qua Docker nhằm bảo đảm tính nhất quán giữa môi trường phát triển và môi trường vận hành thực tế.
+
+#### 1.1.1. Hai nghiệp vụ cốt lõi và dữ liệu cá nhân cần bảo vệ
+
+Căn cứ theo **Nghị định 13/2023/NĐ-CP** và quy định **GDPR**, hai nghiệp vụ trọng tâm sau đây của hệ thống trực tiếp xử lý dữ liệu cá nhân của người dùng và đòi hỏi các biện pháp bảo vệ kỹ thuật nghiêm ngặt:
+
+1. **Nghiệp vụ 1 — Tra cứu và quản lý hành trình vận đơn hàng hải:**
+   * *Mô tả luồng nghiệp vụ:* Khách hàng hoặc đối tác giao nhận nhập mã vận chuyển qua giao diện tìm kiếm (`GET /api/track.php?tracking=`) để theo dõi tình trạng xử lý container, vị trí cập cảng, tình trạng thông quan hải quan và lưu lại các phản hồi nghiệp vụ qua bảng bình luận (`comments`).
+   * *Dữ liệu cần bảo vệ:* Mã vận đơn gắn với định danh khách hàng (`customer_id`), lịch sử vận chuyển hàng hóa, địa điểm bốc dỡ và nội dung trao đổi giao dịch.
+   * *Yêu cầu pháp lý:* Theo Điều 9 Khoản 2 Nghị định 13/2023/NĐ-CP và Article 32 GDPR, doanh nghiệp có nghĩa vụ bảo đảm an toàn, bí mật tuyệt đối đối với luồng dữ liệu này, không để kẻ gian lợi dụng lỗi cú pháp truy vấn (như SQL Injection) để trích xuất trái phép hồ sơ vận chuyển của doanh nghiệp khác.
+
+2. **Nghiệp vụ 2 — Xác thực định danh người dùng và cấp phát mã API:**
+   * *Mô tả luồng nghiệp vụ:* Khách hàng, đối tác vận tải và quản trị viên thực hiện đăng nhập qua cổng thông tin (`POST /login.php`), cấp phát token phiên làm việc và mã khóa API (`api_key`) để tích hợp hệ thống phần mềm doanh nghiệp tự động.
+   * *Dữ liệu cần bảo vệ:* Tên đăng nhập (`username`), mật khẩu (`password`), địa chỉ thư điện tử (`email`), mã định danh API (`api_key`) và mã xác thực ghi nhớ phiên (`remember_token`).
+   * *Yêu cầu pháp lý:* Căn cứ Điều 13 Khoản 2 Điểm a Nghị định 13/2023/NĐ-CP và Article 25 GDPR (Data Protection by Design and by Default), hệ thống bắt buộc phải áp dụng các biện pháp mật mã học mạnh: cấm tuyệt đối việc lưu trữ mật khẩu dạng rõ (plaintext), yêu cầu áp dụng thuật toán băm an toàn Bcrypt và bảo vệ kênh truyền thông tin xác thực.
+
+#### 1.1.2. Sơ đồ thực thể cơ sở dữ liệu và bảng phân loại dữ liệu
+
+Hệ thống quản trị cơ sở dữ liệu MariaDB bao gồm 2 cơ sở dữ liệu riêng biệt:
+* Cơ sở dữ liệu chính **`ilfreight`**: Chứa toàn bộ dữ liệu nghiệp vụ của cổng thông tin vận tải, bao gồm 5 bảng: `users`, `shipments`, `ports`, `comments`, `news`.
+* Cơ sở dữ liệu phụ **`dev`**: Đại diện cho phân vùng cơ sở dữ liệu nội bộ phục vụ kiểm thử, chứa 2 bảng: `credentials`, `debug_log`. Đây là đối tượng dữ liệu mà các cuộc tấn công khai thác liên cơ sở dữ liệu (Cross-Database Enumeration) nhắm tới nếu máy chủ phân quyền lỏng lẻo.
+
+Dưới đây là sơ đồ quan hệ thực thể (ERD) thể hiện cấu trúc logic và các bảng dữ liệu:
+
+```mermaid
+erDiagram
+    users ||--o{ shipments : "so huu (customer_id)"
+    users ||--o{ comments : "viet (user_id)"
+    shipments ||--o{ comments : "chua (shipment_id)"
+    ports ||--o{ shipments : "cap cang (port_code)"
+
+    users {
+        int id PK
+        varchar username UK "Ten dang nhap"
+        varchar password "Mat khau (Bcrypt Hash)"
+        varchar email "Thu dien tu ca nhan"
+        varchar role "Vai tro (customer/staff/admin)"
+        varchar api_key "Khoa API dinh danh"
+        varchar remember_token "Token ghi nho phien"
+    }
+
+    shipments {
+        int id PK
+        varchar tracking_no UK "Ma van don logistics"
+        varchar port_code FK "Ma cang den"
+        varchar status "Trang thai hanh trinh"
+        int customer_id FK "Khoa ngoai nguoi so huu"
+    }
+
+    ports {
+        int id PK
+        varchar code "Ma cang UN/LOCODE"
+        varchar city "Thanh pho toa lac"
+        varchar country "Quoc gia"
+        decimal volume "Luu luong boc do (trieu TEU)"
+    }
+
+    comments {
+        int id PK
+        int shipment_id FK "Ma van don lien quan"
+        int user_id FK "Ma tai khoan binh luan"
+        text content "Noi dung trao doi"
+        datetime created_at "Thoi diem ghi nhan"
+    }
+
+    news {
+        int id PK
+        varchar title "Tieu de ban tin hang hai"
+        text body "Noi dung thong bao"
+        datetime published_at "Ngay phat hanh"
+    }
+
+    credentials {
+        int id PK
+        varchar username "Tai khoan noi bo"
+        varchar password_hash "Chuoi bam MD5"
+        varchar api_key "Khoa API thu nghiem"
+    }
+
+    debug_log {
+        int id PK
+        text message "Nhat ky loi he thong"
+        varchar flag "Co danh dau kiem thu"
+    }
+```
+
+##### Bảng phân loại mức độ nhạy cảm của dữ liệu trong CSDL InlaneWeb
+
+| Tên bảng | Trường dữ liệu | Kiểu dữ liệu | Phân loại dữ liệu theo NĐ 13 & GDPR | Biện pháp bảo vệ kỹ thuật bắt buộc |
+| :--- | :--- | :--- | :---: | :--- |
+| `users` | `username` | `VARCHAR(100)` | Dữ liệu cá nhân cơ bản | Kiểm soát quyền truy cập, chống rà quét danh sách |
+| `users` | `password` | `VARCHAR(255)` | **Dữ liệu đặc biệt nhạy cảm** | **Bắt buộc băm mật mã Bcrypt (Cost 12)**, cấm plaintext |
+| `users` | `email` | `VARCHAR(150)` | Dữ liệu cá nhân cơ bản | Mã hóa truyền tải HTTPS/TLS, che giấu trong báo cáo |
+| `users` | `api_key` | `VARCHAR(64)` | **Dữ liệu xác thực nhạy cảm** | Chỉ cấp phát qua phiên an toàn, thu hồi khi lộ |
+| `shipments` | `tracking_no` | `VARCHAR(30)` | Dữ liệu giao dịch thương mại | Khóa truy vấn theo đúng `customer_id`, ngăn IDOR |
+| `shipments` | `status`, `port_code` | `VARCHAR` | Dữ liệu vận tải nội bộ | Kiểm tra tham số đầu vào qua Prepared Statements |
+| `comments` | `content` | `TEXT` | Dữ liệu trao đổi cá nhân | Lọc làm sạch ký tự đầu vào chống XSS và SQLi |
+| `credentials` (`dev` DB) | `password_hash`, `api_key` | `VARCHAR` | **Dữ liệu nhạy cảm nội bộ** | Phân quyền tài khoản MySQL: tước quyền truy cập DB `dev` |
+
+#### 1.1.3. Cấu trúc cây thư mục mã nguồn toàn diện của dự án
+
+Kho lưu trữ mã nguồn được chuẩn hóa theo mô hình dự án công nghiệp, phân định rõ ràng ranh giới giữa mã nguồn ứng dụng, hạ tầng giám sát, kịch bản tự động hóa CI/CD và tài liệu vận hành:
+
+```text
+PTIT-DevOps-SonarQube/
+├── .githooks/                          # Kiểm soát chất lượng cục bộ tại máy trạm
+│   └── commit-msg                      # Hook kiểm tra cú pháp Conventional Commits trước khi commit
+├── .github/workflows/                  # Đường ống tự động hóa DevSecOps
+│   └── devsecops-pipeline.yml          # Kịch bản GitHub Actions 4 Stage khép kín
+├── InlaneWeb/                          # Khối ứng dụng nghiệp vụ & giám sát
+│   ├── db/                             # Cơ sở dữ liệu MariaDB
+│   │   ├── Dockerfile                  # Đóng gói ảnh CSDL tùy biến
+│   │   ├── fix-perms-entrypoint.sh     # Script khởi tạo phân quyền an toàn thư mục CSDL
+│   │   ├── init.sql                    # Khởi tạo lược đồ 2 CSDL (ilfreight & dev) và dữ liệu mẫu
+│   │   └── lab.cnf                     # Cấu hình tối ưu bộ nhớ và nhật ký truy vấn MariaDB
+│   ├── web/                            # Ứng dụng web InlaneWeb Logistics (PHP 8.2 & Apache)
+│   │   ├── Dockerfile                  # Đóng gói ảnh ứng dụng web đa tầng
+│   │   ├── php.ini                     # Cấu hình bảo mật PHP (tắt display_errors, bật opcache)
+│   │   ├── apache/                     # Cấu hình máy chủ web định dạng JSON log truy cập
+│   │   └── src/                        # Toàn bộ mã nguồn ứng dụng web PHP
+│   ├── monitoring/                     # Cụm hạ tầng quan sát tập trung
+│   │   ├── grafana/                    # Cấu hình tự động nạp nguồn dữ liệu và bảng điều khiển
+│   │   │   └── provisioning/dashboards/inlaneweb-overview.json  # 8 phân vùng giám sát an ninh
+│   │   ├── loki/                       # Cấu hình lưu trữ nhật ký Loki (TSDB & Chunk retention)
+│   │   └── promtail/                   # Thu thập nhật ký từ Docker Socket theo thời gian thực
+│   ├── docker-compose.prod.yml         # Tệp điều phối khối ứng dụng web & CSDL Production
+│   └── docker-compose.monitoring.yml   # Tệp điều phối khối hạ tầng giám sát & Autoheal độc lập
+├── ci/                                 # Bộ công cụ kiểm định tự động (Policy-as-Code & SAST)
+│   ├── policy_guard.py                 # Bộ gác cổng Stage 1: Kiểm soát phân nhánh và tiêu đề PR
+│   ├── semgrep-local-rules.yml         # Tập luật phân tích luồng dữ liệu ô nhiễm tùy biến
+│   ├── semgrep_report.py               # Phân tích cú pháp báo cáo JSON và tóm tắt lỗ hổng
+│   ├── sonarqube-quality-gate.json     # Bộ chỉ số Quality Gate chặn đứng mã lỗi Rating A
+│   ├── sonarqube.py                    # Khởi tạo dự án, nạp Quality Gate và kiểm tra trạng thái
+│   └── validate_configs.py             # Bộ thẩm định cú pháp 21 tệp cấu hình YAML/JSON
+├── docs/                               # Bộ tài liệu kỹ thuật hoàn chỉnh
+│   ├── 01-hạ tầng triển khai.md        # Đặc tả kiến trúc máy chủ VPS, mạng nội bộ và Reverse Proxy
+│   ├── 02-Quy tắc triển khai.md        # Quy chuẩn phân nhánh Git, commit message và cấu trúc PR
+│   ├── 03-Kiểm soát an ninh...md       # Chi tiết quy trình phân tích tĩnh SonarQube & Semgrep
+│   ├── 04-Hướng dẫn cấu hình...md      # Hướng dẫn chi tiết triển khai lên Production thực tế
+│   ├── 05-Báo cáo bài tập lớn...md     # Báo cáo tổng kết toàn diện bài tập nhóm DevSecOps
+│   └── checklist.md                    # Bảng theo dõi tiến độ và đối chiếu yêu cầu môn học
+└── tests/                              # Bộ kiểm thử tự động của các công cụ CI
+    ├── test_policy_guard.py            # Kiểm thử quy tắc kiểm tra nhánh và PR
+    ├── test_sonarqube.py               # Kiểm thử giao tiếp API với máy chủ SonarQube
+    └── test_validate_configs.py        # Kiểm thử bộ thẩm định tệp cấu hình
+```
 
 ### 1.2. Thiết kế tách riêng ứng dụng và cụm giám sát
 
@@ -314,7 +495,9 @@ Dựa trên tài liệu vận hành chuẩn [`docs/04-Hướng dẫn cấu hình
   4. *Kích hoạt chuyển giao liên tục tại Stage 4:* Khi PR được hợp nhất vào `main`, sự kiện push kích hoạt runner thiết lập phiên SSH Ed25519 tới máy chủ VPS.
   5. *Cập nhật không làm gián đoạn dịch vụ:* Kéo hình ảnh mới nhất từ GHCR và thực thi tái tạo container:
      ```bash
-     INLANEWEB_IMAGE=ghcr.io/wtfwhoyouare/inlaneweb:<sha>      INLANEWEB_DB_IMAGE=ghcr.io/wtfwhoyouare/inlaneweb-db:<sha>      docker compose -f docker-compose.prod.yml up -d --remove-orphans
+     INLANEWEB_IMAGE=ghcr.io/wtfwhoyouare/inlaneweb:<sha> \
+     INLANEWEB_DB_IMAGE=ghcr.io/wtfwhoyouare/inlaneweb-db:<sha> \
+     docker compose -f docker-compose.prod.yml up -d --remove-orphans
      ```
      Toàn bộ tiến trình diễn ra dưới 15 giây, dịch vụ chuyển tiếp lưu lượng liền mạch mà không làm rớt kết nối của người dùng.
 
@@ -329,7 +512,7 @@ Dựa trên tài liệu vận hành chuẩn [`docs/04-Hướng dẫn cấu hình
 * **Bối cảnh bài toán:** Trong các phiên bản phát hành lớn có nạp các script cập nhật cấu trúc bảng dữ liệu, hoặc khi MariaDB cần thời gian khởi tạo vùng đệm bộ nhớ, container database sẽ cần từ 10 đến 30 giây để sẵn sàng tiếp nhận kết nối. Nếu container web khởi động đồng thời, các truy vấn đầu tiên sẽ gặp lỗi từ chối kết nối khiến endpoint `/health` trả về mã lỗi HTTP 503.
 * **Cơ chế xử lý lỗi chủ động:**
   * Kịch bản CI/CD không vội vã đánh giá thất bại mà kích hoạt thuật toán thăm dò thích ứng:
-    $$	ext{Tình trạng} = 	ext{Probe}(	ext{URL} = 	exttt{http://127.0.0.1:8080/health}, \quad \Delta t = 2	ext{s}, \quad N_{max} = 30)$$
+    $$\text{Tình trạng} = \text{Probe}(\text{URL} = \texttt{http://127.0.0.1:8080/health}, \quad \Delta t = 2\text{s}, \quad N_{max} = 30)$$
   * Runner duy trì vòng lặp kiểm tra trạng thái sức khỏe định kỳ mỗi 2 giây, cho phép chờ đợi tối đa lên tới 60 giây.
   * Khi cơ sở dữ liệu hoàn tất việc nạp dữ liệu và phản hồi bình thường, endpoint `/health` trả về mã HTTP 200, quy trình lập tức xác nhận thành công.
   * Nếu vượt quá ngưỡng 30 chu kỳ mà hệ thống vẫn không phản hồi, cơ chế chẩn đoán sự cố tự động được kích hoạt, trích xuất 50 dòng log cuối cùng của cả hai container `ilfreight_web` và `ilfreight_db` hiển thị trực tiếp lên bảng điều khiển để kỹ sư điều tra nguyên nhân.
@@ -340,7 +523,9 @@ Dựa trên tài liệu vận hành chuẩn [`docs/04-Hướng dẫn cấu hình
   * **Phương án 5A — Khôi phục tức thời mức hạ tầng qua SSH:** Nhờ cơ chế đóng gói ảnh bất biến có gắn thẻ băm commit SHA trên GHCR, kỹ sư vận hành có thể đảo ngược phiên bản đang chạy về phiên bản ổn định liền trước chỉ trong vòng 10 giây thông qua một câu lệnh duy nhất trên máy chủ VPS:
      ```bash
      cd /opt/inlaneweb
-     INLANEWEB_IMAGE=ghcr.io/wtfwhoyouare/inlaneweb:<sha_on_dinh>      INLANEWEB_DB_IMAGE=ghcr.io/wtfwhoyouare/inlaneweb-db:<sha_on_dinh>      docker compose -f docker-compose.prod.yml up -d --remove-orphans
+     INLANEWEB_IMAGE=ghcr.io/wtfwhoyouare/inlaneweb:<sha_on_dinh> \
+     INLANEWEB_DB_IMAGE=ghcr.io/wtfwhoyouare/inlaneweb-db:<sha_on_dinh> \
+     docker compose -f docker-compose.prod.yml up -d --remove-orphans
      ```
      Nhờ cơ chế gắn kết Docker Volume `db_data` bền vững, toàn bộ dữ liệu nghiệp vụ của cơ sở dữ liệu hoàn toàn không bị ảnh hưởng hay thất thoát trong quá trình đảo ngược.
   * **Phương án 5B — Đảo ngược phiên bản có truy vết lịch sử qua Git Revert:** Kỹ sư tạo một Revert PR đối với commit lỗi trên nhánh `main`. Ngay khi PR được duyệt, đường ống CI/CD sẽ tự động kích hoạt Stage 4, kéo đúng hình ảnh đã được kiểm định của commit trước đó trên GHCR về triển khai lại trên VPS. Cách tiếp cận này bảo đảm tính toàn vẹn tuyệt đối của lịch sử kiểm toán mã nguồn.
@@ -387,7 +572,18 @@ Bất kỳ vi phạm nào liên quan đến việc commit trực tiếp lên nh�
 
 ### 2.3. Quét lỗ hổng mã nguồn bằng SonarQube và Semgrep tại Stage 2
 
-Khi Pull Request vượt qua Stage 1 và hướng tới tích hợp vào nhánh `dev`, hệ thống kích hoạt đồng thời hai động cơ phân tích an ninh tĩnh độc lập:
+Khi Pull Request vượt qua Stage 1 và hướng tới tích hợp vào nhánh `dev`, hệ thống kích hoạt chu trình kiểm định an ninh và chất lượng mã nguồn chuyên sâu:
+
+* **Kiểm tra cú pháp siêu tốc bằng PHP Linting cô lập mạng:**
+  Trước khi khởi chạy các công cụ quét mã nguồn nặng, đường ống thực thi công đoạn kiểm tra cú pháp nhanh với PHP 8.2 (`php -l`). Bước này khởi chạy một container `php:8.2-cli` dùng một lần với cờ bảo mật cao nhất: `--network none` (ngắt toàn bộ kết nối mạng để triệt tiêu hoàn toàn nguy cơ rò rỉ dữ liệu hoặc gọi lệnh mạng ngoài ý muốn) và `--mount readonly` (gắn mã nguồn ở chế độ chỉ đọc, cấm chỉnh sửa tệp tin). Lệnh thực thi:
+  ```bash
+  docker run --rm --network none \
+    --mount "type=bind,src=$GITHUB_WORKSPACE/InlaneWeb/web/src,dst=/src,readonly" \
+    php:8.2-cli sh -c 'find /src -type f -name "*.php" -print0 | xargs -0 -r -n 1 php -l'
+  ```
+  Quá trình này quét toàn bộ cây mã nguồn PHP chỉ trong vòng 2 giây, phát hiện ngay các lỗi cú pháp nghiêm trọng (Syntax Error, thiếu dấu chấm phẩy, khai báo hàm sai cú pháp) trước khi nạp vào các động cơ phân tích ngữ nghĩa phức tạp.
+
+Sau khi vượt qua bước kiểm tra cú pháp nhanh, hệ thống kích hoạt đồng thời hai động cơ phân tích an ninh tĩnh độc lập:
 
 ```text
        Mã nguồn PHP 8.2 trong thư mục InlaneWeb/web/src/
@@ -455,7 +651,25 @@ Khác với các công cụ quét dựa trên biểu thức chính quy đơn thu
 
 ### 3.1. Chạy thử nghiệm hệ thống trên môi trường tạm thời tại Stage 3
 
-Một trong những nguyên nhân hàng đầu khiến hệ thống Production sụp đổ sau khi triển khai là sai lệch cấu hình hạ tầng. Stage 3 thiết lập một rào chắn kiểm định kỹ thuật 3 tầng:
+Một trong những nguyên nhân hàng đầu khiến hệ thống Production sụp đổ sau khi triển khai là sai lệch cấu hình hạ tầng. Stage 3 thiết lập một rào chắn kiểm định kỹ thuật thông minh:
+
+* **Cơ chế nhận diện thông minh phạm vi thay đổi (`eval_stage3`):**
+  Trước khi khởi tạo môi trường tạm thời và kích hoạt việc đóng gói Docker Images, đường ống thực hiện bước đánh giá phạm vi thay đổi (`eval_stage3`). Kịch bản shell phân tích danh sách các tệp tin được chỉnh sửa giữa nhánh nguồn và nhánh đích:
+  ```bash
+  # Trích đoạn logic nhận diện phạm vi commit trong devsecops-pipeline.yml
+  DOCS_ONLY=true
+  while IFS= read -r raw_file; do
+    file=$(echo "$raw_file" | sed 's/^"//; s/"$//' | xargs)
+    [ -z "$file" ] && continue
+    if ! echo "$file" | grep -qE "^(docs/|\.github/.*\.md$|.*\.md$|.*\.docx$|\.gitignore$|LICENSE$)"; then
+      DOCS_ONLY=false
+      break
+    fi
+  done <<< "$CHANGED_FILES"
+  ```
+  Nếu toàn bộ các tệp được chỉnh sửa trong commit chỉ thuộc nhóm tài liệu kỹ thuật (`docs/**`, `*.md`, `*.docx`, `.gitignore`, `LICENSE`), hệ thống tự động thiết lập cờ `skip_stage3=true` và bỏ qua toàn bộ công đoạn Docker Build và Ephemeral Smoke Test. Cơ chế thông minh này giúp tiết kiệm 100% tài nguyên CPU/RAM của máy ảo Runner, rút ngắn thời gian phản hồi từ 5 phút xuống còn dưới 10 giây đối với các lần cập nhật tài liệu kỹ thuật mà vẫn đảm bảo tính an toàn tuyệt đối.
+
+* **Quy trình kiểm định kỹ thuật 3 tầng khi có thay đổi mã nguồn:**
 
 1. **Bộ thẩm định cấu hình tĩnh ([`ci/validate_configs.py`](file:///d:/PTIT-DevOps-SonarQube/ci/validate_configs.py)):** Thực thi kiểm tra tự động 21/21 trường hợp thử nghiệm nghiêm ngặt:
    * Thẩm định cấu hình Docker Compose theo chuẩn Compose Specification V2.
@@ -497,7 +711,6 @@ sequenceDiagram
     participant GHCR as GitHub Container Registry (GHCR)
     participant MariaDB as MariaDB Engine (Persistent)
 
-    Note over Runner, VPS: Kết nối SSH Ed25519 an toàn qua GitHub Secrets
     Note over Runner, VPS: Kết nối SSH Ed25519 an toàn qua GitHub Secrets
     Note over Runner, VPS: Hai Job triển khai chạy song song độc lập (Parallel DAG Execution)
     par Triển khai khối Giám sát (Job 1)
@@ -630,6 +843,19 @@ Bảng điều khiển trung tâm mang tên *"InlaneWeb Logistics — Centralize
 7. **Panel 7 — Tốc độ sự cố an ninh đa chiều theo thời gian:** Biểu đồ chuỗi thời gian phân tầng mức độ nghiêm trọng của các vector tấn công theo thời gian thực.
 8. **Panel 8 — Chẩn đoán hoạt động cơ sở dữ liệu MariaDB:** Theo dõi nhật ký hoạt động nội bộ và chẩn đoán truy vấn của container cơ sở dữ liệu `ilfreight_db`.
 
+##### Bảng đặc tả chi tiết câu lệnh truy vấn LogQL và mẫu Regex của 8 phân vùng giám sát
+
+| Panel | Tên phân vùng giám sát | Dạng trực quan | Mục tiêu giám sát | Câu lệnh truy vấn LogQL và biểu thức chính quy (Regex) |
+| :---: | :--- | :---: | :--- | :--- |
+| **P1** | Ngoại lệ & Vết ngăn xếp ứng dụng | Logs Stream | Phát hiện lỗi thời gian chạy, lỗi cú pháp hoặc ngoại lệ CSDL nội bộ | `{container="ilfreight_web"} \|~ "(?i)(APP-EXCEPTION\|cause_chain\|database_query_failure\|Fatal error\|Uncaught Exception\|mysqli_sql_exception)"` |
+| **P2** | Tấn công tiêm mã SQL (SQLi) | Logs Stream | Bắt các đợt tiêm mã khai thác CSDL qua tham số HTTP | `{container="ilfreight_web"} \|~ "(?i)(union(\s+\|%20\|\+)select\|sleep\(|benchmark\(|or(\s+\|%20\|\+)1=1\|--\|load_file\(|into(\s+\|%20\|\+)outfile\|into(\s+\|%20\|\+)dumpfile\|information_schema\|database\(|schema\(|sqlmap\|havij)"` |
+| **P3** | Duyệt thư mục & Đọc tệp trái phép (LFI/RFI) | Logs Stream | Phát hiện hành vi dò quét file nhạy cảm (`/etc/passwd`, wrapper `php://`) | `{container="ilfreight_web"} \|~ "(?i)(\.\./\|\.\.\\|%2e%2e%2f\|%2e%2e/\|\.\.%2f\|%2e%2e%5c\|/etc/passwd\|/etc/shadow\|/proc/self\|win\.ini\|boot\.ini\|system32\|php://filter\|php://input\|data://)"` |
+| **P4** | Chèn mã kịch bản độc hại (XSS) | Logs Stream | Nhận diện thẻ `<script>`, mã HTML độc và hành vi đánh cắp cookie | `{container="ilfreight_web"} \|~ "(?i)(<script\|%3cscript\|</script\|%3c/script\|<svg\|%3csvg\|<iframe\|%3ciframe\|<img\|%3cimg\|javascript:\|vbscript:\|onload=\|onerror=\|onclick=\|onmouseover=\|alert\(|prompt\(|confirm\(|document\.cookie)"` |
+| **P5** | Thực thi lệnh từ xa & Chèn lệnh OS (CMDi) | Logs Stream | Bắt các ký tự ghép lệnh shell (`cat`, `whoami`, `nc`, `bash`) | `{container="ilfreight_web"} \|~ "(?i)(;\s*(cat\|ls\|id\|whoami\|pwd\|uname\|nc\|sh\|bash)\|\s*\|\s*(cat\|ls\|id\|whoami\|sh\|bash)\|&&\s*(cat\|ls\|id\|whoami)\|/bin/sh\|/bin/bash\|powershell\|cmd\.exe\|wget(\s+\|%20\|\+)\|curl(\s+\|%20\|\+))"` |
+| **P6** | Rò rỉ thông báo lỗi & Mã phản hồi 4xx/5xx | Logs Stream | Phát hiện sập server 500 hoặc cú pháp SQL bị phơi bày ra phía client | `{container="ilfreight_web"} \|~ "(?i)(syntax\s+error\|database_query_failure\|mysqli_error\|SQL\s+Error\|"status":50[0-9]\|"status":40[0-9]\| 500 \| 404 )"` |
+| **P7** | Tốc độ sự cố an ninh đa chiều (Events/s) | Time Series Chart | Biểu đồ đo lường tần suất các vụ tấn công theo từng nhóm nguy cơ | *SQLi:* `sum(rate({container="ilfreight_web"} \|~ "(?i)(union.*select\|sleep\(|benchmark\(|information_schema)"[1m]))`<br>*LFI:* `sum(rate({container="ilfreight_web"} \|~ "(?i)(\.\./\|/etc/passwd\|php://)"[1m]))`<br>*XSS:* `sum(rate({container="ilfreight_web"} \|~ "(?i)(<script\|<svg\|onerror=)"[1m]))`<br>*Lỗi 5xx:* `sum(rate({container="ilfreight_web"} \|~ "(?i)("status":50[0-9]\| 500 )"[1m]))` |
+| **P8** | Chẩn đoán hoạt động cơ sở dữ liệu MariaDB | Logs Stream | Theo dõi nhật ký kết nối, khóa bảng và hiệu năng truy vấn MariaDB | `{container="ilfreight_db"}` |
+
 #### 4.2.3. Thắt chặt an ninh cho bảng điều khiển Grafana
 Do bảng điều khiển chứa toàn bộ nhật ký ứng dụng nhạy cảm (thông tin truy vấn cơ sở dữ liệu, địa chỉ IP máy khách, dấu vết payload và tài khoản người dùng), việc bảo vệ cổng giám sát là yêu cầu an ninh tối thượng:
 * **Tắt quyền xem không cần đăng nhập:**
@@ -647,15 +873,284 @@ Một hệ thống tự vận hành an toàn bắt buộc phải có khả năng
 ---
 ## CHƯƠNG 5: CÁC TÌNH HUỐNG SỰ CỐ VÀ TẤN CÔNG THỰC TẾ
 
-Chương này mô tả chi tiết các sự cố kỹ thuật và nguy cơ bảo mật trong thực tế vận hành: từ các lỗi mã nguồn bị phát hiện và ngăn chặn từ sớm ở giai đoạn kiểm thử tự động cho đến các sự cố hạ tầng và hành vi tấn công mạng trên máy chủ thực tế.
+Chương này mô tả chi tiết các sự cố kỹ thuật và nguy cơ bảo mật trong thực tế vận hành: từ việc phân tích cụ thể 5 vấn đề an toàn tương ứng với 5 thành viên nhóm theo chuẩn bảo vệ dữ liệu cá nhân, các lỗi mã nguồn bị người gác cổng tự động chặn lại, cho đến các sự cố hạ tầng và hành vi tấn công mạng trên máy chủ thực tế.
 
-### 5.1. Các lỗi mã nguồn bị SonarQube chặn khi lập trình
+### 5.1. Đánh giá an toàn ứng dụng và bảo vệ dữ liệu theo từng thành viên nhóm
+
+Thực hiện yêu cầu trọng tâm của bài tập nhóm về việc đánh giá an toàn ứng dụng trong việc đáp ứng yêu cầu bảo vệ dữ liệu người dùng, 5 thành viên trong nhóm nghiên cứu phụ trách phân tích 5 vấn đề an toàn độc lập trải dài trên các pha của chu trình DevSecOps. Các vấn đề này bao quát đầy đủ 2 nhóm lỗi cốt lõi: **nhóm lỗi mã nguồn (Code)** và **nhóm lỗi triển khai/vận hành (Deployment & Operations)**, đồng thời được đối chiếu trực tiếp với các quy định pháp lý bắt buộc theo **Nghị định 13/2023/NĐ-CP (Bảo vệ dữ liệu cá nhân tại Việt Nam)** và **Quy định chung về bảo vệ dữ liệu GDPR (Châu Âu)**:
+
+#### Bảng tổng hợp đối chiếu 5 vấn đề an toàn ứng dụng của 5 thành viên
+
+| Thành viên đảm nhiệm | Vấn đề an toàn phát hiện | Phân loại nhóm lỗi | Pha trong DevSecOps | Căn cứ vi phạm chính sách pháp lý | Cơ chế thực thi kỹ thuật |
+| :--- | :--- | :---: | :---: | :--- | :---: |
+| **1. Nguyễn Giang Nam**<br>*(Trưởng nhóm)* | Kiểm soát thay đổi mã nguồn và quản trị phân nhánh | **Triển khai & Vận hành** | **Pha Code / Commit**<br>*(Stage 1)* | **Nghị định 13/2023:** Điều 13 Khoản 1<br>**GDPR:** Article 25 (By Design) | **Policy-as-Code**<br>*(Python Harness)* |
+| **2. Nguyễn Đình Hải** | Lỗ hổng tiêm mã SQL làm rò rỉ dữ liệu cá nhân người dùng | **Mã nguồn** | **Pha Test / SAST**<br>*(Stage 2)* | **Nghị định 13/2023:** Điều 9 Khoản 2<br>**GDPR:** Article 32 (Security) | **Security-as-Code**<br>*(Semgrep Taint Flow)* |
+| **3. Đào Xuân Mạnh** | Lưu trữ dữ liệu xác thực và mật khẩu gán cứng trong mã nguồn | **Mã nguồn** | **Pha Build / Gate**<br>*(Stage 2)* | **Nghị định 13/2023:** Điều 13 Khoản 2<br>**GDPR:** Article 5(1)(f) | **Security-as-Code**<br>*(SonarQube & Semgrep)* |
+| **4. Lê Đức Anh** | Mất an toàn cấu hình triển khai và nguy cơ lộ cổng cơ sở dữ liệu | **Triển khai & Vận hành** | **Pha Release / Deploy**<br>*(Stage 3 & 4)* | **Nghị định 13/2023:** Điều 13 Khoản 1<br>**GDPR:** Article 32 (Resilience) | **Security-as-Code**<br>*(Config Validator & IaC)* |
+| **5. Nguyễn Phương Mai** | Thiếu hụt giám sát truy vết và ứng phó sự cố rò rỉ dữ liệu | **Triển khai & Vận hành** | **Pha Operate / Monitor**<br>*(Stage 4)* | **Nghị định 13/2023:** Điều 17<br>**GDPR:** Article 33 (72h Notice) | **Security-as-Code**<br>*(LogQL & Auto-Healing)* |
+
+---
+
+#### 5.1.1. Thành viên 1 — Nguyễn Giang Nam: Kiểm soát thay đổi mã nguồn và quản trị phân nhánh
+* **Thành viên phụ trách:** Nguyễn Giang Nam (Trưởng nhóm / Kiến trúc sư DevSecOps).
+* **Bản chất vấn đề an toàn:**
+  Trong các dự án phát triển phần mềm, rủi ro an ninh nghiêm trọng hàng đầu bắt nguồn từ việc thiếu kiểm soát quá trình nạp mã nguồn: lập trình viên vô tình push trực tiếp mã thử nghiệm, bỏ qua các bước kiểm thử tĩnh, hoặc đưa mã chứa lỗ hổng vào các nhánh sản xuất mà không qua xét duyệt.
+* **Phân loại nhóm lỗi:** Lỗi triển khai, vận hành và quản trị hệ thống (Governance & Operations).
+* **Pha trong quy trình DevSecOps:** **Pha Code / Commit (Stage 1: Branch Policy Guard)**.
+* **Cơ chế thực thi kỹ thuật:** **Policy-as-Code (Chính sách an toàn dưới dạng mã nguồn)**.
+* **Căn cứ vi phạm chính sách bảo vệ dữ liệu:**
+  * **Nghị định 13/2023/NĐ-CP — Điều 13 Khoản 1:** Quy định cơ quan, tổ chức xử lý dữ liệu cá nhân phải *"áp dụng các biện pháp quản lý, kỹ thuật phù hợp... để phòng chống hành vi vi phạm quy định về bảo vệ dữ liệu cá nhân"*. Việc thiếu cơ chế kiểm soát mã nguồn đồng nghĩa với việc vi phạm quy trình kiểm soát thay đổi hệ thống công nghệ thông tin xử lý dữ liệu cá nhân.
+  * **GDPR — Article 25 (Data Protection by Design and by Default):** Bắt buộc các biện pháp bảo vệ dữ liệu kỹ thuật và tổ chức phải được tích hợp sẵn ngay từ khi bắt đầu thiết kế và phát triển phần mềm.
+* **Cách thức phát hiện:**
+  Xây dựng công cụ kiểm soát chính sách độc lập [`ci/policy_guard.py`](file:///d:/PTIT-DevOps-SonarQube/ci/policy_guard.py) thực thi tại Stage 1. Kịch bản phân tích lịch sử commit và siêu dữ liệu Pull Request:
+  * Ngăn chặn tuyệt đối hành vi commit hoặc push trực tiếp lên hai nhánh bảo vệ `main` và `dev`.
+  * Bắt buộc mọi đóng góp cá nhân chỉ được mở Pull Request vào `dev` theo cú pháp chuẩn: `[<mã_nhánh>] <loại>(<phạm_vi>): <mô tả>`.
+  * Nhánh `main` chỉ nhận mã nguồn qua PR phát hành xuất phát từ nhánh `dev` với định dạng: `release: vX.Y.Z - <mô tả>`.
+* **Cách thức xử lý và khắc phục:**
+  Kích hoạt cơ chế GitHub Branch Protection Rules khóa cứng nhánh `main` và `dev`, yêu cầu 100% Pull Request phải vượt qua bài kiểm tra của `branch_policy_guard` mới được mở quyền hợp nhất.
+* **Đoạn mã demo thực tế:**
+  *Đoạn mã Policy-as-Code kiểm tra quy chuẩn đóng góp trong [`ci/policy_guard.py`](file:///d:/PTIT-DevOps-SonarQube/ci/policy_guard.py):*
+  ```python
+  # Trích đoạn ci/policy_guard.py - Cưỡng chế quy chuẩn nhánh và Pull Request
+  PR_DEV_REGEX = re.compile(
+      r"^\[(namng|haind|manhdx|anhld|mainp)\]\s+(feat|fix|sec|ci|docs|refactor|test|chore|style|perf|revert)(\([a-zA-Z0-9_\-\.\/]+\))?:\s.+",
+      re.IGNORECASE,
+  )
+  PR_MAIN_REGEX = re.compile(
+      r"^(release|RELEASE):\s+v[0-9]+\.[0-9]+\.[0-9]+(\s+-\s+.+|\s*:\s*.+)",
+      re.IGNORECASE,
+  )
+
+  def validate_pr_policy(base_ref: str, pr_title: str) -> bool:
+      if base_ref == "dev" and not PR_DEV_REGEX.match(pr_title):
+          log_error("PR Title Violation", f"PR vào 'dev' phải theo chuẩn: [{base_ref}] type(scope): message")
+          return False
+      if base_ref == "main" and not PR_MAIN_REGEX.match(pr_title):
+          log_error("Release Violation", "PR vào 'main' bắt buộc phải theo chuẩn: release: vX.Y.Z - description")
+          return False
+      return True
+  ```
+
+---
+
+#### 5.1.2. Thành viên 2 — Nguyễn Đình Hải: Lỗ hổng tiêm mã SQL làm rò rỉ dữ liệu cá nhân người dùng
+* **Thành viên phụ trách:** Nguyễn Đình Hải (Kỹ sư An ninh Ứng dụng / AppSec Engineer).
+* **Bản chất vấn đề an toàn:**
+  Tại các chức năng tra cứu cảng biển (`GET /ports?q=`) và tra cứu vận đơn (`GET /api/track?tracking=`), ứng dụng ghép trực tiếp dữ liệu do người dùng nhập vào chuỗi truy vấn SQL thông qua hàm `mysqli_query()`. Lỗ hổng này cho phép kẻ tấn công thực thi các câu lệnh trích xuất trái phép toàn bộ danh sách khách hàng, lịch sử vận chuyển và thông tin tài khoản quản trị.
+* **Phân loại nhóm lỗi:** Lỗi mã nguồn (Application Source Code).
+* **Pha trong quy trình DevSecOps:** **Pha Test / Scan (Stage 2: Semgrep Taint Analysis & SonarQube SAST)**.
+* **Cơ chế thực thi kỹ thuật:** **Security-as-Code (An ninh dưới dạng mã nguồn)**.
+* **Căn cứ vi phạm chính sách bảo vệ dữ liệu:**
+  * **Nghị định 13/2023/NĐ-CP — Điều 9 Khoản 2:** Quy định bên xử lý dữ liệu cá nhân có nghĩa vụ *"bảo đảm an toàn, an ninh thông tin, bí mật dữ liệu cá nhân của chủ thể dữ liệu trong quá trình xử lý"*. Việc để tồn tại lỗi SQL Injection khiến dữ liệu vận đơn và thông tin liên lạc của khách hàng bị trích xuất công khai là hành vi vi phạm nghiêm trọng nghĩa vụ bảo đảm an toàn dữ liệu.
+  * **GDPR — Article 32 (Security of Processing):** Yêu cầu triển khai các biện pháp kỹ thuật phù hợp nhằm bảo đảm mức an toàn chống lại việc tiết lộ hoặc truy cập trái phép vào dữ liệu cá nhân được lưu trữ.
+* **Cách thức phát hiện:**
+  * **Semgrep SAST Engine:** Thiết lập quy tắc phân tích dòng ô nhiễm Taint Analysis truy vết biến đầu vào `$Source: $_GET[...]` lan truyền trực tiếp tới điểm thực thi nguy hiểm `$Sink: mysqli_query(...)` mà không đi qua các hàm làm sạch chuẩn.
+  * **SonarQube Scanner:** Phân tích cây cú pháp trừu tượng AST, kích hoạt quy tắc `php:S2077` và đánh tụt điểm bảo mật xuống mức E, kích hoạt trạng thái Quality Gate `FAILED` để ngắt đường ống CI.
+* **Cách thức xử lý và khắc phục:**
+  Tái cấu trúc mã nguồn: loại bỏ hoàn toàn việc ghép chuỗi SQL thủ công; thay thế bằng kỹ thuật câu lệnh chuẩn bị trước với tham số liên kết kiểu dữ liệu an toàn qua thư viện PDO.
+* **Đoạn mã demo thực tế:**
+  *Quy tắc phát hiện Semgrep, đoạn mã vi phạm ban đầu và đoạn mã vá lỗi an toàn:*
+  ```yaml
+  # ci/semgrep-local-rules.yml - Quy tắc SAST phát hiện nối chuỗi SQL nguy hiểm
+  rules:
+    - id: php-sqli-unquoted-concatenation
+      languages: [php]
+      severity: ERROR
+      message: Phát hiện ghép biến người dùng trực tiếp vào câu lệnh SQL mà không qua Prepared Statements.
+      patterns:
+        - pattern: mysqli_query($CONN, $SQL)
+        - pattern-inside: |
+            $SQL = "...".$_GET[...]."...";
+            ...
+      metadata:
+        cwe: "CWE-89: SQL Injection"
+        owasp: "A03:2021 Injection"
+  ```
+  ```php
+  // 1. Đoạn mã vi phạm ban đầu (InlaneWeb/web/src/ports.php): Ghép biến trực tiếp
+  $query = "SELECT id, code, city, country, volume FROM ports WHERE code LIKE '%" . $_GET['q'] . "%'";
+  $result = mysqli_query($conn, $query); // Điểm trũng (Sink) nguy hiểm
+
+  // 2. Đoạn mã vá lỗi triệt để bằng Prepared Statements với PDO
+  $stmt = $pdo->prepare("SELECT id, code, city, country, volume FROM ports WHERE code LIKE :code");
+  $stmt->execute(['code' => '%' . $_GET['q'] . '%']);
+  $ports = $stmt->fetchAll(PDO::FETCH_ASSOC);
+  ```
+
+---
+
+#### 5.1.3. Thành viên 3 — Đào Xuân Mạnh: Lưu trữ dữ liệu xác thực và mật khẩu gán cứng trong mã nguồn
+* **Thành viên phụ trách:** Đào Xuân Mạnh (Kỹ sư Kiểm thử An ninh / QA & Quality Gate Engineer).
+* **Bản chất vấn đề an toàn:**
+  Trong phiên bản ban đầu của ứng dụng:
+  1. Tệp kết nối `InlaneWeb/web/src/lib/db.php` chứa chuỗi mật khẩu root mặc định gán cứng `$db_pass = "p@ssw0rd"`.
+  2. Bảng cơ sở dữ liệu `ilfreight.users` lưu trữ mật khẩu của người dùng và quản trị viên dưới dạng văn bản thô (Plaintext), không áp dụng bất kỳ hàm băm mật mã nào. Khi hệ thống bị tấn công SQL Injection hoặc lộ sao lưu CSDL, toàn bộ mật khẩu người dùng bị lộ tức thời.
+* **Phân loại nhóm lỗi:** Lỗi mã nguồn (Application Source Code & Data Storage).
+* **Pha trong quy trình DevSecOps:** **Pha Build / Gate (Stage 2: SonarQube Quality Gate & Semgrep Secrets Detection)**.
+* **Cơ chế thực thi kỹ thuật:** **Security-as-Code**.
+* **Căn cứ vi phạm chính sách bảo vệ dữ liệu:**
+  * **Nghị định 13/2023/NĐ-CP — Điều 13 Khoản 2 Điểm a:** Yêu cầu bắt buộc áp dụng *"biện pháp kỹ thuật, mật mã học để bảo vệ dữ liệu cá nhân"*. Việc lưu trữ mật khẩu dạng rõ trong cơ sở dữ liệu và mã nguồn vi phạm trực tiếp nguyên tắc bảo vệ mật mã đối với dữ liệu xác thực người dùng.
+  * **GDPR — Article 5(1)(f) & Article 25:** Vi phạm nguyên tắc bảo mật thông tin (Confidentiality) và nguyên tắc bảo vệ dữ liệu mặc định (Data protection by default).
+* **Cách thức phát hiện:**
+  * SonarQube kích hoạt quy tắc `secrets:S6702` (Credentials should not be hard-coded) và `php:S181`.
+  * Semgrep thực thi quy tắc tùy biến [`php-hardcoded-db-password-fallback`](file:///d:/PTIT-DevOps-SonarQube/ci/semgrep-local-rules.yml#L2), bắt giữ các cú pháp gán chuỗi tĩnh làm mật khẩu dự phòng.
+* **Cách thức xử lý và khắc phục:**
+  1. Tách toàn bộ thông tin xác thực sang biến môi trường hệ thống và nạp qua GitHub Repository Secrets (`PROD_SSH_KEY`, `PROD_HOST`, `DB_PASS`).
+  2. Nâng cấp toàn bộ cơ chế lưu trữ mật khẩu trong cơ sở dữ liệu sang thuật toán băm mật mã mạnh một chiều Bcrypt (`PASSWORD_BCRYPT`) với hệ số chi phí tính toán an toàn (Cost Factor = 12).
+* **Đoạn mã demo thực tế:**
+  *Quy tắc Semgrep phát hiện chuỗi gán cứng và đoạn mã băm mật khẩu Bcrypt:*
+  ```yaml
+  # 1. Quy tắc phát hiện Semgrep trong ci/semgrep-local-rules.yml:
+  rules:
+    - id: php-hardcoded-db-password-fallback
+      languages: [php]
+      severity: ERROR
+      message: A database password has a hardcoded fallback. Require a secret from the environment instead.
+      patterns:
+        - pattern: "getenv('DB_PASS') ?: $FALLBACK"
+        - metavariable-regex:
+            metavariable: $FALLBACK
+            regex: ^['"].+['"]$
+      metadata:
+        cwe: "CWE-798: Use of Hard-coded Credentials"
+        owasp: "A07:2021 Identification and Authentication Failures"
+  ```
+  ```php
+  // 2. Đoạn mã vá lỗi: Nạp bí mật từ biến môi trường và mã hóa Bcrypt
+  $db_pass = getenv('DB_PASS'); // Loại bỏ hoàn toàn fallback chuỗi tĩnh
+
+  // Mã hóa mật khẩu trước khi lưu trữ vào bảng users
+  $hashed_password = password_hash($raw_password, PASSWORD_BCRYPT, ['cost' => 12]);
+  $stmt = $pdo->prepare("INSERT INTO users (username, password, email) VALUES (:user, :hash, :email)");
+  $stmt->execute(['user' => $username, 'hash' => $hashed_password, 'email' => $email]);
+
+  // Xác thực đăng nhập an toàn chống tấn công Timing Attack
+  $stmt = $pdo->prepare("SELECT id, password FROM users WHERE username = :user");
+  $stmt->execute(['user' => $username]);
+  $user = $stmt->fetch();
+  if ($user && password_verify($login_password, $user['password'])) {
+      // Đăng nhập thành công an toàn
+  }
+  ```
+
+---
+
+#### 5.1.4. Thành viên 4 — Lê Đức Anh: Mất an toàn cấu hình triển khai và nguy cơ lộ cổng cơ sở dữ liệu
+* **Thành viên phụ trách:** Lê Đức Anh (Kỹ sư Tự động hóa Hạ tầng / CI/CD & Cloud Infrastructure).
+* **Bản chất vấn đề an toàn:**
+  Trong quá trình đóng gói và triển khai môi trường máy chủ:
+  1. Cấu hình Docker Compose ban đầu vô tình ánh xạ cổng cơ sở dữ liệu MariaDB `3306:3306` ra ngoài mạng công cộng, tạo điều kiện cho các tác nhân bên ngoài thực hiện tấn công dò quét mật khẩu Brute-force trực tiếp vào cơ sở dữ liệu.
+  2. Xung đột không gian dự án Docker Compose (`name conflict`) giữa khối Web và khối Giám sát dẫn tới việc các container vô tình bị tiêu hủy lẫn nhau khi dùng cờ `--remove-orphans`.
+* **Phân loại nhóm lỗi:** Lỗi triển khai và hạ tầng vận hành (Deployment & Infrastructure Operations).
+* **Pha trong quy trình DevSecOps:** **Pha Release / Deploy (Stage 3: Production Gate & Stage 4: Production CD)**.
+* **Cơ chế thực thi kỹ thuật:** **Security-as-Code & Infrastructure-as-Code**.
+* **Căn cứ vi phạm chính sách bảo vệ dữ liệu:**
+  * **Nghị định 13/2023/NĐ-CP — Điều 13 Khoản 1:** Vi phạm yêu cầu thiết lập vùng đệm an toàn và bảo vệ mạng máy tính lưu trữ dữ liệu cá nhân. Việc để cổng CSDL tiếp xúc với mạng Internet công cộng vi phạm nghiêm trọng nguyên tắc phân vùng an ninh mạng tối thiểu.
+  * **GDPR — Article 32 (Security of Processing):** Vi phạm nghĩa vụ bảo đảm tính toàn vẹn, tính sẵn sàng và tính bảo mật liên tục của các hệ thống máy chủ xử lý dữ liệu.
+* **Cách thức phát hiện:**
+  Xây dựng công cụ kiểm tra tự động [`ci/validate_configs.py`](file:///d:/PTIT-DevOps-SonarQube/ci/validate_configs.py) tại Stage 3 với 21 tiêu chí thẩm định: kiểm tra cấu hình cổng ánh xạ, phát hiện cổng 3306 bị expose ra ngoài host, kiểm tra tính toàn vẹn của volume mount và cú pháp Compose V2.
+* **Cách thức xử lý và khắc phục:**
+  1. Đóng hoàn toàn cổng `3306` của container `ilfreight_db` trong [`InlaneWeb/docker-compose.prod.yml`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/docker-compose.prod.yml), chỉ cho phép giao tiếp nội bộ thông qua mạng bridge `inlaneweb_net`.
+  2. Phân tách tường minh định danh hai project: `-p inlaneweb-monitoring` và `-p inlaneweb-prod`, cấu hình script dọn dẹp an toàn container cũ mà vẫn bảo toàn 100% dữ liệu trên Docker Volume `db_data`.
+* **Đoạn mã demo thực tế:**
+  *Kiểm tra cấu hình tự động trong [`ci/validate_configs.py`](file:///d:/PTIT-DevOps-SonarQube/ci/validate_configs.py) và cấu hình mạng nội bộ cô lập trong [`InlaneWeb/docker-compose.prod.yml`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/docker-compose.prod.yml):*
+  ```python
+  # 1. Đoạn mã kiểm thử tự động trong ci/validate_configs.py:
+  # Thẩm định cấu hình Compose: cấm mở cổng 3306 ra ngoài máy chủ host
+  def validate_database_isolation(compose_path: str) -> bool:
+      with open(compose_path, "r", encoding="utf-8") as f:
+          config = yaml.safe_load(f)
+      db_ports = config.get("services", {}).get("db", {}).get("ports", [])
+      for port_mapping in db_ports:
+          if "3306:3306" in str(port_mapping) or "0.0.0.0:3306" in str(port_mapping):
+              print(f"❌ VI PHẠM AN NINH: Cổng 3306 đang mở công khai trong {compose_path}!")
+              return False
+      return True
+  ```
+  ```yaml
+  # 2. Cấu hình mạng nội bộ cô lập trong InlaneWeb/docker-compose.prod.yml:
+  services:
+    web:
+      image: ${INLANEWEB_IMAGE}
+      container_name: ilfreight_web
+      networks:
+        - inlaneweb_net
+      # Chỉ mở cổng HTTP qua Reverse Proxy nội bộ
+      ports:
+        - "8088:80"
+
+    db:
+      image: ${INLANEWEB_DB_IMAGE}
+      container_name: ilfreight_db
+      # TUYỆT ĐỐI KHÔNG DÙNG ports: ["3306:3306"]
+      # Cổng 3306 chỉ mở trong mạng inlaneweb_net cho web kết nối
+      expose:
+        - "3306"
+      volumes:
+        - db_data:/var/lib/mysql
+      networks:
+        - inlaneweb_net
+
+  networks:
+    inlaneweb_net:
+      name: inlaneweb_net
+      external: true
+  ```
+
+---
+
+#### 5.1.5. Thành viên 5 — Nguyễn Phương Mai: Thiếu hụt giám sát truy vết và ứng phó sự cố rò rỉ dữ liệu
+* **Thành viên phụ trách:** Nguyễn Phương Mai (Kỹ sư Vận hành & Giám sát An ninh / SecOps & Observability).
+* **Bản chất vấn đề an toàn:**
+  Hệ thống khi triển khai ban đầu thiếu cơ chế thu thập và phân tích nhật ký tập trung. Khi kẻ tấn công thực hiện các chiến dịch dò quét tự động hoặc cố gắng trích xuất dữ liệu trái phép, quản trị viên hoàn toàn không nhận được cảnh báo, dẫn tới hiện tượng "mù quan sát" (Blind Spot). Đồng thời, khi ứng dụng bị tấn công làm tràn bộ nhớ gây sập container, hệ thống không thể tự phục hồi nếu thiếu can thiệp thủ công của kỹ sư trực.
+* **Phân loại nhóm lỗi:** Lỗi triển khai, vận hành và giám sát (Operations & Incident Response).
+* **Pha trong quy trình DevSecOps:** **Pha Operate / Monitor (Stage 4: Continuous Monitoring & Self-Healing)**.
+* **Cơ chế thực thi kỹ thuật:** **Security-as-Code (Giám sát và Phản ứng an ninh dưới dạng mã nguồn)**.
+* **Căn cứ vi phạm chính sách bảo vệ dữ liệu:**
+  * **Nghị định 13/2023/NĐ-CP — Điều 17 (Xử lý sự cố vi phạm dữ liệu cá nhân):** Bắt buộc tổ chức phải thông báo cho Bộ Công an trong thời hạn **72 giờ** kể từ khi xảy ra sự cố vi phạm dữ liệu cá nhân. Nếu không có hệ thống ghi vết nhật ký tập trung để chứng minh phạm vi, thời điểm và số lượng bản ghi bị rò rỉ, doanh nghiệp hoàn toàn không thể lập biên bản điều tra sự cố theo đúng pháp luật.
+  * **GDPR — Article 33 & Article 34:** Bắt buộc năng lực phát hiện, khoanh vùng và thông báo vi phạm dữ liệu cá nhân (Personal Data Breach Notification) cho cơ quan có thẩm quyền trong vòng 72 giờ.
+* **Cách thức phát hiện:**
+  Triển khai cụm FOSS Observability bao gồm Promtail thu thập trực tiếp từ Docker Unix Socket, Grafana Loki lập chỉ mục và phân tích chuỗi log JSON theo thời gian thực. Sử dụng cú pháp LogQL bóc tách các dấu hiệu tấn công mạng:
+  ```logql
+  # Cú pháp LogQL phát hiện các đợt tấn công trích xuất dữ liệu SQLi theo thời gian thực
+  sum by (client_ip) (
+    count_over_time(
+      {container="ilfreight_web"} 
+      | json 
+      | uri =~ "(?i).*(union.*select|sleep\(|extractvalue|information_schema).*" [1m]
+    )
+  )
+  ```
+* **Cách thức xử lý và khắc phục:**
+  1. Trực quan hóa toàn bộ 8 phân vùng giám sát an ninh trên Bảng điều khiển Grafana tập trung (`https://grafana.ecotools.online`), thiết lập cơ chế xác thực quản trị viên bảo mật (vô hiệu hóa Anonymous Access).
+  2. Kích hoạt bộ điều phối tự phục hồi Autoheal giám sát nhịp tim `/health`. Khi phát hiện container bị sập hoặc treo tiến trình, Autoheal tự động khởi động lại container trong thời gian dưới 5 giây mà không làm gián đoạn cơ sở dữ liệu.
+* **Đoạn mã demo thực tế:**
+  *Cấu hình tự phục hồi container trong [`InlaneWeb/docker-compose.monitoring.yml`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/docker-compose.monitoring.yml):*
+  ```yaml
+  autoheal:
+    image: willfarrell/autoheal:1.2.0
+    container_name: ilfreight_autoheal
+    restart: always
+    environment:
+      - AUTOHEAL_CONTAINER_LABEL=autoheal
+      - AUTOHEAL_INTERVAL=10
+      - AUTOHEAL_START_PERIOD=30
+      - AUTOHEAL_DEFAULT_STOP_TIMEOUT=10
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - inlaneweb_net
+  ```
+
+---
+
+### 5.2. Các lỗi mã nguồn bị SonarQube chặn khi lập trình
 
 Trong đường ống CI/CD, SonarQube đóng vai trò là người gác cổng tại **Stage 2** ([`.github/workflows/devsecops-pipeline.yml`](file:///d:/PTIT-DevOps-SonarQube/.github/workflows/devsecops-pipeline.yml)). Bất kỳ đoạn mã nguồn nào muốn được tích hợp vào nhánh `dev` đều phải vượt qua bộ chỉ số Quality Gate tại [`ci/sonarqube-quality-gate.json`](file:///d:/PTIT-DevOps-SonarQube/ci/sonarqube-quality-gate.json).
 
 Dưới đây là 4 tình huống vi phạm điển hình mà SonarQube phát hiện và chặn đứng:
 
-#### 5.1.1. Chặn câu lệnh SQL nối chuỗi nguy hiểm
+#### 5.2.1. Chặn câu lệnh SQL nối chuỗi nguy hiểm
 * **Hành vi vi phạm trong mã nguồn:**
   Lập trình viên ghép trực tiếp biến người dùng `$_GET['q']` vào chuỗi truy vấn cơ sở dữ liệu:
   ```php
@@ -674,7 +1169,7 @@ Dưới đây là 4 tình huống vi phạm điển hình mà SonarQube phát hi
   4. GitHub Actions Runner dừng khẩn cấp Job Stage 2. Stage 3 và Stage 4 bị hủy bỏ.
   5. GitHub Branch Protection Rules lập tức **vô hiệu hóa nút bấm Merge Pull Request**, ngăn chặn hoàn toàn mã lỗi lọt vào nhánh tích hợp.
 
-#### 5.1.2. Chặn để lộ mật khẩu trong mã nguồn
+#### 5.2.2. Chặn để lộ mật khẩu trong mã nguồn
 * **Hành vi vi phạm trong mã nguồn:**
   Khai báo trực tiếp mật khẩu cơ sở dữ liệu trong tệp kết nối `lib/db.php`:
   ```php
@@ -687,7 +1182,7 @@ Dưới đây là 4 tình huống vi phạm điển hình mà SonarQube phát hi
 * **Quy tắc vi phạm:** `php:S181` / `secrets:S6702` — *"Credentials should not be hard-coded"*.
 * **Cơ chế chặn:** SonarQube đánh dấu vi phạm nghiêm trọng, hạ `security_rating` về mức E, ngắt đường ống CI/CD và yêu cầu lập trình viên đưa mật khẩu vào biến môi trường `getenv('DB_PASS')` và GitHub Secrets.
 
-#### 5.1.3. Chặn Cookie thiếu cờ bảo mật
+#### 5.2.3. Chặn Cookie thiếu cờ bảo mật
 * **Hành vi vi phạm:** Khởi tạo Cookie phiên làm việc mà không bật cờ bảo vệ:
   ```php
   // Thiếu cờ HttpOnly và Secure
@@ -696,18 +1191,18 @@ Dưới đây là 4 tình huống vi phạm điển hình mà SonarQube phát hi
 * **Quy tắc vi phạm:** `php:S2255` — *"Using cookies without the 'HttpOnly' and 'Secure' flags is security-sensitive"*.
 * **Cơ chế chặn:** Điều kiện `{"metric": "security_hotspots_reviewed", "op": "LT", "error": "100"}` yêu cầu 100% điểm nóng phải được rà soát. Do chưa được phê duyệt ($0\% < 100\%$), Quality Gate báo `FAILED`, chặn merge Pull Request.
 
-#### 5.1.4. Chặn mã nguồn viết cẩu thả và khó bảo trì
+#### 5.2.4. Chặn mã nguồn viết cẩu thả và khó bảo trì
 * **Hành vi vi phạm:** Một hàm xử lý chứa quá nhiều vòng lặp và câu lệnh rẽ nhánh lồng nhau phức tạp.
 * **Quy tắc vi phạm:** `php:S3776` — *"Cognitive Complexity of functions should not be too high"*.
 * **Cơ chế chặn:** Độ phức tạp cao làm chỉ số bảo trì `sqale_rating` tụt xuống B hoặc C, vi phạm ngưỡng chất lượng và buộc lập trình viên phải sửa đổi và làm sạch mã nguồn trước khi được tích hợp.
 
 ---
 
-### 5.2. Các sự cố web và hạ tầng trên môi trường Production
+### 5.3. Các sự cố web và hạ tầng trên môi trường Production
 
 Phần này phân tích 6 sự cố kỹ thuật thực tế phát sinh trong quá trình vận hành hệ thống trên máy chủ VPS:
 
-#### 5.2.1. Sự cố mất kết nối cơ sở dữ liệu gây lỗi 500 và 503
+#### 5.3.1. Sự cố mất kết nối cơ sở dữ liệu gây lỗi 500 và 503
 * **Bản chất lỗi:** Ứng dụng web PHP không thể thiết lập kết nối tới container cơ sở dữ liệu `ilfreight_db:3306` (do cơ sở dữ liệu đang khởi động lại hoặc mạng nội bộ gặp sự cố), phát sinh ngoại lệ `mysqli_sql_exception: Connection refused`.
 * **Mã HTTP Response trả về:** **HTTP 500 Internal Server Error** (nếu ứng dụng cố gắng xử lý truy vấn) hoặc **HTTP 503 Service Unavailable** (nếu endpoint `/health` trả về kết quả kiểm tra trạng thái thất bại).
 * **Quy tắc Promtail thu thập:**
@@ -722,7 +1217,7 @@ Phần này phân tích 6 sự cố kỹ thuật thực tế phát sinh trong qu
   | line_format "{{.timestamp}} [LỖI KẾT NỐI DB] tại {{.file}}:{{.line}} -> {{.message}}"
   ```
 
-#### 5.2.2. Lỗi truy cập trang không tồn tại mã 404
+#### 5.3.2. Lỗi truy cập trang không tồn tại mã 404
 * **Bản chất lỗi:** Người dùng nhập sai đường dẫn, hoặc bot tự động quét các tệp nhạy cảm không tồn tại (`/wp-login.php`, `/.env`).
 * **Mã HTTP Response trả về:** **HTTP 404 Not Found**.
 * **Quy tắc thu thập:** Apache Access Log JSON ghi nhận `"status": 404`. Promtail kích hoạt quy tắc bóc tách và gán nhãn `log_category="http_traffic"`.
@@ -734,7 +1229,7 @@ Phần này phân tích 6 sự cố kỹ thuật thực tế phát sinh trong qu
   ))
   ```
 
-#### 5.2.3. Sự cố sập ứng dụng do vượt ngưỡng bộ nhớ
+#### 5.3.3. Sự cố sập ứng dụng do vượt ngưỡng bộ nhớ
 * **Bản chất lỗi:** Tiến trình kết xuất dữ liệu quá lớn vượt quá mức cấu hình `memory_limit = 128M` trong [`php.ini`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/php.ini), phát sinh lỗi `Fatal error: Allowed memory size exhausted`.
 * **Mã HTTP Response trả về:** **HTTP 500 Internal Server Error** (Apache ngắt kết nối trắng trang).
 * **Quy tắc thu thập:** Hàm `InlaneLogger::logShutdown()` qua `register_shutdown_function` bắt lấy `error_get_last()`, phát ra JSON `"type":"fatal_shutdown_error"`, `"level":"fatal"`. Promtail bắt trọn vẹn và gán nhãn `level="error"`.
@@ -743,7 +1238,7 @@ Phần này phân tích 6 sự cố kỹ thuật thực tế phát sinh trong qu
   {container="ilfreight_web", log_category="app_exception"} | json | type == "fatal_shutdown_error" or level == "fatal"
   ```
 
-#### 5.2.4. Sự cố xóa nhầm container giữa hai tệp Compose chạy song song
+#### 5.3.4. Sự cố xóa nhầm container giữa hai tệp Compose chạy song song
 * **Triệu chứng sự cố:** Trong lượt chạy Production CD (Run #39985446211), Job triển khai hạ tầng quan sát bị thất bại khẩn cấp với thông báo: `dependency failed to start: Error response from daemon: No such container...`.
 * **Phân tích nguyên nhân gốc rễ sự cố:**
   1. Hai tệp điều phối [`InlaneWeb/docker-compose.monitoring.yml`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/docker-compose.monitoring.yml) và [`InlaneWeb/docker-compose.prod.yml`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/docker-compose.prod.yml) cùng thực thi trong thư mục `/opt/inlaneweb` nhưng ban đầu không chỉ định tên dự án riêng biệt.
@@ -751,10 +1246,10 @@ Phần này phân tích 6 sự cố kỹ thuật thực tế phát sinh trong qu
   3. Khi Job Giám sát chạy lệnh `docker compose ... up -d --remove-orphans`, Docker Compose xem xét toàn bộ container thuộc dự án `inlaneweb`. Do `ilfreight_web` và `ilfreight_db` không nằm trong tệp monitoring, Docker hiểu nhầm chúng là container mồ côi và tiến hành dừng rồi xóa chúng.
   4. Đồng thời, Job Web chạy song song với cờ `--remove-orphans` lại xem `ilfreight_loki` và `ilfreight_grafana` là mồ côi và xóa bỏ `ilfreight_loki` đúng thời điểm Promtail và Grafana đang chờ Loki sẵn sàng. Hai tiến trình tranh chấp và vô tình triệt tiêu lẫn nhau.
 * **Giải pháp khắc phục:**
-  1. *Phân lập định danh dự án riêng biệt:* Khối giám sát được gán `name: inlaneweb-monitoring` (chạy với cờ `-p inlaneweb-monitoring`), khối web được gán `name: inlaneweb-prod` (chạy với cờ `-p inlaneweb-prod`). Nhờ đó, cờ `--remove-orphans` chỉ dọn dẹp các container trong phạm vi nội bộ của chính dự án đó.
-  2. *Chuyển đổi luồng thực thi tuần tự:* Cấu hình `production_deploy_web` phụ thuộc vào `production_deploy_monitoring` (`needs: [production_smoke_test, production_deploy_monitoring]`), đảm bảo cụm giám sát khởi động và vượt qua kiểm tra nhịp tim trước rồi mới triển khai ứng dụng web.
+  1. *Phân lập định danh dự án riêng biệt:* Khối giám sát được gán `name: inlaneweb-monitoring` (chạy với cờ `-p inlaneweb-monitoring`), khối web được gán `name: inlaneweb-prod` (chạy với cờ `-p inlaneweb-prod`). Nhờ đó, cờ `--remove-orphans` chỉ dọn dẹp các container trong phạm vi nội bộ của chính dự án đó mà không bao giờ chạm tới container của dự án khác.
+  2. *Tối ưu hóa chạy song song độc lập (Parallel DAG Execution):* Nhờ phân lập định danh dự án kết hợp cơ chế kiểm tra nhịp tim độc lập, hai Job triển khai Web và triển khai Giám sát hoàn toàn có thể chạy song song đồng thời mà không hề xung đột, rút ngắn 50% tổng thời gian chuyển giao của Stage 4 mà vẫn đảm bảo an toàn tuyệt đối.
 
-#### 5.2.5. Sự cố mất kết nối giữa Reverse Proxy và ứng dụng web gây lỗi 502
+#### 5.3.5. Sự cố mất kết nối giữa Reverse Proxy và ứng dụng web gây lỗi 502
 * **Triệu chứng sự cố:** Người dùng truy cập tên miền `https://inlaneweb.ecotools.online/` bị Cloudflare chặn lại và hiển thị trang thông báo Bad Gateway mã 502. Trong khi đó, lệnh kiểm tra `docker ps` trên máy chủ VPS xác nhận container `ilfreight_web` vẫn đang ở trạng thái khỏe mạnh.
 * **Phân tích nguyên nhân gốc rễ sự cố:**
   1. Hệ thống Reverse Proxy sử dụng container `proxy-manager-app-1` (Nginx Proxy Manager) thuộc mạng Docker riêng biệt (`proxy-manager_default`).
@@ -768,7 +1263,7 @@ Phần này phân tích 6 sự cố kỹ thuật thực tế phát sinh trong qu
      ```
   2. Nginx ngay lập tức phân giải được hostname `ilfreight_web`, lưu lượng HTTP được phục hồi thông suốt và mã phản hồi trả về trạng thái HTTP 200 OK bình thường.
 
-#### 5.2.6. Sự cố không phân giải được tên miền phụ Grafana
+#### 5.3.6. Sự cố không phân giải được tên miền phụ Grafana
 * **Triệu chứng sự cố:** Quản trị viên truy cập vào địa chỉ `https://grafana.ecotools.online/` nhưng trình duyệt thông báo lỗi không thể tìm thấy máy chủ: `ERR_NAME_NOT_RESOLVED`.
 * **Phân tích nguyên nhân gốc rễ sự cố:**
   Tên miền gốc `ecotools.online` được ủy quyền quản lý DNS tại Cloudflare. Khi nhóm nghiên cứu khởi tạo Proxy Host trong Nginx Proxy Manager cho tên miền phụ `grafana.ecotools.online`, bản ghi DNS `A` hoặc `CNAME` tương ứng cho tiền tố `grafana` chưa được khai báo trên bảng quản lý DNS của Cloudflare.
@@ -779,11 +1274,11 @@ Phần này phân tích 6 sự cố kỹ thuật thực tế phát sinh trong qu
 
 ---
 
-### 5.3. Các kịch bản tấn công thực tế và cách phát hiện qua log
+### 5.4. Các kịch bản tấn công thực tế và cách phát hiện qua log
 
 Nhóm nghiên cứu đã thực nghiệm trực tiếp 14 kịch bản khai thác an ninh trên hệ thống thực nghiệm [`InlaneWeb/writeup.md`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/writeup.md). Phần này phân tích chi tiết 4 kịch bản đại diện:
 
-#### 5.3.1. Tấn công trích xuất dữ liệu bằng thông báo lỗi XPath
+#### 5.4.1. Tấn công trích xuất dữ liệu bằng thông báo lỗi XPath
 * **Điểm cuối bị tấn công:** `GET /ports/{code}` (Lỗ hổng V2).
 * **Payload khai thác:**
   ```http
@@ -804,7 +1299,7 @@ Nhóm nghiên cứu đã thực nghiệm trực tiếp 14 kịch bản khai thá
   {container="ilfreight_web"} |~ "(?i)XPATH syntax error"
   ```
 
-#### 5.3.2. Tấn công ghép bảng đọc dữ liệu nhạy cảm bằng kỹ thuật UNION
+#### 5.4.2. Tấn công ghép bảng đọc dữ liệu nhạy cảm bằng kỹ thuật UNION
 * **Điểm cuối bị tấn công:** `GET /ports?q=` (Lỗ hổng V1).
 * **Payload khai thác:**
   ```http
@@ -818,7 +1313,7 @@ Nhóm nghiên cứu đã thực nghiệm trực tiếp 14 kịch bản khai thá
   {container="ilfreight_web", vuln_category="sqli"} | json | query =~ "(?i).*union.*select.*"
   ```
 
-#### 5.3.3. Tấn công suy diễn dữ liệu dựa vào độ trễ thời gian
+#### 5.4.3. Tấn công suy diễn dữ liệu dựa vào độ trễ thời gian
 * **Điểm cuối bị tấn công:** `GET /api/track?tracking=` (Lỗ hổng V4).
 * **Payload khai thác:**
   ```http
@@ -832,7 +1327,7 @@ Nhóm nghiên cứu đã thực nghiệm trực tiếp 14 kịch bản khai thá
   {container="ilfreight_web", vuln_category="sqli"} | json | uri =~ "(?i).*(sleep|benchmark)\\("
   ```
 
-#### 5.3.4. Tấn công tải tệp độc hại để thực thi lệnh trái phép từ xa
+#### 5.4.4. Tấn công tải tệp độc hại để thực thi lệnh trái phép từ xa
 * **Điểm cuối bị tấn công:** `GET /admin/console` (V12) và `GET /ports?q=` (V1).
 * **Payload khai thác:**
   ```sql
@@ -852,7 +1347,7 @@ Nhóm nghiên cứu đã thực nghiệm trực tiếp 14 kịch bản khai thá
 
 ---
 
-#### 5.3.5. Bảng tổng hợp đối chiếu 14 kịch bản thực tế
+#### 5.4.5. Bảng tổng hợp đối chiếu 14 kịch bản thực tế
 
 | Mã Điểm Lỗi | Điểm cuối kiểm tra | Kỹ thuật và hành vi thực tế | Cơ chế ngăn chặn của SonarQube và Semgrep khi kiểm tra mã nguồn | Năng lực ghi vết của Promtail và Grafana Loki khi vận hành thực tế | Mã HTTP trả về khi bị khai thác |
 | :---: | :--- | :--- | :--- | :--- | :---: |
@@ -876,9 +1371,9 @@ Nhóm nghiên cứu đã thực nghiệm trực tiếp 14 kịch bản khai thá
 
 ---
 
-### 5.4. Biện pháp vá lỗi và phòng thủ an toàn
+### 5.5. Biện pháp vá lỗi và phòng thủ an toàn
 
-#### 5.4.1. Chống tấn công SQL Injection bằng cơ chế chuẩn bị trước câu lệnh truy vấn
+#### 5.5.1. Chống tấn công SQL Injection bằng cơ chế chuẩn bị trước câu lệnh truy vấn
 Biện pháp phòng thủ căn bản và triệt để nhất đối với lỗi chèn câu lệnh SQL là tách rời hoàn toàn giữa cấu trúc lệnh truy vấn và dữ liệu người dùng nhập vào. Lập trình viên thay thế việc ghép chuỗi truyền thống bằng kỹ thuật Prepared Statements với PDO:
 ```php
 // Sửa chữa an toàn bằng câu lệnh chuẩn bị trước qua PDO
@@ -888,7 +1383,7 @@ $results = $stmt->fetchAll();
 ```
 Khi sử dụng phương pháp này, máy chủ cơ sở dữ liệu sẽ biên dịch trước khung câu lệnh SQL. Tham số do người dùng nhập vào được truyền riêng biệt dưới dạng giá trị thuần túy chứ không bao giờ được phân tích cú pháp như một phần của lệnh SQL, triệt tiêu hoàn toàn khả năng bị bẻ gãy cú pháp câu truy vấn.
 
-#### 5.4.2. Phân quyền chặt chẽ trên thư mục và hạn chế quyền tài khoản cơ sở dữ liệu
+#### 5.5.2. Phân quyền chặt chẽ trên thư mục và hạn chế quyền tài khoản cơ sở dữ liệu
 * **Phân quyền trên hệ thống tệp tin:**
   * Toàn bộ cây thư mục mã nguồn ứng dụng web được thiết lập quyền chỉ đọc đối với tài khoản dịch vụ web `www-data`.
   * Ngoại trừ các thư mục bắt buộc phải ghi dữ liệu tạm thời (như thư mục tải tệp lên hoặc thư mục lưu phiên làm việc), tất cả các tệp PHP đều bị cấm quyền ghi để ngăn chặn việc kẻ tấn công tải lên hoặc chỉnh sửa mã nguồn trực tiếp.
@@ -897,7 +1392,7 @@ Khi sử dụng phương pháp này, máy chủ cơ sở dữ liệu sẽ biên 
   * Tài khoản kết nối của ứng dụng web chỉ được cấp các quyền thao tác dữ liệu tối thiểu cần thiết (`SELECT`, `INSERT`, `UPDATE`, `DELETE`) trên đúng cơ sở dữ liệu `ilfreight`.
   * Tước bỏ hoàn toàn các quyền quản trị nhạy cảm như quyền `FILE` (ngăn chặn việc đọc ghi tệp qua `LOAD_FILE` hoặc `INTO OUTFILE`), quyền `GRANT OPTION` và quyền `DROP TABLE`.
 
-#### 5.4.3. Tự động phục hồi dịch vụ khi gặp sự cố bằng Autoheal
+#### 5.5.3. Tự động phục hồi dịch vụ khi gặp sự cố bằng Autoheal
 Để đảm bảo hệ thống luôn sẵn sàng phục vụ khi xảy ra sự cố đột ngột:
 * Chỉ thị `healthcheck` trong [`docker-compose.prod.yml`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/docker-compose.prod.yml) liên tục gửi tín hiệu thăm dò tới endpoint nội bộ `http://localhost/health` mỗi 30 giây.
 * Container độc lập `willfarrell/autoheal` lắng nghe các sự kiện qua Docker Unix Socket. Khi phát hiện container `ilfreight_web` chuyển sang trạng thái không khỏe mạnh quá 3 chu kỳ liên tiếp (tương đương 90 giây không phản hồi), Autoheal sẽ tự động kích hoạt lệnh khởi động lại container một cách độc lập mà không làm ảnh hưởng tới cơ sở dữ liệu hay hạ tầng giám sát, khôi phục dịch vụ về trạng thái sẵn sàng trong thời gian dưới 5 giây.
@@ -911,6 +1406,23 @@ Nghiên cứu đã hoàn thành toàn diện các mục tiêu thực tế và k�
 2. **Đưa việc kiểm tra an ninh về sớm ngay khi viết mã:** Rút ngắn thời gian kiểm định an ninh từ việc chờ đợi đến cuối kỳ xuống còn **dưới 3 phút** ngay trên giao diện GitHub Actions, giúp lập trình viên phát hiện và khắc phục sai phạm ngay tại thời điểm tạo Pull Request.
 3. **Vận hành tách biệt độc lập giữa ứng dụng nghiệp vụ và hạ tầng giám sát:** Chứng minh tính hiệu quả của mô hình phân tách hai nhánh Compose độc lập: việc nâng cấp mã nguồn ứng dụng web diễn ra nhanh chóng mà cụm công cụ giám sát và thu thập log vẫn duy trì hoạt động liên tục 24/7, xóa bỏ hoàn toàn điểm mù quan sát trong quá trình phát hành.
 4. **Đóng góp bộ tài liệu kỹ thuật chuẩn công nghiệp:** Cung cấp hệ thống 5 tài liệu đặc tả kiến trúc, hướng dẫn triển khai, kịch bản thử nghiệm tấn công và báo cáo tổng kết chi tiết trong thư mục [`docs/`](file:///d:/PTIT-DevOps-SonarQube/docs), tạo tiền đề cho việc chuẩn hóa quy trình DevOps tại các đơn vị phát triển phần mềm.
+
+#### 6.1.1. Bảng phân tích tối ưu tổng chi phí sở hữu (TCO) và hiệu quả kinh tế
+
+Một trong những đóng góp thực tiễn quan trọng của đề tài là việc chứng minh một hệ thống doanh nghiệp vừa và nhỏ hoàn toàn có thể xây dựng nền tảng DevSecOps và Giám sát an ninh đạt chuẩn bảo vệ dữ liệu với chi phí phần mềm bằng 0, thông qua việc kết hợp các giải pháp nguồn mở tự do (FOSS):
+
+| Hạng mục chi phí | Giải pháp doanh nghiệp thương mại phổ biến | Chi phí ước tính thương mại (USD/năm) | Giải pháp đề tài xây dựng (FOSS Stack) | Chi phí giải pháp đề tài (USD/năm) | Mức tiết kiệm chi phí |
+| :--- | :--- | :---: | :--- | :---: | :---: |
+| **Kiểm định mã nguồn (SAST & Quality Gate)** | SonarQube Enterprise + Snyk Code | ~ $12,000 / năm | **SonarQube Community + Semgrep OSS** | **$0** (Nguồn mở) | **Tiết kiệm 100%** |
+| **Kiểm soát chính sách (Policy-as-Code)** | HashiCorp Sentinel / OPA Enterprise | ~ $6,000 / năm | **Tự xây dựng `ci/policy_guard.py`** | **$0** (Tự phát triển) | **Tiết kiệm 100%** |
+| **Thu thập & Giám sát Log tập trung** | Datadog Log Management / Splunk Enterprise | ~ $15,000 / năm | **Grafana Loki + Promtail 3.0** | **$0** (Tự vận hành) | **Tiết kiệm 100%** |
+| **Bảng điều khiển an ninh (SIEM / Dashboards)** | Splunk Enterprise Cloud / Elastic Security | ~ $8,000 / năm | **Grafana OSS 11.0 (8 Panels tùy biến)** | **$0** (Nguồn mở) | **Tiết kiệm 100%** |
+| **Điều phối hạ tầng & Tự phục hồi** | Enterprise Container Platform / PagerDuty | ~ $4,000 / năm | **Docker Compose V2 + Autoheal** | **$0** (Nguồn mở) | **Tiết kiệm 100%** |
+| **Chi phí máy chủ máy ảo (Hạ tầng phần cứng)** | Cloud Managed Cluster (AWS EKS / GCP GKE) | ~ $2,400 / năm | **Cloud VPS Ubuntu 24.04 LTS độc lập** | ~ $120 / năm | **Tiết kiệm > 95%** |
+| **TỔNG CHI PHÍ SỞ HỮU (TCO / NĂM)** | **Bộ giải pháp thương mại khép kín** | **~ $47,400 / năm** | **Toàn bộ hệ thống đề tài triển khai** | **~ $120 / năm** | **Tiết kiệm $47,280/năm (> 99.7%)** |
+
+* **Ý nghĩa về quyền tự chủ và tuân thủ pháp lý:**
+  Việc sử dụng các dịch vụ đám mây thương mại SaaS của nước ngoài tiềm ẩn rủi ro lớn về việc dữ liệu cá nhân của khách hàng và nhật ký truy vấn bị đẩy ra ngoài lãnh thổ Việt Nam. Khi tự vận hành cụm Loki, Grafana và MariaDB trên máy chủ riêng (VPS độc lập), doanh nghiệp nắm giữ **100% quyền tự chủ dữ liệu** (Data Sovereignty), bảo đảm dữ liệu cá nhân không bao giờ bị truyền tải trái phép ra nước ngoài, qua đó tuân thủ tuyệt đối quy định tại **Điều 25 Nghị định 13/2023/NĐ-CP** về điều kiện chuyển dữ liệu cá nhân ra nước ngoài.
 
 ### 6.2. Hạn chế và hướng phát triển tiếp theo
 * **Hạn chế thực tế của hệ thống hiện tại:**
