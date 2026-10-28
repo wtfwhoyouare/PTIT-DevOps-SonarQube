@@ -51,6 +51,10 @@
 - [CHƯƠNG 2: QUẢN LÝ MÃ NGUỒN VÀ QUÉT LỖ HỔNG BẢO MẬT Ở CÁC GIAI ĐOẠN ĐẦU](#chương-2-quản-lý-mã-nguồn-và-quét-lỗ-hổng-bảo-mật-ở-các-giai-đoạn-đầu)
   - [2.1. Chặn lỗi commit từ máy lập trình viên bằng Git Hooks](#21-chặn-lỗi-commit-từ-máy-lập-trình-viên-bằng-git-hooks)
   - [2.2. Kiểm tra quy tắc nhánh và Pull Request tại Stage 1](#22-kiểm-tra-quy-tắc-nhánh-và-pull-request-tại-stage-1)
+    - [2.2.1. Ma trận phân quyền và mô hình toán học kiểm soát luồng phân nhánh](#221-ma-trận-phân-quyền-và-mô-hình-toán-học-kiểm-soát-luồng-phân-nhánh)
+    - [2.2.2. Quy chuẩn tiêu đề Pull Request 2 tầng (Two-Tier PR Naming)](#222-quy-chuẩn-tiêu-đề-pull-request-2-tầng-two-tier-pr-naming)
+    - [2.2.3. Cơ chế quét lịch sử Commit trong Payload và hướng dẫn xử lý vi phạm](#223-cơ-chế-quét-lịch-sử-commit-trong-payload-và-hướng-dẫn-xử-lý-vi-phạm)
+    - [2.2.4. Bảng tổng hợp các tình huống vi phạm chính sách và biện pháp xử lý](#224-bảng-tổng-hợp-các-tình-huống-vi-phạm-chính-sách-và-biện-pháp-xử-lý)
   - [2.3. Quét lỗ hổng mã nguồn bằng SonarQube và Semgrep tại Stage 2](#23-quét-lỗ-hổng-mã-nguồn-bằng-sonarqube-và-semgrep-tại-stage-2)
     - [2.3.1. Bắt lỗi và đánh giá chất lượng mã nguồn bằng SonarQube](#231-bắt-lỗi-và-đánh-giá-chất-lượng-mã-nguồn-bằng-sonarqube)
     - [2.3.2. Dò luồng dữ liệu độc hại bằng Semgrep](#232-dò-luồng-dữ-liệu-độc-hại-bằng-semgrep)
@@ -130,6 +134,8 @@
 | **Bảng 0.1** | Bảng phân công trách nhiệm nhóm và tỷ lệ đóng góp (RACI Matrix) | [Mục 4 (Mở đầu)](#bảng-phân-công-trách-nhiệm-nhóm) |
 | **Bảng 1.1** | Bảng phân loại mức độ nhạy cảm của dữ liệu trong CSDL theo NĐ 13 & GDPR | [Mục 1.1.3](#bảng-phân-loại-mức-độ-nhạy-cảm-của-dữ-liệu-trong-csdl-inlaneweb) |
 | **Bảng 1.2** | Bảng so sánh 5 kịch bản triển khai hệ thống trong thực tế | [Mục 1.4.6](#146-bảng-so-sánh-5-kịch-bản-triển-khai) |
+| **Bảng 2.1** | Ma trận phân quyền và kiểm soát luồng phân nhánh | [Mục 2.2.1](#bảng-21-ma-trận-phân-quyền-và-kiểm-soát-luồng-phân-nhánh) |
+| **Bảng 2.2** | Bảng tổng hợp các tình huống vi phạm chính sách phân nhánh và biện pháp xử lý | [Mục 2.2.4](#bảng-22-bảng-tổng-hợp-các-tình-huống-vi-phạm-chính-sách-và-biện-pháp-xử-lý) |
 | **Bảng 4.1** | Bảng đặc tả chi tiết câu lệnh truy vấn LogQL và mẫu Regex của 8 phân vùng giám sát | [Mục 4.2.2](#bảng-đặc-tả-chi-tiết-câu-lệnh-truy-vấn-logql-và-mẫu-regex-của-8-phân-vùng-giám-sát) |
 | **Bảng 5.1** | Bảng tổng hợp đối chiếu 5 vấn đề an toàn ứng dụng của 5 thành viên | [Mục 5.1](#bảng-tổng-hợp-đối-chiếu-5-vấn-đề-an-toàn-ứng-dụng-của-5-thành-viên) |
 | **Bảng 5.2** | Bảng tổng hợp đối chiếu 14 kịch bản thực tế và hiệu quả phát hiện qua Log | [Mục 5.4.5](#545-bảng-tổng-hợp-đối-chiếu-14-kịch-bản-thực-tế) |
@@ -638,30 +644,83 @@ Hệ thống triển khai áp dụng kiến trúc chuyển giao liên tục tác
 
 ### 2.1. Chặn lỗi commit từ máy lập trình viên bằng Git Hooks
 
-Nhằm đảm bảo lịch sử mã nguồn luôn trong trạng thái rõ ràng, có khả năng truy vết và tuân thủ các quy chuẩn công nghiệp, dự án áp dụng mô hình phân cấp nhánh 3 tầng nghiêm ngặt:
+Nhằm bảo đảm lịch sử mã nguồn luôn trong trạng thái rõ ràng, có khả năng truy vết và tuân thủ các quy chuẩn công nghiệp, dự án áp dụng mô hình phân cấp nhánh 3 tầng nghiêm ngặt:
 
-$$\text{Nhánh Cá nhân / Tính năng} \quad \xrightarrow{\text{PR chuẩn}} \quad \text{nhánh dev} \quad \xrightarrow{\text{PR Release}} \quad \text{nhánh main}$$
+$$\text{Nhánh Cá nhân / Tính năng} \quad \xrightarrow{\text{PR chuẩn đóng góp}} \quad \text{nhánh dev} \quad \xrightarrow{\text{PR Release phát hành}} \quad \text{nhánh main}$$
 
-1. **Chuẩn hóa thông điệp Commit:** Mọi commit bắt buộc phải có cấu trúc dạng: `<type>(<scope>): <subject>`, trong đó `<type>` thuộc tập hợp xác định: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`.
-2. **Kiểm soát chủ động tại máy trạm qua githooks:** Để giảm thiểu thời gian chờ đợi phản hồi từ CI/CD trên đám mây, dự án phân phối thư mục mẫu [`.githooks/commit-msg`](file:///d:/PTIT-DevOps-SonarQube/.githooks). Lập trình viên thiết lập môi trường cục bộ thông qua lệnh `git config core.hooksPath .githooks`. Kịch bản shell sẽ chặn đứng các thông điệp sai quy chuẩn ngay tại thời điểm lập trình viên thực hiện lệnh `git commit`.
+1. **Chuẩn hóa thông điệp Commit theo Conventional Commits:** Mọi commit bắt buộc phải có cấu trúc dạng: `<loại>(<phạm_vi>): <mô tả>`, trong đó `<loại>` (type) thuộc tập hợp xác định: `feat` (tính năng mới), `fix` (khắc phục lỗi logic), `sec` (vá lỗ hổng an ninh), `ci` (cấu hình tự động hóa), `docs` (bổ sung tài liệu), `refactor` (tái cấu trúc), `test` (kịch bản kiểm thử), `chore` (tác vụ phụ trợ), `style` (định dạng mã theo PSR-12), `perf` (tối ưu hiệu năng).
+2. **Kiểm soát chủ động tại máy trạm qua Git Hooks:** Để giảm thiểu thời gian chờ đợi phản hồi từ đường ống CI/CD trên đám mây, dự án phân phối sẵn cấu hình hook kiểm tra cục bộ trong tệp `.githooks/commit-msg`. Kỹ sư chỉ cần kích hoạt một lần thông qua câu lệnh:
+   ```bash
+   git config core.hooksPath .githooks
+   ```
+   Kịch bản shell cục bộ sẽ tự động gọi trình xác thực `ci/policy_guard.py` và chặn đứng các commit có tiêu đề sai quy chuẩn ngay tại thời điểm lập trình viên thực hiện lệnh `git commit` trên máy trạm, giúp loại bỏ hoàn toàn các lỗi cú pháp sơ đẳng trước khi mã nguồn được đẩy lên kho lưu trữ.
 
 ### 2.2. Kiểm tra quy tắc nhánh và Pull Request tại Stage 1
 
-Khi mã nguồn được đẩy lên máy chủ GitHub, cơ chế bảo vệ biên trung tâm được kích hoạt thông qua công cụ chuyên dụng [`ci/policy_guard.py`](file:///d:/PTIT-DevOps-SonarQube/ci/policy_guard.py). Đây là công đoạn đầu tiên trong đường ống CI/CD, có thời gian thực thi cực ngắn từ 3 đến 5 giây nhằm áp dụng nguyên lý phát hiện lỗi sớm:
+Khi mã nguồn được đẩy lên máy chủ GitHub hoặc khi lập trình viên khởi tạo một Pull Request, cơ chế bảo vệ biên trung tâm được kích hoạt tự động thông qua công cụ chuyên dụng tự xây dựng `ci/policy_guard.py`. Đây là cửa ải đầu tiên trong đường ống CI/CD (Stage 1: Policy Guard), có thời gian thực thi cực ngắn từ **3 đến 5 giây**, áp dụng triệt để nguyên lý phát hiện lỗi sớm (*Shift-Left Governance Gate*) và phản hồi tức thời (*Fail-Fast Principle*) nhằm bảo vệ toàn vẹn tài nguyên tính toán của các giai đoạn quét an ninh nặng phía sau.
 
-* **Mô hình logic của cơ chế kiểm tra nhánh:**
-  Gọi $B_{head}$ là nhánh nguồn và $B_{base}$ là nhánh đích của một Pull Request $\mathcal{P}$. Không gian trạng thái hợp lệ $\mathcal{S}_{valid}$ được định nghĩa bởi hàm logic:
-  
+#### 2.2.1. Ma trận phân quyền và mô hình toán học kiểm soát luồng phân nhánh
+
+Để bảo vệ sự toàn vẹn của mã nguồn trên môi trường máy chủ sản xuất, hệ thống thiết lập ma trận phân cấp quyền hạn nghiêm ngặt giữa các nhánh:
+
+#### Bảng 2.1: Ma trận phân quyền và kiểm soát luồng phân nhánh
+
+| Tên nhánh | Phân loại | Mục đích kỹ thuật | Quyền Push trực tiếp | Nguồn tiếp nhận Pull Request |
+| :--- | :--- | :--- | :---: | :--- |
+| `main` | Production | Mã nguồn chính thức triển khai môi trường thực tế | Cấm hoàn toàn | Duy nhất từ nhánh tích hợp `dev` |
+| `dev` | Integration | Tích hợp và kiểm thử hệ thống tổng thể | Cấm trực tiếp | Các nhánh tính năng của kỹ sư thành viên |
+| `namng`, `haind`, `manhdx`, `anhld`, `mainp` | Feature / Dev | Không gian làm việc cá nhân của 5 thành viên trong nhóm | Được phép | Nhận merge đồng bộ từ `origin/dev` |
+
+* **Mô hình logic xác thực luồng Pull Request:**
+  Gọi $B_{head}$ là nhánh nguồn (nơi lập trình viên đề xuất thay đổi) và $B_{base}$ là nhánh đích (nơi tiếp nhận mã nguồn) của một Pull Request $\mathcal{P}$. Không gian trạng thái hợp lệ $\mathcal{S}_{valid}$ được kiểm soát chặt chẽ bởi hàm đặc trưng logic:
+
   $$\mathcal{F}(\mathcal{P}) = \begin{cases} 
   1 & \text{nếu } (B_{base} = \text{"dev"} \land B_{head} \notin \{\text{"main"}, \text{"dev"}\}) \lor (B_{base} = \text{"main"} \land B_{head} = \text{"dev"}) \\
-  0 & \text{ngược lại (Chặn đứng và thông báo lỗi vi phạm chính sách)}
+  0 & \text{ngược lại (Chặn đứng tiến trình, xuất mã lỗi Exit Code 1)}
   \end{cases}$$
 
-Kịch bản tự động phân tích tiêu đề của Pull Request:
-* PR vào nhánh `dev` bắt buộc phải khớp mẫu Regex: `^\[([a-zA-Z0-9_\-\/]+)\]\s+(feat|fix|docs|style|refactor|perf|test|build|ci|chore)(\([a-zA-Z0-9_\-\/]+\))?:\s+.+$`.
-* PR vào nhánh `main` bắt buộc phải khớp mẫu phát hành phiên bản chính thức: `^release:\s+v[0-9]+\.[0-9]+\.[0-9]+.*$`.
+Hàm logic này ngăn chặn triệt để tình huống lập trình viên vô tình mở Pull Request từ nhánh cá nhân thẳng vào nhánh `main`, hoặc cố ý hợp nhất nhánh `main` ngược trở lại `dev`, bảo đảm mọi thay đổi bắt buộc phải đi qua bậc thang kiểm định trên nhánh `dev` trước khi bước vào môi trường sản xuất.
 
-Bất kỳ vi phạm nào liên quan đến việc commit trực tiếp lên nhánh bảo vệ hoặc mở PR từ nhánh cá nhân trực tiếp vào `main` đều bị hệ thống từ chối ngay lập tức, ngăn ngừa hoàn toàn nguy cơ ô nhiễm nhánh sản xuất.
+#### 2.2.2. Quy chuẩn tiêu đề Pull Request 2 tầng (Two-Tier PR Naming)
+
+Stage 1 tự động phân tích tiêu đề của Pull Request thông qua hai bộ biểu thức chính quy (Regular Expressions) chuyên biệt theo tầng:
+
+* **Tầng 1 — Đóng góp tính năng từ nhánh cá nhân vào nhánh `dev`:**
+  Tiêu đề bắt buộc phải chứa mã định danh của thành viên phụ trách thuộc nhóm nghiên cứu, theo sau là phân loại commit chuẩn và phạm vi ảnh hưởng:
+  ```regex
+  ^\[(namng|haind|manhdx|anhld|mainp)\]\s+(feat|fix|sec|ci|docs|refactor|test|chore|style|perf|revert)(\([a-zA-Z0-9_\-\.\/]+\))?:\s.+
+  ```
+  *Ví dụ hợp lệ:* `[namng] feat(db): bổ sung endpoint healthcheck phục vụ preview` hoặc `[manhdx] sec(auth): ngăn chặn lỗ hổng bypass token JWT`.
+
+* **Tầng 2 — Phát hành chính thức từ nhánh `dev` vào nhánh `main`:**
+  Tiêu đề bắt buộc phải tuân thủ nghiêm ngặt quy tắc định danh phiên bản ngữ nghĩa (Semantic Versioning - SemVer) với cú pháp phát hành chính thức:
+  ```regex
+  ^(release|RELEASE):\s+v[0-9]+\.[0-9]+\.[0-9]+(\s+-\s+.+|\s*:\s*.+)
+  ```
+  *Quy tắc định danh phiên bản:* `vX.0.0` (Major - thay đổi lớn phá vỡ tính tương thích ngược), `v1.X.0` (Minor - bổ sung nhóm tính năng mới nhưng tương thích ngược), `v1.0.X` (Patch - vá lỗi khẩn cấp hoặc vá an ninh).  
+  *Ví dụ hợp lệ:* `release: v1.0.0 - Triển khai cổng thông tin Logistics InlaneWeb lên Production`.
+
+#### 2.2.3. Cơ chế quét lịch sử Commit trong Payload và hướng dẫn xử lý vi phạm
+
+Không chỉ dừng lại ở việc kiểm tra tiêu đề Pull Request, `ci/policy_guard.py` còn bóc tách toàn bộ mảng dữ liệu `commits` trong webhook payload của GitHub Actions (`event_data.get("commits", [])`). Mọi commit đơn lẻ được đẩy lên nhánh đều được đối chiếu với quy chuẩn Conventional Commits (ngoại trừ các merge commit mặc định của Git). Nếu phát hiện bất kỳ commit nào vi phạm định dạng, Stage 1 sẽ lập tức đánh dấu thất bại.
+
+Điểm nổi bật của công cụ Stage 1 là cơ chế **phản hồi có tính định hướng khắc phục** (Actionable Developer Feedback):
+1. Khi phát hiện vi phạm, hệ thống sử dụng cú pháp chú thích tiêu chuẩn `::error title=...` để hiển thị khung thông báo đỏ trực quan ngay trên giao diện dòng lệnh và bảng điều khiển GitHub Actions.
+2. Hệ thống đồng thời trích xuất thông điệp vi phạm và in kèm khối lệnh hướng dẫn khắc phục cụ thể:
+   * Nếu commit sai quy chuẩn: Cung cấp lệnh `git commit --amend -m "feat(<phạm_vi>): <mô tả lại cho đúng>"` đối với commit gần nhất, hoặc `git rebase -i HEAD~<n>` khi có nhiều commit sai.
+   * Nếu tiêu đề PR sai quy cách: Hướng dẫn kỹ sư nhấn nút **Edit** cạnh tiêu đề PR trên GitHub để điều chỉnh lại theo đúng mẫu mà không cần phải thực hiện commit lại mã nguồn.
+   * Nếu PR mở sai nhánh đích: Yêu cầu đóng Pull Request hiện tại và mở Pull Request mới hướng vào nhánh `dev`.
+
+#### 2.2.4. Bảng tổng hợp các tình huống vi phạm chính sách và biện pháp xử lý
+
+#### Bảng 2.2: Bảng tổng hợp các tình huống vi phạm chính sách phân nhánh và biện pháp xử lý
+
+| Tình huống vi phạm | Biểu hiện lỗi trên GitHub Actions | Nguyên nhân kỹ thuật | Hướng dẫn xử lý khắc phục |
+| :--- | :--- | :--- | :--- |
+| **Commit sai cú pháp** | `::error title=Sai định dạng tiêu đề Commit` | Tiêu đề commit thiếu tiền tố quy chuẩn (ví dụ: `update code`). | Chạy lệnh `git commit --amend` sửa lại tiêu đề chuẩn, sau đó `git push --force origin <nhánh>`. |
+| **Tiêu đề PR vào `dev` bị từ chối** | `::error title=Sai quy ước đặt tên PR vào dev` | Thiếu mã định danh thành viên hoặc sai cú pháp (ví dụ: `fix login error`). | Nhấn nút **Edit** cạnh tiêu đề PR trên giao diện GitHub, đổi thành `[<mã_nhánh>] fix(auth): mô tả sự cố` và bấm Save. |
+| **PR vào `main` bị chặn đứng** | `::error title=Vi phạm luồng phân nhánh` | Mở PR trực tiếp từ nhánh cá nhân (`namng`, `haind`...) vào `main`. | Đóng PR vi phạm. Tạo PR mới với nhánh đích là `dev` để thực hiện kiểm định tích hợp trước. |
+| **Tiêu đề PR phát hành sai chuẩn** | `::error title=Sai quy ước đặt tên PR vào main` | Tiêu đề PR vào `main` không tuân theo định dạng phát hành SemVer. | Nhấn nút **Edit** trên GitHub, đổi tiêu đề thành `release: vX.Y.Z - <Mô tả phiên bản phát hành>` và bấm Save. |
 
 ### 2.3. Quét lỗ hổng mã nguồn bằng SonarQube và Semgrep tại Stage 2
 
