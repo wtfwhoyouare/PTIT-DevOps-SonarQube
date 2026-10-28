@@ -34,10 +34,11 @@
   - [4. Phân công nhiệm vụ nhóm](#4-phân-công-nhiệm-vụ-nhóm)
     - [Bảng phân công trách nhiệm nhóm](#bảng-phân-công-trách-nhiệm-nhóm)
 - [CHƯƠNG 1: TỔNG QUAN HỆ THỐNG VÀ CÁC KỊCH BẢN TRIỂN KHAI](#chương-1-tổng-quan-hệ-thống-và-các-kịch-bản-triển-khai)
-  - [1.1. Giới thiệu ứng dụng web InlaneWeb Logistics](#11-giới-thiệu-ứng-dụng-web-inlaneweb-logistics)
-    - [1.1.1. Hai nghiệp vụ cốt lõi và dữ liệu cá nhân cần bảo vệ](#111-hai-nghiệp-vụ-cốt-lõi-và-dữ-liệu-cá-nhân-cần-bảo-vệ)
-    - [1.1.2. Sơ đồ thực thể cơ sở dữ liệu và bảng phân loại dữ liệu](#112-sơ-đồ-thực-thể-cơ-sở-dữ-liệu-và-bảng-phân-loại-dữ-liệu)
-    - [1.1.3. Cấu trúc cây thư mục mã nguồn toàn diện của dự án](#113-cấu-trúc-cây-thư-mục-mã-nguồn-toàn-diện-của-dự-án)
+  - [1.1. Kiến trúc tổng thể hạ tầng hệ thống DevSecOps](#11-kiến-trúc-tổng-thể-hạ-tầng-hệ-thống-devsecops)
+    - [1.1.1. Sơ đồ kiến trúc hạ tầng toàn diện từ đầu đến cuối](#111-sơ-đồ-kiến-trúc-hạ-tầng-toàn-diện-từ-đầu-đến-cuối)
+    - [1.1.2. Phân tích chi tiết các phân hệ hạ tầng và nguyên lý vận hành](#112-phân-tích-chi-tiết-các-phân-hệ-hạ-tầng-và-nguyên-lý-vận-hành)
+    - [1.1.3. Khối ứng dụng nghiệp vụ InlaneWeb và phân loại dữ liệu cần bảo vệ](#113-khối-ứng-dụng-nghiệp-vụ-inlaneweb-và-phân-loại-dữ-liệu-cần-bảo-vệ)
+    - [1.1.4. Cấu trúc cây thư mục mã nguồn toàn diện của dự án](#114-cấu-trúc-cây-thư-mục-mã-nguồn-toàn-diện-của-dự-án)
   - [1.2. Thiết kế tách riêng ứng dụng và cụm giám sát](#12-thiết-kế-tách-riêng-ứng-dụng-và-cụm-giám-sát)
   - [1.3. Thiết kế mạng nội bộ và Reverse Proxy bảo mật](#13-thiết-kế-mạng-nội-bộ-và-reverse-proxy-bảo-mật)
   - [1.4. Năm kịch bản triển khai hệ thống trong thực tế](#14-năm-kịch-bản-triển-khai-hệ-thống-trong-thực-tế)
@@ -112,9 +113,10 @@
 
 | Ký hiệu | Tên hình vẽ / Sơ đồ kiến trúc | Vị trí tham chiếu |
 | :---: | :--- | :--- |
-| **Hình 1.1** | Sơ đồ quan hệ thực thể (ERD) cơ sở dữ liệu `ilfreight` và `dev` | [Mục 1.1.2](#112-sơ-đồ-thực-thể-cơ-sở-dữ-liệu-và-bảng-phân-loại-dữ-liệu) |
-| **Hình 1.2** | Mô hình phân tách vòng đời hai nhánh độc lập (Dual-Track Lifecycle) | [Mục 1.2](#12-thiết-kế-tách-riêng-ứng-dụng-và-cụm-giám-sát) |
-| **Hình 1.3** | Sơ đồ kiến trúc mạng đa tầng phòng thủ và Reverse Proxy bảo mật | [Mục 1.3](#13-thiết-kế-mạng-nội-bộ-và-reverse-proxy-bảo-mật) |
+| **Hình 1.1** | Sơ đồ kiến trúc tổng thể hạ tầng hệ thống DevSecOps từ đầu đến cuối | [Mục 1.1.1](#111-sơ-đồ-kiến-trúc-hạ-tầng-toàn-diện-từ-đầu-đến-cuối) |
+| **Hình 1.2** | Sơ đồ quan hệ thực thể (ERD) cơ sở dữ liệu `ilfreight` và `dev` | [Mục 1.1.3](#113-khối-ứng-dụng-nghiệp-vụ-inlaneweb-và-phân-loại-dữ-liệu-cần-bảo-vệ) |
+| **Hình 1.3** | Mô hình phân tách vòng đời hai nhánh độc lập (Dual-Track Lifecycle) | [Mục 1.2](#12-thiết-kế-tách-riêng-ứng-dụng-và-cụm-giám-sát) |
+| **Hình 1.4** | Sơ đồ kiến trúc mạng đa tầng phòng thủ và Reverse Proxy bảo mật | [Mục 1.3](#13-thiết-kế-mạng-nội-bộ-và-reverse-proxy-bảo-mật) |
 | **Hình 2.1** | Quy trình phân tích an ninh tĩnh song song với SonarQube và Semgrep | [Mục 2.3](#23-quét-lỗ-hổng-mã-nguồn-bằng-sonarqube-và-semgrep-tại-stage-2) |
 | **Hình 3.1** | Sơ đồ tuần tự quy trình triển khai song song Stage 4 qua SSH Ed25519 | [Mục 3.3](#33-tự-động-triển-khai-lên-máy-chủ-production-tại-stage-4) |
 | **Hình 4.1** | Kiến trúc thu thập nhật ký phân tán Dual-Stream Logging với Promtail và Loki | [Mục 4.1](#41-tách-biệt-log-ứng-dụng-và-log-truy-cập-web) |
@@ -126,7 +128,7 @@
 | Ký hiệu | Tên bảng biểu kỹ thuật | Vị trí tham chiếu |
 | :---: | :--- | :--- |
 | **Bảng 0.1** | Bảng phân công trách nhiệm nhóm và tỷ lệ đóng góp (RACI Matrix) | [Mục 4 (Mở đầu)](#bảng-phân-công-trách-nhiệm-nhóm) |
-| **Bảng 1.1** | Bảng phân loại mức độ nhạy cảm của dữ liệu trong CSDL theo NĐ 13 & GDPR | [Mục 1.1.2](#bảng-phân-loại-mức-độ-nhạy-cảm-của-dữ-liệu-trong-csdl-inlaneweb) |
+| **Bảng 1.1** | Bảng phân loại mức độ nhạy cảm của dữ liệu trong CSDL theo NĐ 13 & GDPR | [Mục 1.1.3](#bảng-phân-loại-mức-độ-nhạy-cảm-của-dữ-liệu-trong-csdl-inlaneweb) |
 | **Bảng 1.2** | Bảng so sánh 5 kịch bản triển khai hệ thống trong thực tế | [Mục 1.4.6](#146-bảng-so-sánh-5-kịch-bản-triển-khai) |
 | **Bảng 4.1** | Bảng đặc tả chi tiết câu lệnh truy vấn LogQL và mẫu Regex của 8 phân vùng giám sát | [Mục 4.2.2](#bảng-đặc-tả-chi-tiết-câu-lệnh-truy-vấn-logql-và-mẫu-regex-của-8-phân-vùng-giám-sát) |
 | **Bảng 5.1** | Bảng tổng hợp đối chiếu 5 vấn đề an toàn ứng dụng của 5 thành viên | [Mục 5.1](#bảng-tổng-hợp-đối-chiếu-5-vấn-đề-an-toàn-ứng-dụng-của-5-thành-viên) |
@@ -196,8 +198,8 @@ Mục tiêu cốt lõi của đề tài là xây dựng một hệ thống phát
 Để đạt được mục tiêu tổng quát nêu trên, nhóm tập trung thực hiện 5 nhiệm vụ kỹ thuật cụ thể:
 
 1. **Kiểm soát mã nguồn ngay tại máy lập trình viên và trên nhánh làm việc:**
-   - Cài đặt công cụ kiểm tra tự động trước khi commit: tự động quét lỗi cú pháp, ngăn lập trình viên vô tình để lộ mật khẩu, API key hoặc khóa kết nối nhạy cảm.
-   - Xây dựng bộ quy tắc kiểm tra tự động trên GitHub Actions: bắt buộc tên nhánh và nội dung commit phải đúng quy ước chuẩn thì mới cho phép tạo Pull Request.
+   - Cài đặt cơ chế kiểm soát cục bộ qua Git Hook (`commit-msg`): tự động chặn đứng ngay tại máy trạm các thông điệp commit không tuân thủ chuẩn Conventional Commits trước khi đẩy lên kho lưu trữ từ xa.
+   - Xây dựng bộ quy tắc kiểm soát tự động Policy Guard tại Stage 1 trên GitHub Actions: kiểm tra toàn diện thông điệp commit được push, cưỡng chế quy chuẩn tiêu đề Pull Request 2 tầng và chặn các luồng tạo PR vi phạm mô hình phân cấp nhánh (nhánh cá nhân chỉ được mở PR vào `dev`, và `main` chỉ nhận PR phát hành từ `dev`).
 
 2. **Chặn lỗi bảo mật và kiểm tra chất lượng code tự động bằng SonarQube và Semgrep:**
    - Dùng SonarQube để tự động đo chất lượng code: kiểm tra cú pháp, tính toán thời gian cần bỏ ra để sửa các đoạn mã viết cẩu thả hoặc khó bảo trì (nợ kỹ thuật), và chỉ cho phép đưa code vào nhánh phát triển khi đạt chuẩn chất lượng loại A cao nhất.
@@ -235,13 +237,15 @@ Trong quá trình thực hiện, đề tài tập trung trả lời 3 câu hỏi
   * Triển khai thực nghiệm trên hệ thống hạ tầng thực tế: Máy chủ Production VPS chạy hệ điều hành Ubuntu 24.04 LTS, định tuyến tên miền chính thức `inlaneweb.ecotools.online` qua mạng Cloudflare với mã hóa TLS 1.3 Full Strict.
   * Giới hạn an ninh tập trung vào các lớp lỗ hổng kiểm soát truy cập và thao tác dữ liệu: các dạng tấn công chèn câu lệnh SQL, đọc tệp trái phép, cài cắm Web Shell chiếm quyền điều khiển và các vi phạm quy chuẩn mã nguồn.
 * **Phương pháp luận nghiên cứu:**
-  * **Phương pháp nghiên cứu lý thuyết:** Phân tích tài liệu chuẩn SSDF của NIST, các tài liệu hướng dẫn của tổ chức OWASP, mô hình lý thuyết truy vết dòng dữ liệu ô nhiễm và kiến trúc quan sát phân tán.
+  * **Phương pháp nghiên cứu lý thuyết:** Phân tích khung tiêu chuẩn an toàn phát triển phần mềm SSDF (NIST SP 800-218), các tài liệu hướng dẫn an ninh từ tổ chức OWASP, nguyên lý phân tích luồng dữ liệu (Taint Analysis) và kiến trúc giám sát nhật ký phân tán.
   * **Phương pháp thực nghiệm kỹ thuật:** Xây dựng hệ thống thực nghiệm nhiều tầng, thiết lập đường ống GitHub Actions tự động hóa, cấu hình cụm giám sát thực tế và thực hiện đo lường định lượng các chỉ số kỹ thuật: thời gian phục hồi hệ thống, thời gian chạy của đường ống và tỷ lệ phát hiện lỗ hổng bảo mật.
+* **Ý nghĩa khoa học và giá trị thực tiễn của đề tài:**
+  * **Ý nghĩa khoa học:** Nghiên cứu và hiện thực hóa mô hình an ninh dịch chuyển về trước (Shift-Left Security) trong chu trình CI/CD; đánh giá thực nghiệm tính hiệu quả khi kết hợp kỹ thuật phân tích luồng dữ liệu (Taint Analysis) để phát hiện lỗ hổng an ninh với kiểm định chất lượng mã nguồn tĩnh (AST Analysis), giúp rút ngắn chu kỳ phát hiện và phản hồi sai phạm an ninh cho lập trình viên xuống dưới 3 phút ngay trên nhánh làm việc.
+  * **Giá trị thực tiễn:** Xây dựng một giải pháp DevSecOps CI/CD tự động hóa hoàn chỉnh và nền tảng giám sát tập trung vận hành trên máy chủ thực tế, sử dụng 100% công nghệ nguồn mở (FOSS) với chi phí bản quyền bằng 0. Mô hình sẵn sàng chuyển giao và ứng dụng thực tế cho các doanh nghiệp vừa và nhỏ nhằm tối ưu hóa chi phí, duy trì tính liên tục của dịch vụ và đáp ứng các quy định pháp lý về bảo vệ dữ liệu cá nhân (Nghị định 13/2023/NĐ-CP và GDPR).
 
 ### 4. Phân công nhiệm vụ nhóm
 
-* **Ý nghĩa khoa học:** Công trình đóng góp mô hình kiểm soát luồng nhánh tự động; chứng minh tính hiệu quả của phương pháp phân tích luồng dữ liệu ô nhiễm kết hợp đo nợ kỹ thuật trong việc rút ngắn thời gian phát hiện và phản hồi lỗ hổng an ninh cho lập trình viên.
-* **Giá trị thực tiễn:** Cung cấp một bộ mã nguồn và tệp cấu hình hoàn chỉnh, sẵn sàng đưa vào sử dụng thực tế cho các doanh nghiệp vừa và nhỏ, giúp xây dựng nền tảng DevSecOps và giám sát vận hành mạnh mẽ với chi phí bản quyền bằng 0.
+Để triển khai toàn diện các mục tiêu nghiên cứu và phát triển hệ thống, nhóm phân bổ nhiệm vụ cụ thể cho 5 thành viên theo mô hình ma trận RACI. Mỗi thành viên phụ trách một hợp phần kỹ thuật chuyên trách trong chu trình DevSecOps và chủ trì đánh giá một vấn đề an toàn ứng dụng tương ứng (chi tiết đối chiếu tại Chương 5):
 
 #### Bảng phân công trách nhiệm nhóm
 
@@ -258,33 +262,112 @@ Trong quá trình thực hiện, đề tài tập trung trả lời 3 câu hỏi
 ---
 ## CHƯƠNG 1: TỔNG QUAN HỆ THỐNG VÀ CÁC KỊCH BẢN TRIỂN KHAI
 
-### 1.1. Giới thiệu ứng dụng web InlaneWeb Logistics
+### 1.1. Kiến trúc tổng thể hạ tầng hệ thống DevSecOps
 
-Hệ thống InlaneWeb Logistics Portal được thiết kế nhằm mô phỏng toàn diện hoạt động vận hành của một doanh nghiệp vận tải biển và khai thác cảng quốc tế. Trong thực tế, các doanh nghiệp logistics thường xuyên phải xử lý đồng thời hai luồng nghiệp vụ nhạy cảm: luồng thông tin hàng hải công khai (danh mục cảng, lịch trình tàu, bản tin thông báo) và luồng dữ liệu khách hàng riêng tư (hồ sơ tài khoản, mã vận đơn, hành trình bốc dỡ và lịch sử thanh toán).
+Hệ thống được thiết kế theo mô hình hạ tầng phân tán hiện đại, phân tách ranh giới rõ ràng giữa **tầng biên bảo vệ (Edge Security)**, **tầng định tuyến ngược (Reverse Proxy)**, **mạng nội bộ cô lập (Isolated Container Network)** chứa hai khối chức năng độc lập (Ứng dụng nghiệp vụ và Nền tảng quan sát an ninh), cùng **kênh điều phối tự động hóa từ xa (CI/CD Control Plane)**. 
 
-Hệ thống được xây dựng trên ngăn xếp công nghệ phổ biến trong ngành vận tải: máy chủ web Apache HTTP Server, ngôn ngữ lập trình PHP 8.2 và hệ quản trị cơ sở dữ liệu quan hệ MariaDB 10.11. Toàn bộ các dịch vụ được container hóa độc lập thông qua Docker nhằm bảo đảm tính nhất quán giữa môi trường phát triển và môi trường vận hành thực tế.
+Toàn bộ hệ thống vận hành trên nền tảng máy chủ VPS chạy hệ điều hành Ubuntu 24.04 LTS, áp dụng 100% các công nghệ nguồn mở miễn phí (FOSS), bảo đảm khả năng mở rộng, độ sẵn sàng cao và tuân thủ nghiêm ngặt các quy định về an toàn thông tin và bảo vệ dữ liệu cá nhân theo Nghị định 13/2023/NĐ-CP và GDPR.
 
-#### 1.1.1. Hai nghiệp vụ cốt lõi và dữ liệu cá nhân cần bảo vệ
+#### 1.1.1. Sơ đồ kiến trúc hạ tầng toàn diện từ đầu đến cuối
 
-Căn cứ theo **Nghị định 13/2023/NĐ-CP** và quy định **GDPR**, hai nghiệp vụ trọng tâm sau đây của hệ thống trực tiếp xử lý dữ liệu cá nhân của người dùng và đòi hỏi các biện pháp bảo vệ kỹ thuật nghiêm ngặt:
+Dưới đây là sơ đồ kiến trúc tổng thể mô tả chi tiết toàn bộ các thành phần hạ tầng, luồng lưu lượng truy cập của người dùng, luồng giám sát nhật ký và kênh điều khiển triển khai tự động:
 
-1. **Nghiệp vụ 1 — Tra cứu và quản lý hành trình vận đơn hàng hải:**
-   * *Mô tả luồng nghiệp vụ:* Khách hàng hoặc đối tác giao nhận nhập mã vận chuyển qua giao diện tìm kiếm (`GET /api/track.php?tracking=`) để theo dõi tình trạng xử lý container, vị trí cập cảng, tình trạng thông quan hải quan và lưu lại các phản hồi nghiệp vụ qua bảng bình luận (`comments`).
-   * *Dữ liệu cần bảo vệ:* Mã vận đơn gắn với định danh khách hàng (`customer_id`), lịch sử vận chuyển hàng hóa, địa điểm bốc dỡ và nội dung trao đổi giao dịch.
-   * *Yêu cầu pháp lý:* Theo Điều 9 Khoản 2 Nghị định 13/2023/NĐ-CP và Article 32 GDPR, doanh nghiệp có nghĩa vụ bảo đảm an toàn, bí mật tuyệt đối đối với luồng dữ liệu này, không để kẻ gian lợi dụng lỗi cú pháp truy vấn (như SQL Injection) để trích xuất trái phép hồ sơ vận chuyển của doanh nghiệp khác.
+```mermaid
+graph TB
+    subgraph CICD["TẦNG 1: TỰ ĐỘNG HÓA CI/CD & ĐÓNG GÓI (GITHUB)"]
+        direction TB
+        DEV["Lập trình viên / Máy trạm<br/>• Git Hook: commit-msg"]
+        GHA["GitHub Actions Runner (CI)<br/>• Stage 1: Branch Policy Guard<br/>• Stage 2: SonarQube & Semgrep SAST<br/>• Stage 3: Docker Build & Smoke Test"]
+        GHCR[("GitHub Container Registry (GHCR)<br/>• inlaneweb:latest<br/>• inlaneweb-db:latest")]
+        
+        DEV -->|Git Push / Pull Request| GHA
+        GHA -->|Push Images đã kiểm định| GHCR
+    end
 
-2. **Nghiệp vụ 2 — Xác thực định danh người dùng và cấp phát mã API:**
-   * *Mô tả luồng nghiệp vụ:* Khách hàng, đối tác vận tải và quản trị viên thực hiện đăng nhập qua cổng thông tin (`POST /login.php`), cấp phát token phiên làm việc và mã khóa API (`api_key`) để tích hợp hệ thống phần mềm doanh nghiệp tự động.
-   * *Dữ liệu cần bảo vệ:* Tên đăng nhập (`username`), mật khẩu (`password`), địa chỉ thư điện tử (`email`), mã định danh API (`api_key`) và mã xác thực ghi nhớ phiên (`remember_token`).
-   * *Yêu cầu pháp lý:* Căn cứ Điều 13 Khoản 2 Điểm a Nghị định 13/2023/NĐ-CP và Article 25 GDPR (Data Protection by Design and by Default), hệ thống bắt buộc phải áp dụng các biện pháp mật mã học mạnh: cấm tuyệt đối việc lưu trữ mật khẩu dạng rõ (plaintext), yêu cầu áp dụng thuật toán băm an toàn Bcrypt và bảo vệ kênh truyền thông tin xác thực.
+    subgraph VPS["TẦNG 2: MÁY CHỦ SẢN XUẤT PRODUCTION VPS (UBUNTU 24.04 LTS)"]
+        direction TB
+        
+        subgraph DOCKER_NET["Mạng cầu nối nội bộ cô lập (inlaneweb_net)"]
+            direction LR
+            
+            subgraph WORKLOAD["Khối Ứng dụng nghiệp vụ (docker-compose.prod.yml)"]
+                direction TB
+                WEB["ilfreight_web<br/>(Apache 2.4 + PHP 8.2)<br/>Cổng 80 (Chỉ nội bộ)<br/>Xuất log JSON & Stderr"]
+                DB[("ilfreight_db<br/>(MariaDB 10.11 LTS)<br/>Cổng 3306 (Chỉ nội bộ)")]
+                VOL_DB[("Docker Volume<br/>db_data")]
+                
+                WEB -->|Truy vấn CSDL: 3306| DB
+                DB -.->|Gắn kết dữ liệu bền vững| VOL_DB
+            end
 
-#### 1.1.2. Sơ đồ thực thể cơ sở dữ liệu và bảng phân loại dữ liệu
+            subgraph MONITORING["Khối Giám sát an ninh tập trung (docker-compose.monitoring.yml)"]
+                direction TB
+                PROM["ilfreight_promtail (Log Shipper 3.0)<br/>Đọc socket: /var/run/docker.sock"]
+                LOKI[("ilfreight_loki (Log Storage 3.0)<br/>Cổng 3100 nội bộ<br/>TSDB & Alert Rules")]
+                GRAF["ilfreight_grafana (Dashboard 11.0)<br/>Cổng 3000 nội bộ<br/>8 Panels an ninh"]
+                AUTOHEAL["autoheal (Monitoring Daemon)<br/>Tự động phục hồi container lỗi"]
+                
+                PROM -->|HTTP Push API| LOKI
+                GRAF -->|Truy vấn LogQL| LOKI
+                AUTOHEAL -.->|Giám sát nhịp tim container| PROM
+            end
+        end
 
-Hệ thống quản trị cơ sở dữ liệu MariaDB bao gồm 2 cơ sở dữ liệu riêng biệt:
-* Cơ sở dữ liệu chính **`ilfreight`**: Chứa toàn bộ dữ liệu nghiệp vụ của cổng thông tin vận tải, bao gồm 5 bảng: `users`, `shipments`, `ports`, `comments`, `news`.
-* Cơ sở dữ liệu phụ **`dev`**: Đại diện cho phân vùng cơ sở dữ liệu nội bộ phục vụ kiểm thử, chứa 2 bảng: `credentials`, `debug_log`. Đây là đối tượng dữ liệu mà các cuộc tấn công khai thác liên cơ sở dữ liệu (Cross-Database Enumeration) nhắm tới nếu máy chủ phân quyền lỏng lẻo.
+        NPM["Nginx Proxy Manager (Edge Reverse Proxy)<br/>• Đặt tại biên máy chủ Production VPS<br/>• Mở cổng 80, 443 tiếp nhận từ Cloudflare<br/>• SSL Termination & Cân bằng tải nội bộ"]
+        
+        WEB -->|Định tuyến dịch vụ Web: Cổng 80| NPM
+        GRAF -->|Định tuyến Dashboard: Cổng 3000| NPM
+    end
 
-Dưới đây là sơ đồ quan hệ thực thể (ERD) thể hiện cấu trúc logic và các bảng dữ liệu:
+    subgraph INTERNET["TẦNG 3: TẦNG BIÊN & TRUY CẬP NGƯỜI DÙNG / INTERNET"]
+        direction TB
+        CF["Cloudflare Edge Network & WAF<br/>• TLS 1.3 Full Strict Encryption<br/>• Che giấu IP gốc máy chủ VPS<br/>• inlaneweb.ecotools.online & grafana.ecotools.online"]
+        
+        USER["Người dùng hợp pháp<br/>(Khách hàng / Kỹ sư On-Call)"]
+        ATTACKER["Kẻ tấn công tiềm tàng<br/>(SQLi / XSS / LFI)"]
+        
+        CF -->|Phục vụ lưu lượng HTTPS an toàn| USER
+        CF -.->|Chặn đứng tấn công WAF / Drop Payload| ATTACKER
+    end
+
+    GHA ==>|Stage 4 CD: Điều phối qua SSH Ed25519| DOCKER_NET
+    GHCR -.->|Kéo image Production sạch| WORKLOAD
+    NPM ==>|Origin Traffic: Cổng 80, 443| CF
+```
+
+#### 1.1.2. Phân tích chi tiết các phân hệ hạ tầng và nguyên lý vận hành
+
+Kiến trúc hạ tầng được tổ chức thành 4 phân hệ chính hoạt động đồng bộ:
+
+1. **Phân hệ biên và định tuyến an ninh (Edge & Reverse Proxy Layer):**
+   * **Mạng biên Cloudflare:** Đóng vai trò là tuyến phòng thủ đầu tiên. Cloudflare tiếp nhận toàn bộ lưu lượng truy cập từ Internet vào hai tên miền chính thức:
+     * Cổng dịch vụ logistics: `https://inlaneweb.ecotools.online`
+     * Cổng điều khiển an ninh: `https://grafana.ecotools.online`
+     Toàn bộ kết nối bên ngoài bắt buộc sử dụng giao thức HTTPS với chuẩn mã hóa TLS 1.3 Full Strict. Cloudflare che giấu hoàn toàn địa chỉ IP thực của máy chủ VPS, đồng thời kích hoạt bộ lọc WAF và chống tấn công từ chối dịch vụ (DDoS) ở tầng mạng và tầng ứng dụng.
+   * **Nginx Proxy Manager (NPM):** Là thành phần Reverse Proxy đặt tại máy chủ VPS, chỉ mở 2 cổng công khai duy nhất `80` và `443` để nhận lưu lượng đã được xác thực từ Cloudflare. NPM thực hiện giải mã SSL và điều hướng lưu lượng vào các container tương ứng trong mạng nội bộ Docker dựa theo tên miền con (Virtual Host Routing).
+
+2. **Phân hệ mạng nội bộ và cách ly tài nguyên (Docker Isolated Network `inlaneweb_net`):**
+   * Toàn bộ các dịch vụ container trên VPS được kết nối thông qua một mạng cầu nối duy nhất có tên `inlaneweb_net`.
+   * **Chính sách đóng cổng tuyệt đối (No Host Port Exposure):** Cổng kết nối cơ sở dữ liệu MariaDB (`3306`), cổng nhận log của Loki (`3100`) và cổng quản trị Grafana (`3000`) tuyệt đối **không ánh xạ ra ngoài máy chủ VPS**. Chúng chỉ có thể giao tiếp với nhau qua DNS nội bộ của Docker trong mạng `inlaneweb_net`, triệt tiêu hoàn toàn nguy cơ quét cổng hoặc tấn công brute-force từ Internet.
+
+3. **Hai khối chức năng độc lập (Dual-Track Architecture):**
+   * **Khối Ứng dụng nghiệp vụ (Workload - `docker-compose.prod.yml`):** Gồm máy chủ web `ilfreight_web` (Apache 2.4, PHP 8.2) và cơ sở dữ liệu `ilfreight_db` (MariaDB 10.11 LTS). CSDL sử dụng Docker Named Volume `db_data` gắn vào `/var/lib/mysql` để đảm bảo dữ liệu được lưu trữ độc lập và không bao giờ bị mất khi container web/db được cập nhật hoặc khởi động lại.
+   * **Khối Nền tảng quan sát tập trung (Observability - `docker-compose.monitoring.yml`):** Vận hành độc lập 24/7 gồm Promtail 3.0, Grafana Loki 3.0, Grafana 11.0 và Autoheal daemon. Khối này đọc log phi xâm lấn qua `/var/run/docker.sock` và tự động kích hoạt khởi động lại dịch vụ nếu web bị treo hoặc bất thường.
+
+4. **Phân hệ điều khiển CI/CD và chuyển giao tự động (CI/CD Control Plane):**
+   * Kết nối máy trạm của lập trình viên với máy ảo GitHub Actions Runner qua các cổng kiểm soát tự động 4 Stage (Policy Guard, SAST SonarQube & Semgrep, Build & Smoke Test).
+   * Runner đóng gói các Docker image sạch và đẩy lên kho lưu trữ GitHub Container Registry (GHCR). Tại Stage 4, Runner kết nối an toàn vào VPS qua SSH với cặp khóa mã hóa Ed25519 để chỉ thị máy chủ kéo image mới về triển khai mà không làm gián đoạn hạ tầng giám sát.
+
+#### 1.1.3. Khối ứng dụng nghiệp vụ InlaneWeb và phân loại dữ liệu cần bảo vệ
+
+Trên nền tảng hạ tầng bảo mật nêu trên, hệ thống triển khai khối tải làm việc nghiệp vụ **InlaneWeb Logistics Portal** — ứng dụng mô phỏng cổng thông tin điều hành hàng hải và quản lý cảng biển. Trong chu trình vận hành, ứng dụng xử lý đồng thời luồng thông tin vận tải công khai và dữ liệu khách hàng riêng tư, đòi hỏi các biện pháp bảo vệ kỹ thuật nghiêm ngặt theo **Nghị định 13/2023/NĐ-CP** và **GDPR**:
+
+1. **Hai nghiệp vụ cốt lõi xử lý dữ liệu cá nhân:**
+   * **Nghiệp vụ 1 — Tra cứu và quản lý hành trình vận đơn hàng hải:** Khách hàng tra cứu trạng thái vận chuyển (`GET /api/track.php?tracking=`) và để lại phản hồi trao đổi (`comments`). Dữ liệu cần bảo vệ gồm mã vận đơn, hành trình bốc dỡ và định danh khách hàng (`customer_id`). Cần phòng chống triệt để lỗ hổng tiêm mã SQL Injection theo Điều 9 Khoản 2 Nghị định 13/2023/NĐ-CP.
+   * **Nghiệp vụ 2 — Xác thực định danh người dùng và cấp phát mã API:** Người dùng và đối tác đăng nhập (`POST /login.php`) để nhận phiên làm việc và `api_key`. Dữ liệu cần bảo vệ gồm tài khoản, mật khẩu, email và khóa API. Bắt buộc áp dụng thuật toán băm an toàn Bcrypt (Cost 12), cấm lưu trữ plaintext theo Điều 13 Khoản 2 Nghị định 13/2023/NĐ-CP và Article 25 GDPR.
+
+2. **Cấu trúc thực thể cơ sở dữ liệu (ERD):**
+   Hệ thống cơ sở dữ liệu MariaDB bao gồm CSDL chính `ilfreight` (chứa các bảng `users`, `shipments`, `ports`, `comments`, `news`) và CSDL phụ `dev` (chứa bảng `credentials`, `debug_log` dùng trong môi trường thử nghiệm):
 
 ```mermaid
 erDiagram
@@ -361,7 +444,7 @@ erDiagram
 | `comments` | `content` | `TEXT` | Dữ liệu trao đổi cá nhân | Lọc làm sạch ký tự đầu vào chống XSS và SQLi |
 | `credentials` (`dev` DB) | `password_hash`, `api_key` | `VARCHAR` | **Dữ liệu nhạy cảm nội bộ** | Phân quyền tài khoản MySQL: tước quyền truy cập DB `dev` |
 
-#### 1.1.3. Cấu trúc cây thư mục mã nguồn toàn diện của dự án
+#### 1.1.4. Cấu trúc cây thư mục mã nguồn toàn diện của dự án
 
 Kho lưu trữ mã nguồn được chuẩn hóa theo mô hình dự án công nghiệp, phân định rõ ràng ranh giới giữa mã nguồn ứng dụng, hạ tầng giám sát, kịch bản tự động hóa CI/CD và tài liệu vận hành:
 
