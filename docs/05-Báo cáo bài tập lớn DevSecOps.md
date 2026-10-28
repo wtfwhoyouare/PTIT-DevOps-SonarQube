@@ -533,7 +533,7 @@ Trong môi trường triển khai thực tế, một sai lầm phổ biến khi 
   └────────────────────────────────────────────────────────────────────────┘
 ```
 
-Thông qua việc phân lập tệp điều phối thành [`docker-compose.monitoring.yml`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/docker-compose.monitoring.yml) và [`docker-compose.prod.yml`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/docker-compose.prod.yml), hai khối vận hành hoàn toàn độc lập về không gian tiến trình, nhưng liên kết lỏng với nhau thông qua mạng Docker Bridge nội bộ và cơ chế chia sẻ Docker Unix Socket.
+Thông qua việc phân lập tệp điều phối thành `InlaneWeb/docker-compose.monitoring.yml` và `InlaneWeb/docker-compose.prod.yml`, hai khối vận hành hoàn toàn độc lập về không gian tiến trình, nhưng liên kết lỏng với nhau thông qua mạng Docker Bridge nội bộ và cơ chế chia sẻ Docker Unix Socket.
 
 ### 1.3. Thiết kế mạng nội bộ và Reverse Proxy bảo mật
 
@@ -861,7 +861,7 @@ Một trong những nguyên nhân hàng đầu khiến hệ thống Production s
 
 * **Quy trình kiểm định kỹ thuật 3 tầng khi có thay đổi mã nguồn:**
 
-1. **Bộ thẩm định cấu hình tĩnh ([`ci/validate_configs.py`](file:///d:/PTIT-DevOps-SonarQube/ci/validate_configs.py)):** Thực thi kiểm tra tự động 21/21 trường hợp thử nghiệm nghiêm ngặt:
+1. **Bộ thẩm định cấu hình tĩnh (`ci/validate_configs.py`):** Thực thi kiểm tra tự động 21/21 trường hợp thử nghiệm nghiêm ngặt:
    * Thẩm định cấu hình Docker Compose theo chuẩn Compose Specification V2.
    * Thẩm định tính hợp lệ của cú pháp ánh xạ đường dẫn log trong cấu hình Promtail `promtail-config.yml`.
    * Kiểm tra tính đúng đắn của sơ đồ cấu hình lưu trữ chunks và bảng chỉ mục của Grafana Loki `loki-config.yml`.
@@ -940,7 +940,7 @@ Pipeline phân tích danh sách các tệp tin có sự thay đổi giữa commi
 * **Thay đổi đồng thời hoặc bản phát hành lớn:** Cả hai Job đều được kích hoạt và chạy **song song đồng thời** (Parallel Execution), rút ngắn một nửa thời gian chờ đợi so với mô hình chạy tuần tự.
 
 #### 3.3.2. Giữ an toàn dữ liệu cơ sở dữ liệu bằng Docker Volume
-Trong tệp [`InlaneWeb/docker-compose.prod.yml`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/docker-compose.prod.yml), vùng lưu trữ dữ liệu `/var/lib/mysql` của MariaDB được gắn kết cố định vào một Docker Named Volume mang tên `db_data`. Trong suốt quá trình kéo image mới và tái tạo container, Docker Engine chỉ thực hiện tiêu hủy tầng tính toán tạm thời của container, toàn bộ dữ liệu vật lý trên ổ đĩa được bảo toàn nguyên vẹn 100%, loại bỏ nguy cơ mất mát dữ liệu khách hàng.
+Trong tệp điều phối `InlaneWeb/docker-compose.prod.yml`, vùng lưu trữ dữ liệu `/var/lib/mysql` của MariaDB được gắn kết cố định vào một Docker Named Volume mang tên `db_data`. Trong suốt quá trình kéo image mới và tái tạo container, Docker Engine chỉ thực hiện tiêu hủy tầng tính toán tạm thời của container, toàn bộ dữ liệu vật lý trên ổ đĩa được bảo toàn nguyên vẹn 100%, loại bỏ nguy cơ mất mát dữ liệu khách hàng.
 
 #### 3.3.3. Kiểm tra web hoạt động ổn định trước khi hoàn tất
 Trong các hệ thống phân tán, cơ sở dữ liệu thường cần từ 5 đến 20 giây để khởi động các tiến trình quản lý trang nhớ và kiểm tra bảng dữ liệu. Nếu kiểm tra trạng thái ngay lập tức, tiến trình kiểm tra sẽ báo lỗi giả. Pipeline đã cài đặt thuật toán kiểm tra nhịp tim vòng lặp:
@@ -999,7 +999,7 @@ Tại máy chủ Production VPS, công cụ Nginx Proxy Manager đóng vai trò 
 ```
 
 1. **Luồng 1 — Chẩn đoán lỗi nội bộ ứng dụng:**
-   Được quản lý thông qua lớp nghiệp vụ độc lập [`InlaneLogger`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/lib/logger.php). Khi hệ thống gặp các lỗi nghiêm trọng như lỗi kết nối cơ sở dữ liệu hoặc lỗi cú pháp truy vấn SQL, logger tự động trích xuất nguyên nhân gốc, chuỗi các ngoại lệ lồng nhau cùng toàn bộ vết ngăn xếp Stack Trace, phục vụ việc gỡ lỗi logic cho kỹ sư phần mềm.
+   Được quản lý thông qua lớp nghiệp vụ độc lập `InlaneLogger` (tại thư mục nguồn `InlaneWeb/web/src/lib/logger.php`). Khi hệ thống gặp các lỗi nghiêm trọng như lỗi kết nối cơ sở dữ liệu hoặc lỗi cú pháp truy vấn SQL, logger tự động trích xuất nguyên nhân gốc, chuỗi các ngoại lệ lồng nhau cùng toàn bộ vết ngăn xếp Stack Trace, phục vụ việc gỡ lỗi logic cho kỹ sư phần mềm.
 2. **Luồng 2 — Chẩn đoán tấn công lưu lượng HTTP:**
    Máy chủ Apache được tái cấu hình để ghi lại toàn bộ các yêu cầu HTTP dưới dạng chuỗi JSON có cấu trúc hoàn chỉnh thay cho định dạng văn bản thô Common Log Format truyền thống:
    ```apache
@@ -1052,7 +1052,7 @@ Bảng điều khiển trung tâm mang tên *"InlaneWeb Logistics — Centralize
 #### 4.2.3. Thắt chặt an ninh cho bảng điều khiển Grafana
 Do bảng điều khiển chứa toàn bộ nhật ký ứng dụng nhạy cảm (thông tin truy vấn cơ sở dữ liệu, địa chỉ IP máy khách, dấu vết payload và tài khoản người dùng), việc bảo vệ cổng giám sát là yêu cầu an ninh tối thượng:
 * **Tắt quyền xem không cần đăng nhập:**
-  Cấu hình `GF_AUTH_ANONYMOUS_ENABLED=false` trong tệp điều phối [`InlaneWeb/docker-compose.monitoring.yml`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/docker-compose.monitoring.yml). Mọi yêu cầu truy cập giao diện web đều bắt buộc phải vượt qua bước xác thực tài khoản quản trị.
+  Cấu hình `GF_AUTH_ANONYMOUS_ENABLED=false` trong tệp điều phối `InlaneWeb/docker-compose.monitoring.yml`. Mọi yêu cầu truy cập giao diện web đều bắt buộc phải vượt qua bước xác thực tài khoản quản trị.
 * **Đặt mật khẩu quản trị ngẫu nhiên có độ phức tạp cao:**
   Thay thế hoàn toàn mật khẩu mặc định bằng chuỗi ký tự ngẫu nhiên có độ dài 24 ký tự có độ phức tạp cao, triệt tiêu nguy cơ tấn công brute-force hoặc chiếm quyền thông qua tài khoản mặc định.
 * **Tự động hóa đồng bộ và làm sạch cơ sở dữ liệu xác thực:**
@@ -1095,14 +1095,14 @@ Thực hiện yêu cầu trọng tâm của bài tập nhóm về việc đánh 
   * **Nghị định 13/2023/NĐ-CP — Điều 13 Khoản 1:** Quy định cơ quan, tổ chức xử lý dữ liệu cá nhân phải *"áp dụng các biện pháp quản lý, kỹ thuật phù hợp... để phòng chống hành vi vi phạm quy định về bảo vệ dữ liệu cá nhân"*. Việc thiếu cơ chế kiểm soát mã nguồn đồng nghĩa với việc vi phạm quy trình kiểm soát thay đổi hệ thống công nghệ thông tin xử lý dữ liệu cá nhân.
   * **GDPR — Article 25 (Data Protection by Design and by Default):** Bắt buộc các biện pháp bảo vệ dữ liệu kỹ thuật và tổ chức phải được tích hợp sẵn ngay từ khi bắt đầu thiết kế và phát triển phần mềm.
 * **Cách thức phát hiện:**
-  Xây dựng công cụ kiểm soát chính sách độc lập [`ci/policy_guard.py`](file:///d:/PTIT-DevOps-SonarQube/ci/policy_guard.py) thực thi tại Stage 1. Kịch bản phân tích lịch sử commit và siêu dữ liệu Pull Request:
+  Xây dựng công cụ kiểm soát chính sách độc lập `ci/policy_guard.py` thực thi tại Stage 1. Kịch bản phân tích lịch sử commit và siêu dữ liệu Pull Request:
   * Ngăn chặn tuyệt đối hành vi commit hoặc push trực tiếp lên hai nhánh bảo vệ `main` và `dev`.
   * Bắt buộc mọi đóng góp cá nhân chỉ được mở Pull Request vào `dev` theo cú pháp chuẩn: `[<mã_nhánh>] <loại>(<phạm_vi>): <mô tả>`.
   * Nhánh `main` chỉ nhận mã nguồn qua PR phát hành xuất phát từ nhánh `dev` với định dạng: `release: vX.Y.Z - <mô tả>`.
 * **Cách thức xử lý và khắc phục:**
   Kích hoạt cơ chế GitHub Branch Protection Rules khóa cứng nhánh `main` và `dev`, yêu cầu 100% Pull Request phải vượt qua bài kiểm tra của `branch_policy_guard` mới được mở quyền hợp nhất.
 * **Đoạn mã demo thực tế:**
-  *Đoạn mã Policy-as-Code kiểm tra quy chuẩn đóng góp trong [`ci/policy_guard.py`](file:///d:/PTIT-DevOps-SonarQube/ci/policy_guard.py):*
+  *Đoạn mã Policy-as-Code kiểm tra quy chuẩn đóng góp trong `ci/policy_guard.py`:*
   ```python
   # Trích đoạn ci/policy_guard.py - Cưỡng chế quy chuẩn nhánh và Pull Request
   PR_DEV_REGEX = re.compile(
@@ -1137,7 +1137,7 @@ Thực hiện yêu cầu trọng tâm của bài tập nhóm về việc đánh 
   * **Nghị định 13/2023/NĐ-CP — Điều 9 Khoản 2:** Quy định bên xử lý dữ liệu cá nhân có nghĩa vụ *"bảo đảm an toàn, an ninh thông tin, bí mật dữ liệu cá nhân của chủ thể dữ liệu trong quá trình xử lý"*. Việc để tồn tại lỗi SQL Injection khiến dữ liệu vận đơn và thông tin liên lạc của khách hàng bị trích xuất công khai là hành vi vi phạm nghiêm trọng nghĩa vụ bảo đảm an toàn dữ liệu.
   * **GDPR — Article 32 (Security of Processing):** Yêu cầu triển khai các biện pháp kỹ thuật phù hợp nhằm bảo đảm mức an toàn chống lại việc tiết lộ hoặc truy cập trái phép vào dữ liệu cá nhân được lưu trữ.
 * **Cách thức phát hiện:**
-  * **Semgrep SAST Engine:** Thiết lập quy tắc phân tích dòng ô nhiễm Taint Analysis truy vết biến đầu vào `$Source: $_GET[...]` lan truyền trực tiếp tới điểm thực thi nguy hiểm `$Sink: mysqli_query(...)` mà không đi qua các hàm làm sạch chuẩn.
+  * **Semgrep SAST Engine:** Thiết lập quy tắc phân tích dòng ô nhiễm Taint Analysis truy vết biến đầu vào nguồn (`Source: $_GET[...]`) lan truyền trực tiếp tới điểm thực thi nguy hiểm trũng (`Sink: mysqli_query(...)`) mà không đi qua các hàm làm sạch chuẩn (`Sanitizer`).
   * **SonarQube Scanner:** Phân tích cây cú pháp trừu tượng AST, kích hoạt quy tắc `php:S2077` và đánh tụt điểm bảo mật xuống mức E, kích hoạt trạng thái Quality Gate `FAILED` để ngắt đường ống CI.
 * **Cách thức xử lý và khắc phục:**
   Tái cấu trúc mã nguồn: loại bỏ hoàn toàn việc ghép chuỗi SQL thủ công; thay thế bằng kỹ thuật câu lệnh chuẩn bị trước với tham số liên kết kiểu dữ liệu an toàn qua thư viện PDO.
@@ -1186,7 +1186,7 @@ Thực hiện yêu cầu trọng tâm của bài tập nhóm về việc đánh 
   * **GDPR — Article 5(1)(f) & Article 25:** Vi phạm nguyên tắc bảo mật thông tin (Confidentiality) và nguyên tắc bảo vệ dữ liệu mặc định (Data protection by default).
 * **Cách thức phát hiện:**
   * SonarQube kích hoạt quy tắc `secrets:S6702` (Credentials should not be hard-coded) và `php:S181`.
-  * Semgrep thực thi quy tắc tùy biến [`php-hardcoded-db-password-fallback`](file:///d:/PTIT-DevOps-SonarQube/ci/semgrep-local-rules.yml#L2), bắt giữ các cú pháp gán chuỗi tĩnh làm mật khẩu dự phòng.
+  * Semgrep thực thi quy tắc tùy biến `php-hardcoded-db-password-fallback` (khai báo trong tệp cấu hình `ci/semgrep-local-rules.yml`), bắt giữ các cú pháp gán chuỗi tĩnh làm mật khẩu dự phòng.
 * **Cách thức xử lý và khắc phục:**
   1. Tách toàn bộ thông tin xác thực sang biến môi trường hệ thống và nạp qua GitHub Repository Secrets (`PROD_SSH_KEY`, `PROD_HOST`, `DB_PASS`).
   2. Nâng cấp toàn bộ cơ chế lưu trữ mật khẩu trong cơ sở dữ liệu sang thuật toán băm mật mã mạnh một chiều Bcrypt (`PASSWORD_BCRYPT`) với hệ số chi phí tính toán an toàn (Cost Factor = 12).
@@ -1241,12 +1241,12 @@ Thực hiện yêu cầu trọng tâm của bài tập nhóm về việc đánh 
   * **Nghị định 13/2023/NĐ-CP — Điều 13 Khoản 1:** Vi phạm yêu cầu thiết lập vùng đệm an toàn và bảo vệ mạng máy tính lưu trữ dữ liệu cá nhân. Việc để cổng CSDL tiếp xúc với mạng Internet công cộng vi phạm nghiêm trọng nguyên tắc phân vùng an ninh mạng tối thiểu.
   * **GDPR — Article 32 (Security of Processing):** Vi phạm nghĩa vụ bảo đảm tính toàn vẹn, tính sẵn sàng và tính bảo mật liên tục của các hệ thống máy chủ xử lý dữ liệu.
 * **Cách thức phát hiện:**
-  Xây dựng công cụ kiểm tra tự động [`ci/validate_configs.py`](file:///d:/PTIT-DevOps-SonarQube/ci/validate_configs.py) tại Stage 3 với 21 tiêu chí thẩm định: kiểm tra cấu hình cổng ánh xạ, phát hiện cổng 3306 bị expose ra ngoài host, kiểm tra tính toàn vẹn của volume mount và cú pháp Compose V2.
+  Xây dựng công cụ kiểm tra tự động `ci/validate_configs.py` tại Stage 3 với 21 tiêu chí thẩm định: kiểm tra cấu hình cổng ánh xạ, phát hiện cổng 3306 bị expose ra ngoài host, kiểm tra tính toàn vẹn của volume mount và cú pháp Compose V2.
 * **Cách thức xử lý và khắc phục:**
-  1. Đóng hoàn toàn cổng `3306` của container `ilfreight_db` trong [`InlaneWeb/docker-compose.prod.yml`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/docker-compose.prod.yml), chỉ cho phép giao tiếp nội bộ thông qua mạng bridge `inlaneweb_net`.
+  1. Đóng hoàn toàn cổng `3306` của container `ilfreight_db` trong `InlaneWeb/docker-compose.prod.yml`, chỉ cho phép giao tiếp nội bộ thông qua mạng bridge `inlaneweb_net`.
   2. Phân tách tường minh định danh hai project: `-p inlaneweb-monitoring` và `-p inlaneweb-prod`, cấu hình script dọn dẹp an toàn container cũ mà vẫn bảo toàn 100% dữ liệu trên Docker Volume `db_data`.
 * **Đoạn mã demo thực tế:**
-  *Kiểm tra cấu hình tự động trong [`ci/validate_configs.py`](file:///d:/PTIT-DevOps-SonarQube/ci/validate_configs.py) và cấu hình mạng nội bộ cô lập trong [`InlaneWeb/docker-compose.prod.yml`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/docker-compose.prod.yml):*
+  *Kiểm tra cấu hình tự động trong `ci/validate_configs.py` và cấu hình mạng nội bộ cô lập trong `InlaneWeb/docker-compose.prod.yml`:*
   ```python
   # 1. Đoạn mã kiểm thử tự động trong ci/validate_configs.py:
   # Thẩm định cấu hình Compose: cấm mở cổng 3306 ra ngoài máy chủ host
@@ -1318,7 +1318,7 @@ Thực hiện yêu cầu trọng tâm của bài tập nhóm về việc đánh 
   1. Trực quan hóa toàn bộ 8 phân vùng giám sát an ninh trên Bảng điều khiển Grafana tập trung (`https://grafana.ecotools.online`), thiết lập cơ chế xác thực quản trị viên bảo mật (vô hiệu hóa Anonymous Access).
   2. Kích hoạt bộ điều phối tự phục hồi Autoheal giám sát nhịp tim `/health`. Khi phát hiện container bị sập hoặc treo tiến trình, Autoheal tự động khởi động lại container trong thời gian dưới 5 giây mà không làm gián đoạn cơ sở dữ liệu.
 * **Đoạn mã demo thực tế:**
-  *Cấu hình tự phục hồi container trong [`InlaneWeb/docker-compose.monitoring.yml`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/docker-compose.monitoring.yml):*
+  *Cấu hình tự phục hồi container trong `InlaneWeb/docker-compose.monitoring.yml`:*
   ```yaml
   autoheal:
     image: willfarrell/autoheal:1.2.0
@@ -1339,7 +1339,7 @@ Thực hiện yêu cầu trọng tâm của bài tập nhóm về việc đánh 
 
 ### 5.2. Các lỗi mã nguồn bị SonarQube chặn khi lập trình
 
-Trong đường ống CI/CD, SonarQube đóng vai trò là người gác cổng tại **Stage 2** ([`.github/workflows/devsecops-pipeline.yml`](file:///d:/PTIT-DevOps-SonarQube/.github/workflows/devsecops-pipeline.yml)). Bất kỳ đoạn mã nguồn nào muốn được tích hợp vào nhánh `dev` đều phải vượt qua bộ chỉ số Quality Gate tại [`ci/sonarqube-quality-gate.json`](file:///d:/PTIT-DevOps-SonarQube/ci/sonarqube-quality-gate.json).
+Trong đường ống CI/CD, SonarQube đóng vai trò là người gác cổng tại **Stage 2** (định nghĩa trong `.github/workflows/devsecops-pipeline.yml`). Bất kỳ đoạn mã nguồn nào muốn được tích hợp vào nhánh `dev` đều phải vượt qua bộ chỉ số Quality Gate quy định tại `ci/sonarqube-quality-gate.json`.
 
 Dưới đây là 4 tình huống vi phạm điển hình mà SonarQube phát hiện và chặn đứng:
 
@@ -1358,7 +1358,7 @@ Dưới đây là 4 tình huống vi phạm điển hình mà SonarQube phát hi
 * **Tác động tới Quality Gate và cơ chế chặn:**
   1. Chỉ số bảo mật `security_rating` lập tức bị hạ từ mức 1 (mức A cao nhất) xuống mức 5 (mức E kém nhất).
   2. SonarQube kích hoạt điều kiện vi phạm `{"metric": "security_rating", "op": "GT", "error": "1"}`, đánh dấu Quality Gate ở trạng thái **`ERROR / FAILED`**.
-  3. Kịch bản điều phối [`ci/sonarqube.py check`](file:///d:/PTIT-DevOps-SonarQube/ci/sonarqube.py) đọc tệp trạng thái và trả về mã lỗi `sys.exit(1)`.
+  3. Kịch bản điều phối `ci/sonarqube.py check` đọc tệp trạng thái và trả về mã lỗi `sys.exit(1)`.
   4. GitHub Actions Runner dừng khẩn cấp Job Stage 2. Stage 3 và Stage 4 bị hủy bỏ.
   5. GitHub Branch Protection Rules lập tức **vô hiệu hóa nút bấm Merge Pull Request**, ngăn chặn hoàn toàn mã lỗi lọt vào nhánh tích hợp.
 
@@ -1382,7 +1382,7 @@ Dưới đây là 4 tình huống vi phạm điển hình mà SonarQube phát hi
   setcookie("auth_token", $token, time() + 3600, "/");
   ```
 * **Quy tắc vi phạm:** `php:S2255` — *"Using cookies without the 'HttpOnly' and 'Secure' flags is security-sensitive"*.
-* **Cơ chế chặn:** Điều kiện `{"metric": "security_hotspots_reviewed", "op": "LT", "error": "100"}` yêu cầu 100% điểm nóng phải được rà soát. Do chưa được phê duyệt ($0\% < 100\%$), Quality Gate báo `FAILED`, chặn merge Pull Request.
+* **Cơ chế chặn:** Điều kiện `{"metric": "security_hotspots_reviewed", "op": "LT", "error": "100"}` yêu cầu 100% điểm nóng phải được rà soát. Do chưa được phê duyệt (tỷ lệ duyệt 0% < 100%), Quality Gate báo `FAILED`, chặn merge Pull Request.
 
 #### 5.2.4. Chặn mã nguồn viết cẩu thả và khó bảo trì
 * **Hành vi vi phạm:** Một hàm xử lý chứa quá nhiều vòng lặp và câu lệnh rẽ nhánh lồng nhau phức tạp.
@@ -1423,7 +1423,7 @@ Phần này phân tích 6 sự cố kỹ thuật thực tế phát sinh trong qu
   ```
 
 #### 5.3.3. Sự cố sập ứng dụng do vượt ngưỡng bộ nhớ
-* **Bản chất lỗi:** Tiến trình kết xuất dữ liệu quá lớn vượt quá mức cấu hình `memory_limit = 128M` trong [`php.ini`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/php.ini), phát sinh lỗi `Fatal error: Allowed memory size exhausted`.
+* **Bản chất lỗi:** Tiến trình kết xuất dữ liệu quá lớn vượt quá mức cấu hình `memory_limit = 128M` trong `php.ini` (`InlaneWeb/web/php.ini`), phát sinh lỗi `Fatal error: Allowed memory size exhausted`.
 * **Mã HTTP Response trả về:** **HTTP 500 Internal Server Error** (Apache ngắt kết nối trắng trang).
 * **Quy tắc thu thập:** Hàm `InlaneLogger::logShutdown()` qua `register_shutdown_function` bắt lấy `error_get_last()`, phát ra JSON `"type":"fatal_shutdown_error"`, `"level":"fatal"`. Promtail bắt trọn vẹn và gán nhãn `level="error"`.
 * **Hiển thị & lọc LogQL:** Panel 1 hiển thị thẻ đỏ cảnh báo lỗi nghiêm trọng; lọc bằng:
@@ -1434,7 +1434,7 @@ Phần này phân tích 6 sự cố kỹ thuật thực tế phát sinh trong qu
 #### 5.3.4. Sự cố xóa nhầm container giữa hai tệp Compose chạy song song
 * **Triệu chứng sự cố:** Trong lượt chạy Production CD (Run #39985446211), Job triển khai hạ tầng quan sát bị thất bại khẩn cấp với thông báo: `dependency failed to start: Error response from daemon: No such container...`.
 * **Phân tích nguyên nhân gốc rễ sự cố:**
-  1. Hai tệp điều phối [`InlaneWeb/docker-compose.monitoring.yml`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/docker-compose.monitoring.yml) và [`InlaneWeb/docker-compose.prod.yml`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/docker-compose.prod.yml) cùng thực thi trong thư mục `/opt/inlaneweb` nhưng ban đầu không chỉ định tên dự án riêng biệt.
+  1. Hai tệp điều phối `InlaneWeb/docker-compose.monitoring.yml` và `InlaneWeb/docker-compose.prod.yml` cùng thực thi trong thư mục `/opt/inlaneweb` nhưng ban đầu không chỉ định tên dự án riêng biệt.
   2. Mặc định Docker Compose gán tên dự án theo tên thư mục làm việc (`inlaneweb`).
   3. Khi Job Giám sát chạy lệnh `docker compose ... up -d --remove-orphans`, Docker Compose xem xét toàn bộ container thuộc dự án `inlaneweb`. Do `ilfreight_web` và `ilfreight_db` không nằm trong tệp monitoring, Docker hiểu nhầm chúng là container mồ côi và tiến hành dừng rồi xóa chúng.
   4. Đồng thời, Job Web chạy song song với cờ `--remove-orphans` lại xem `ilfreight_loki` và `ilfreight_grafana` là mồ côi và xóa bỏ `ilfreight_loki` đúng thời điểm Promtail và Grafana đang chờ Loki sẵn sàng. Hai tiến trình tranh chấp và vô tình triệt tiêu lẫn nhau.
@@ -1587,7 +1587,7 @@ Khi sử dụng phương pháp này, máy chủ cơ sở dữ liệu sẽ biên 
 
 #### 5.5.3. Tự động phục hồi dịch vụ khi gặp sự cố bằng Autoheal
 Để đảm bảo hệ thống luôn sẵn sàng phục vụ khi xảy ra sự cố đột ngột:
-* Chỉ thị `healthcheck` trong [`docker-compose.prod.yml`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/docker-compose.prod.yml) liên tục gửi tín hiệu thăm dò tới endpoint nội bộ `http://localhost/health` mỗi 30 giây.
+* Chỉ thị `healthcheck` trong `InlaneWeb/docker-compose.prod.yml` liên tục gửi tín hiệu thăm dò tới endpoint nội bộ `http://localhost/health` mỗi 30 giây.
 * Container độc lập `willfarrell/autoheal` lắng nghe các sự kiện qua Docker Unix Socket. Khi phát hiện container `ilfreight_web` chuyển sang trạng thái không khỏe mạnh quá 3 chu kỳ liên tiếp (tương đương 90 giây không phản hồi), Autoheal sẽ tự động kích hoạt lệnh khởi động lại container một cách độc lập mà không làm ảnh hưởng tới cơ sở dữ liệu hay hạ tầng giám sát, khôi phục dịch vụ về trạng thái sẵn sàng trong thời gian dưới 5 giây.
 
 ---
@@ -1604,15 +1604,15 @@ Nghiên cứu đã hoàn thành toàn diện các mục tiêu thực tế và k�
 
 Một trong những đóng góp thực tiễn quan trọng của đề tài là việc chứng minh một hệ thống doanh nghiệp vừa và nhỏ hoàn toàn có thể xây dựng nền tảng DevSecOps và Giám sát an ninh đạt chuẩn bảo vệ dữ liệu với chi phí phần mềm bằng 0, thông qua việc kết hợp các giải pháp nguồn mở tự do (FOSS):
 
-| Hạng mục chi phí | Giải pháp doanh nghiệp thương mại phổ biến | Chi phí ước tính thương mại (USD/năm) | Giải pháp đề tài xây dựng (FOSS Stack) | Chi phí giải pháp đề tài (USD/năm) | Mức tiết kiệm chi phí |
+| Hạng mục chi phí | Giải pháp doanh nghiệp thương mại phổ biến | Chi phí ước tính thương mại | Giải pháp đề tài xây dựng (FOSS Stack) | Chi phí giải pháp đề tài | Mức tiết kiệm chi phí |
 | :--- | :--- | :---: | :--- | :---: | :---: |
-| **Kiểm định mã nguồn (SAST & Quality Gate)** | SonarQube Enterprise + Snyk Code | ~ $12,000 / năm | **SonarQube Community + Semgrep OSS** | **$0** (Nguồn mở) | **Tiết kiệm 100%** |
-| **Kiểm soát chính sách (Policy-as-Code)** | HashiCorp Sentinel / OPA Enterprise | ~ $6,000 / năm | **Tự xây dựng `ci/policy_guard.py`** | **$0** (Tự phát triển) | **Tiết kiệm 100%** |
-| **Thu thập & Giám sát Log tập trung** | Datadog Log Management / Splunk Enterprise | ~ $15,000 / năm | **Grafana Loki + Promtail 3.0** | **$0** (Tự vận hành) | **Tiết kiệm 100%** |
-| **Bảng điều khiển an ninh (SIEM / Dashboards)** | Splunk Enterprise Cloud / Elastic Security | ~ $8,000 / năm | **Grafana OSS 11.0 (8 Panels tùy biến)** | **$0** (Nguồn mở) | **Tiết kiệm 100%** |
-| **Điều phối hạ tầng & Tự phục hồi** | Enterprise Container Platform / PagerDuty | ~ $4,000 / năm | **Docker Compose V2 + Autoheal** | **$0** (Nguồn mở) | **Tiết kiệm 100%** |
-| **Chi phí máy chủ máy ảo (Hạ tầng phần cứng)** | Cloud Managed Cluster (AWS EKS / GCP GKE) | ~ $2,400 / năm | **Cloud VPS Ubuntu 24.04 LTS độc lập** | ~ $120 / năm | **Tiết kiệm > 95%** |
-| **TỔNG CHI PHÍ SỞ HỮU (TCO / NĂM)** | **Bộ giải pháp thương mại khép kín** | **~ $47,400 / năm** | **Toàn bộ hệ thống đề tài triển khai** | **~ $120 / năm** | **Tiết kiệm $47,280/năm (> 99.7%)** |
+| **Kiểm định mã nguồn (SAST & Quality Gate)** | SonarQube Enterprise + Snyk Code | ~ 12.000 USD / năm | **SonarQube Community + Semgrep OSS** | **0 USD** (Nguồn mở) | **Tiết kiệm 100%** |
+| **Kiểm soát chính sách (Policy-as-Code)** | HashiCorp Sentinel / OPA Enterprise | ~ 6.000 USD / năm | **Tự xây dựng `ci/policy_guard.py`** | **0 USD** (Tự phát triển) | **Tiết kiệm 100%** |
+| **Thu thập & Giám sát Log tập trung** | Datadog Log Management / Splunk Enterprise | ~ 15.000 USD / năm | **Grafana Loki + Promtail 3.0** | **0 USD** (Tự vận hành) | **Tiết kiệm 100%** |
+| **Bảng điều khiển an ninh (SIEM / Dashboards)** | Splunk Enterprise Cloud / Elastic Security | ~ 8.000 USD / năm | **Grafana OSS 11.0 (8 Panels tùy biến)** | **0 USD** (Nguồn mở) | **Tiết kiệm 100%** |
+| **Điều phối hạ tầng & Tự phục hồi** | Enterprise Container Platform / PagerDuty | ~ 4.000 USD / năm | **Docker Compose V2 + Autoheal** | **0 USD** (Nguồn mở) | **Tiết kiệm 100%** |
+| **Chi phí máy chủ máy ảo (Hạ tầng phần cứng)** | Cloud Managed Cluster (AWS EKS / GCP GKE) | ~ 2.400 USD / năm | **Cloud VPS Ubuntu 24.04 LTS độc lập** | ~ 120 USD / năm | **Tiết kiệm > 95%** |
+| **TỔNG CHI PHÍ SỞ HỮU (TCO / NĂM)** | **Bộ giải pháp thương mại khép kín** | **~ 47.400 USD / năm** | **Toàn bộ hệ thống đề tài triển khai** | **~ 120 USD / năm** | **Tiết kiệm ~ 47.280 USD/năm (> 99.7%)** |
 
 * **Ý nghĩa về quyền tự chủ và tuân thủ pháp lý:**
   Việc sử dụng các dịch vụ đám mây thương mại SaaS của nước ngoài tiềm ẩn rủi ro lớn về việc dữ liệu cá nhân của khách hàng và nhật ký truy vấn bị đẩy ra ngoài lãnh thổ Việt Nam. Khi tự vận hành cụm Loki, Grafana và MariaDB trên máy chủ riêng (VPS độc lập), doanh nghiệp nắm giữ **100% quyền tự chủ dữ liệu** (Data Sovereignty), bảo đảm dữ liệu cá nhân không bao giờ bị truyền tải trái phép ra nước ngoài, qua đó tuân thủ tuyệt đối quy định tại **Điều 25 Nghị định 13/2023/NĐ-CP** về điều kiện chuyển dữ liệu cá nhân ra nước ngoài.
@@ -1645,13 +1645,13 @@ Một trong những đóng góp thực tiễn quan trọng của đề tài là 
 
 *(Hội đồng thẩm định và quý độc giả có thể tham chiếu trực tiếp các minh chứng kỹ thuật tương ứng trong kho mã nguồn và hệ thống thực nghiệm)*
 
-* **Minh chứng 1:** Bản ghi thực thi thành công 4 giai đoạn tự động trên GitHub Actions Workflow: [`.github/workflows/devsecops-pipeline.yml`](file:///d:/PTIT-DevOps-SonarQube/.github/workflows/devsecops-pipeline.yml).
-* **Minh chứng 2:** Bộ quy tắc kiểm soát chính sách phân nhánh và kiểm tra cú pháp commit: [`ci/policy_guard.py`](file:///d:/PTIT-DevOps-SonarQube/ci/policy_guard.py).
-* **Minh chứng 3:** Bảng cấu hình ngưỡng chặn chất lượng SonarQube Quality Gate Rating A: [`ci/sonarqube-quality-gate.json`](file:///d:/PTIT-DevOps-SonarQube/ci/sonarqube-quality-gate.json).
-* **Minh chứng 4:** Bộ quy tắc nhận diện luồng dữ liệu ô nhiễm tùy biến địa phương: [`ci/semgrep-local-rules.yml`](file:///d:/PTIT-DevOps-SonarQube/ci/semgrep-local-rules.yml).
-* **Minh chứng 5:** Bộ kiểm tra thẩm định cấu hình hạ tầng 21/21 test cases: [`ci/validate_configs.py`](file:///d:/PTIT-DevOps-SonarQube/ci/validate_configs.py).
-* **Minh chứng 6:** Tệp điều phối triển khai sản xuất bảo toàn dữ liệu MariaDB: [`InlaneWeb/docker-compose.prod.yml`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/docker-compose.prod.yml).
-* **Minh chứng 7:** Tệp điều phối hạ tầng giám sát tập trung bền vững 24/7: [`InlaneWeb/docker-compose.monitoring.yml`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/docker-compose.monitoring.yml).
+* **Minh chứng 1:** Bản ghi thực thi thành công 4 giai đoạn tự động trên GitHub Actions Workflow (tệp `.github/workflows/devsecops-pipeline.yml`).
+* **Minh chứng 2:** Bộ quy tắc kiểm soát chính sách phân nhánh và kiểm tra cú pháp commit (mã nguồn tại `ci/policy_guard.py`).
+* **Minh chứng 3:** Bảng cấu hình ngưỡng chặn chất lượng SonarQube Quality Gate Rating A (đặc tả tại `ci/sonarqube-quality-gate.json`).
+* **Minh chứng 4:** Bộ quy tắc nhận diện luồng dữ liệu ô nhiễm tùy biến địa phương (đặc tả tại `ci/semgrep-local-rules.yml`).
+* **Minh chứng 5:** Bộ kiểm tra thẩm định cấu hình hạ tầng 21/21 test cases (mã nguồn tại `ci/validate_configs.py`).
+* **Minh chứng 6:** Tệp điều phối triển khai sản xuất bảo toàn dữ liệu MariaDB (đặc tả tại `InlaneWeb/docker-compose.prod.yml`).
+* **Minh chứng 7:** Tệp điều phối hạ tầng giám sát tập trung bền vững 24/7 (đặc tả tại `InlaneWeb/docker-compose.monitoring.yml`).
 * **Minh chứng 8:** Hồ sơ thực nghiệm chi tiết và mã khai thác thực tế của 14 vector tấn công SQL Injection trên hệ thống InlaneWeb Logistics Portal.
 * **Minh chứng 9:** Cổng giám sát an ninh tập trung trực tuyến thời gian thực: `https://grafana.ecotools.online` (Bảo mật qua xác thực tài khoản quản trị viên, vô hiệu hóa hoàn toàn Anonymous Access).
 * **Minh chứng 10:** Kiến trúc điều phối mạng Docker nội bộ (`inlaneweb_net`) và cơ chế định tuyến Reverse Proxy Nginx Proxy Manager đa cổng độc lập.
