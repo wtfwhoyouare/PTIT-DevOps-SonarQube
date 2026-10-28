@@ -58,7 +58,8 @@
   - [2.3. Quét lỗ hổng mã nguồn bằng SonarQube và Semgrep tại Stage 2](#23-quét-lỗ-hổng-mã-nguồn-bằng-sonarqube-và-semgrep-tại-stage-2)
     - [2.3.1. Bắt lỗi và đánh giá chất lượng mã nguồn bằng SonarQube](#231-bắt-lỗi-và-đánh-giá-chất-lượng-mã-nguồn-bằng-sonarqube)
     - [2.3.2. Dò luồng dữ liệu độc hại bằng Semgrep](#232-dò-luồng-dữ-liệu-độc-hại-bằng-semgrep)
-    - [2.3.3. Tự động che giấu dữ liệu nhạy cảm trong báo cáo](#233-tự-động-che-giấu-dữ-liệu-nhạy-cảm-trong-báo-cáo)
+    - [2.3.3. Tự động che giấu dữ liệu nhạy cảm trong báo cáo và trực quan hóa kết quả](#233-tự-động-che-giấu-dữ-liệu-nhạy-cảm-trong-báo-cáo-và-trực-quan-hóa-kết-quả)
+    - [2.3.4. Quy trình thẩm định ngoại lệ và xử lý cảnh báo giả](#234-quy-trình-thẩm-định-ngoại-lệ-và-xử-lý-cảnh-báo-giả)
 - [CHƯƠNG 3: ĐÓNG GÓI VÀ TỰ ĐỘNG TRIỂN KHAI LÊN MÁY CHỦ THỰC TẾ](#chương-3-đóng-gói-và-tự-động-triển-khai-lên-máy-chủ-thực-tế)
   - [3.1. Chạy thử nghiệm hệ thống trên môi trường tạm thời tại Stage 3](#31-chạy-thử-nghiệm-hệ-thống-trên-môi-trường-tạm-thời-tại-stage-3)
   - [3.2. Đóng gói Docker Image và lưu trữ trên GitHub Container Registry](#32-đóng-gói-docker-image-và-lưu-trữ-trên-github-container-registry)
@@ -136,6 +137,8 @@
 | **Bảng 1.2** | Bảng so sánh 5 kịch bản triển khai hệ thống trong thực tế | [Mục 1.4.6](#146-bảng-so-sánh-5-kịch-bản-triển-khai) |
 | **Bảng 2.1** | Ma trận phân quyền và kiểm soát luồng phân nhánh | [Mục 2.2.1](#bảng-21-ma-trận-phân-quyền-và-kiểm-soát-luồng-phân-nhánh) |
 | **Bảng 2.2** | Bảng tổng hợp các tình huống vi phạm chính sách phân nhánh và biện pháp xử lý | [Mục 2.2.4](#bảng-22-bảng-tổng-hợp-các-tình-huống-vi-phạm-chính-sách-và-biện-pháp-xử-lý) |
+| **Bảng 2.3** | Bộ tiêu chuẩn định lượng Quality Gate của SonarQube | [Mục 2.3.1](#bảng-23-bộ-tiêu-chuẩn-định-lượng-quality-gate-của-sonarqube) |
+| **Bảng 2.4** | Phân cấp mức độ nghiêm trọng và thời hạn khắc phục lỗ hổng (SLA) | [Mục 2.3.2](#bảng-24-phân-cấp-mức-độ-nghiêm-trọng-và-thời-hạn-khắc-phục-lỗ-hổng-sla) |
 | **Bảng 4.1** | Bảng đặc tả chi tiết câu lệnh truy vấn LogQL và mẫu Regex của 8 phân vùng giám sát | [Mục 4.2.2](#bảng-đặc-tả-chi-tiết-câu-lệnh-truy-vấn-logql-và-mẫu-regex-của-8-phân-vùng-giám-sát) |
 | **Bảng 5.1** | Bảng tổng hợp đối chiếu 5 vấn đề an toàn ứng dụng của 5 thành viên | [Mục 5.1](#bảng-tổng-hợp-đối-chiếu-5-vấn-đề-an-toàn-ứng-dụng-của-5-thành-viên) |
 | **Bảng 5.2** | Bảng tổng hợp đối chiếu 14 kịch bản thực tế và hiệu quả phát hiện qua Log | [Mục 5.4.5](#545-bảng-tổng-hợp-đối-chiếu-14-kịch-bản-thực-tế) |
@@ -724,7 +727,7 @@ Không chỉ dừng lại ở việc kiểm tra tiêu đề Pull Request, `ci/po
 
 ### 2.3. Quét lỗ hổng mã nguồn bằng SonarQube và Semgrep tại Stage 2
 
-Khi Pull Request vượt qua Stage 1 và hướng tới tích hợp vào nhánh `dev`, hệ thống kích hoạt chu trình kiểm định an ninh và chất lượng mã nguồn chuyên sâu:
+Khi Pull Request vượt qua Stage 1 và hướng tới tích hợp vào nhánh `dev`, hệ thống kích hoạt chu trình kiểm định an ninh và chất lượng mã nguồn chuyên sâu tại Stage 2 (Dev Security & Quality Gate). Giai đoạn này hiện thực hóa nguyên lý an ninh dịch chuyển về sớm (*Shift-Left Security*), ngăn chặn 100% các lỗ hổng an ninh nghiêm trọng (Critical/High), các điểm rò rỉ thông tin bí mật (Secrets Leakage) và suy giảm chất lượng mã trước khi được phép hòa vào dòng mã nguồn chung.
 
 * **Kiểm tra cú pháp siêu tốc bằng PHP Linting cô lập mạng:**
   Trước khi khởi chạy các công cụ quét mã nguồn nặng, đường ống thực thi công đoạn kiểm tra cú pháp nhanh với PHP 8.2 (`php -l`). Bước này khởi chạy một container `php:8.2-cli` dùng một lần với cờ bảo mật cao nhất: `--network none` (ngắt toàn bộ kết nối mạng để triệt tiêu hoàn toàn nguy cơ rò rỉ dữ liệu hoặc gọi lệnh mạng ngoài ý muốn) và `--mount readonly` (gắn mã nguồn ở chế độ chỉ đọc, cấm chỉnh sửa tệp tin). Lệnh thực thi:
@@ -735,7 +738,7 @@ Khi Pull Request vượt qua Stage 1 và hướng tới tích hợp vào nhánh 
   ```
   Quá trình này quét toàn bộ cây mã nguồn PHP chỉ trong vòng 2 giây, phát hiện ngay các lỗi cú pháp nghiêm trọng (Syntax Error, thiếu dấu chấm phẩy, khai báo hàm sai cú pháp) trước khi nạp vào các động cơ phân tích ngữ nghĩa phức tạp.
 
-Sau khi vượt qua bước kiểm tra cú pháp nhanh, hệ thống kích hoạt đồng thời hai động cơ phân tích an ninh tĩnh độc lập:
+Sau khi vượt qua bước kiểm tra cú pháp nhanh, hệ thống kích hoạt song song hai động cơ phân tích an ninh tĩnh độc lập mang tính chất bổ trợ lẫn nhau:
 
 ```text
        Mã nguồn PHP 8.2 trong thư mục InlaneWeb/web/src/
@@ -757,33 +760,39 @@ Sau khi vượt qua bước kiểm tra cú pháp nhanh, hệ thống kích hoạ
 
 #### 2.3.1. Bắt lỗi và đánh giá chất lượng mã nguồn bằng SonarQube
 * **Vị trí và thời điểm kích hoạt trong đường ống CI/CD:**
-  SonarQube được định vị tại **Stage 2** trong tệp điều phối [`.github/workflows/devsecops-pipeline.yml`](file:///d:/PTIT-DevOps-SonarQube/.github/workflows/devsecops-pipeline.yml). Công đoạn này phụ thuộc trực tiếp vào kết quả của Stage 1 (`needs: [branch_policy_guard]`) và được tự động kích hoạt trong 2 trường hợp:
+  SonarQube được định vị tại **Stage 2** trong tệp điều phối `.github/workflows/devsecops-pipeline.yml`. Công đoạn này phụ thuộc trực tiếp vào kết quả của Stage 1 (`needs: [branch_policy_guard]`) và được tự động kích hoạt trong 2 trường hợp:
   1. Khi lập trình viên mở một Pull Request có nhánh đích là nhánh tích hợp `dev` (`github.event_name == 'pull_request' && github.base_ref == 'dev'`).
   2. Khi có sự kiện đẩy mã nguồn trực tiếp vào nhánh `dev` (`github.ref == 'refs/heads/dev'`).
-* **Quy trình phân tích tự động trong Runner:**
-  * Khởi tạo môi trường SonarQube độc lập: Đường ống khởi chạy một vùng chứa SonarQube Community 26.9 độc lập ngay trên GitHub Actions Runner qua Docker, phân bổ 4GB RAM và thiết lập thông số nhân Linux `vm.max_map_count=524288`. Kịch bản [`ci/sonarqube.py bootstrap`](file:///d:/PTIT-DevOps-SonarQube/ci/sonarqube.py) tự động khởi tạo cấu hình dự án, cấu hình token bảo mật và nạp Quality Gate tùy biến.
-  * Tác tử quét SonarScanner phiên bản 8.1.0 phân tích toàn diện mã nguồn PHP 8.2: bóc tách cây cú pháp, kiểm tra tuân thủ chuẩn PSR-12, đo lường độ phức tạp, trùng lặp mã nguồn, và đối chiếu với ngân hàng quy tắc an ninh cùng các điểm nóng bảo mật.
-* **Cơ chế cưỡng chế Quality Gate và phương thức chặn đứng vi phạm:**
-  Hệ thống áp dụng tập luật Quality Gate nghiêm ngặt được đặc tả trong [`ci/sonarqube-quality-gate.json`](file:///d:/PTIT-DevOps-SonarQube/ci/sonarqube-quality-gate.json):
-  * Đánh giá bảo mật (`security_rating`): Bắt buộc đạt mức đánh giá A cao nhất (giá trị 1). Nếu xuất hiện bất kỳ lỗ hổng bảo mật nào ở mức nghiêm trọng, chỉ số này lập tức tụt xuống các mức kém hơn và hệ thống sẽ lập tức dừng lại.
-  * Đánh giá độ tin cậy (`reliability_rating`): Bắt buộc đạt mức A, bảo đảm không tồn tại lỗi logic hoặc sự cố treo mã nguồn.
-  * Đánh giá khả năng bảo trì (`sqale_rating`): Bắt buộc đạt mức A, bảo đảm nợ kỹ thuật ở mức tối thiểu.
-  * Đánh giá điểm nóng an ninh (`security_hotspots_reviewed`): Bắt buộc đạt 100%, bảo đảm mọi đoạn mã nhạy cảm đều phải được rà soát.
-  * Tỷ lệ mã trùng lặp (`duplicated_lines_density`): Không được vượt quá 10%.
-* **Quy trình ngắt đường ống và bảo vệ nhánh:**
-  * Sau khi hoàn tất phân tích, kịch bản `python3 ci/sonarqube.py check` đọc tệp trạng thái `reports/sonarqube/status.json`. Nếu Quality Gate trả về trạng thái lỗi, kịch bản lập tức phát tín hiệu báo động ra `stderr` và trả về mã thoát lỗi khác 0 (`sys.exit(1)`).
+* **Môi trường thực thi cô lập (Ephemeral Container Sandbox):**
+  * Đường ống khởi chạy một vùng chứa SonarQube Community 26.9 độc lập ngay trên GitHub Actions Runner qua Docker, phân bổ 4GB RAM và thiết lập thông số nhân Linux `vm.max_map_count=524288`. Kịch bản `ci/sonarqube.py bootstrap` tự động khởi tạo cấu hình dự án, cấu hình token bảo mật và nạp Quality Gate tùy biến.
+  * Tác tử quét SonarScanner phiên bản 8.1.0 phân tích toàn diện mã nguồn PHP 8.2: bóc tách cây cú pháp trừu tượng (AST), kiểm tra tuân thủ chuẩn phong cách PSR-12, đo lường độ phức tạp tính toán (Cyclomatic Complexity), trùng lặp mã nguồn, và đối chiếu với ngân hàng quy tắc an ninh cùng các điểm nóng bảo mật (Security Hotspots).
+* **Cơ chế cưỡng chế Quality Gate và bộ tiêu chuẩn định lượng:**
+  Hệ thống áp đặt chính sách Quality Gate tùy chỉnh khắt khe được đặc tả trong tệp cấu hình `ci/sonarqube-quality-gate.json`:
+
+#### Bảng 2.3: Bộ tiêu chuẩn định lượng Quality Gate của SonarQube
+
+| Chỉ số kỹ thuật (Metric) | Điều kiện kiểm tra | Ngưỡng bắt buộc | Diễn giải tiêu chuẩn chất lượng |
+| :--- | :---: | :---: | :--- |
+| **Đánh giá Bảo mật** (`security_rating`) | `GT` (Lớn hơn) | **1 (Hạng A)** | Tuyệt đối không chấp nhận bất kỳ lỗ hổng bảo mật nào (Vulnerabilities = 0). |
+| **Đánh giá Độ tin cậy** (`reliability_rating`) | `GT` (Lớn hơn) | **1 (Hạng A)** | Tuyệt đối không chấp nhận bất kỳ lỗi phần mềm tiềm ẩn nào (Bugs = 0). |
+| **Đánh giá Khả năng bảo trì** (`sqale_rating`) | `GT` (Lớn hơn) | **1 (Hạng A)** | Tỷ lệ nợ kỹ thuật (Technical Debt Ratio) phải duy trì ở mức tối thiểu. |
+| **Điểm nóng an ninh đã rà soát** (`security_hotspots_reviewed`) | `LT` (Nhỏ hơn) | **100%** | Toàn bộ 100% các điểm nóng an ninh được chỉ định phải được rà soát và đánh giá. |
+| **Tỷ lệ trùng lặp mã nguồn** (`duplicated_lines_density`) | `GT` (Lớn hơn) | **10.0%** | Mức độ trùng lặp mã nguồn không được vượt quá 10% tổng số dòng mã nguồn thực thi. |
+
+* **Quy trình ngắt đường ống (Break-the-Build Enforcement) và bảo vệ nhánh:**
+  * Sau khi hoàn tất phân tích, kịch bản `python3 ci/sonarqube.py check` đọc tệp trạng thái `reports/sonarqube/status.json`. Nếu Quality Gate trả về trạng thái `ERROR`, kịch bản lập tức phát tín hiệu báo động ra `stderr` và trả về mã thoát lỗi khác 0 (`sys.exit(1)`).
   * Khi tiến trình trả về mã lỗi 1, GitHub Actions lập tức đánh dấu Job kiểm tra an ninh và chất lượng mã nguồn ở Stage 2 chuyển sang trạng thái Thất bại.
-  * **Hệ quả của việc chặn:** Toàn bộ các công đoạn tiếp theo bao gồm Stage 3 và Stage 4 bị hủy bỏ. Đồng thời, cơ chế bảo vệ nhánh trên GitHub phát hiện bài kiểm tra bắt buộc bị thất bại, lập tức vô hiệu hóa nút bấm hợp nhất Merge Pull Request, ngăn chặn tuyệt đối mã nguồn có lỗi lọt vào hệ thống.
+  * **Hệ quả của việc chặn:** Toàn bộ các công đoạn tiếp theo bao gồm Stage 3 (Kiểm thử hạ tầng) và Stage 4 (Triển khai Production) bị hủy bỏ. Đồng thời, cơ chế bảo vệ nhánh trên GitHub phát hiện bài kiểm tra bắt buộc bị thất bại, lập tức vô hiệu hóa nút bấm hợp nhất Merge Pull Request, ngăn chặn tuyệt đối mã nguồn có lỗi lọt vào nhánh tích hợp.
 
 #### 2.3.2. Dò luồng dữ liệu độc hại bằng Semgrep
-Khác với các công cụ quét dựa trên biểu thức chính quy đơn thuần vốn tạo ra tỷ lệ cảnh báo giả rất cao, Semgrep Engine sử dụng phương pháp truy vết luồng dữ liệu ô nhiễm:
+Khác với các công cụ quét dựa trên biểu thức chính quy đơn thuần vốn tạo ra tỷ lệ cảnh báo giả rất cao, Semgrep Engine sử dụng phương pháp phân tích ngữ nghĩa và truy vết luồng dữ liệu ô nhiễm (Semantic Taint Analysis):
 
 * **Mô hình hóa bài toán truy vết dữ liệu:**
-  Một biến dữ liệu $x$ được coi là bị ô nhiễm khi nó bắt nguồn từ một nguồn đầu vào không tin cậy:
+  Một biến dữ liệu $x$ được coi là bị ô nhiễm (Tainted Variable) khi nó bắt nguồn từ một nguồn đầu vào không tin cậy của người dùng:
   
   $$\text{Source} \in \{\texttt{\$_GET}, \texttt{\$_POST}, \texttt{\$_REQUEST}, \texttt{\$_COOKIE}, \texttt{\$_SERVER['QUERY\_STRING']}\}$$
   
-  Biến này lan truyền qua đồ thị dòng điều khiển mà không đi qua bất kỳ bộ lọc làm sạch hợp lệ nào:
+  Biến này lan truyền qua đồ thị dòng điều khiển (Control Flow Graph - CFG) mà không đi qua bất kỳ bộ lọc làm sạch hợp lệ nào:
   
   $$\text{Sanitizer} \notin \{\texttt{mysqli\_real\_escape\_string}, \texttt{intval}, \texttt{pdo->prepare}\}$$
   
@@ -793,10 +802,33 @@ Khác với các công cụ quét dựa trên biểu thức chính quy đơn thu
   
   Semgrep sẽ lập tức xác lập một vi phạm an ninh nghiêm trọng tương ứng với mã định danh lỗ hổng CWE-89 cho lỗi tiêm lệnh SQL.
 
-* **Tập luật nhận diện tùy biến địa phương ([`ci/semgrep-local-rules.yml`](file:///d:/PTIT-DevOps-SonarQube/ci/semgrep-local-rules.yml)):** Nhóm nghiên cứu đã phát triển bộ quy tắc chuyên biệt phát hiện các hàm thực thi đa câu lệnh nguy hiểm `mysqli_multi_query` và các điểm gọi hàm đọc ghi tệp tin nhạy cảm của hệ điều hành.
+* **Tập luật nhận diện tùy biến địa phương (`ci/semgrep-local-rules.yml`):**
+  Nhóm nghiên cứu đã phát triển bộ quy tắc chuyên biệt bổ sung vào hệ thống kiểm tra, tập trung phát hiện các mẫu vi phạm đặc thù trong kiến trúc ứng dụng:
+  * `php-hardcoded-db-password-fallback`: Nhận diện các chuỗi mật khẩu cơ sở dữ liệu hardcoded trong mã nguồn PHP thay vì đọc qua biến môi trường.
+  * `php-sqli-unquoted-concatenation`: Nhận diện các câu truy vấn cơ sở dữ liệu nối chuỗi trực tiếp mà không qua prepared statement.
+  * `php-mysqli-multi-query-misuse`: Phát hiện việc sử dụng hàm thực thi đa truy vấn nguy hiểm `mysqli_multi_query` cho phép kẻ tấn công thực thi nhiều câu lệnh SQL liên tiếp trong một payload.
 
-#### 2.3.3. Tự động che giấu dữ liệu nhạy cảm trong báo cáo
-Để tuân thủ triệt để nguyên tắc không để lộ dữ liệu bí mật trong môi trường CI/CD, kịch bản [`ci/semgrep_report.py`](file:///d:/PTIT-DevOps-SonarQube/ci/semgrep_report.py) tự động phân tích tệp kết quả JSON, thực hiện che giấu toàn bộ các chuỗi mã token, khóa định danh SSH, thông tin mật khẩu có trong log kiểm thử trước khi xuất bản thành báo cáo trực quan dưới dạng HTML và gắn trực tiếp vào bảng tóm tắt GitHub Actions Step Summary.
+#### Bảng 2.4: Phân cấp mức độ nghiêm trọng và thời hạn khắc phục lỗ hổng (SLA)
+
+| Mức độ (`severity`) | Định nghĩa kỹ thuật | Ảnh hưởng tới CI/CD Gate | Thời hạn khắc phục (SLA) |
+| :--- | :--- | :---: | :---: |
+| **ERROR (Critical/High)** | Các lỗ hổng cho phép thực thi mã từ xa, tiêm mã SQL, lộ lọt thông tin bí mật (Hardcoded Credentials), hoặc vượt qua cơ chế xác thực. | **Chặn ngay lập tức** (Break-the-Build). Không cho phép merge. | Tối đa 04 giờ làm việc kể từ khi phát hiện |
+| **WARNING (Medium)** | Các điểm vi phạm an toàn cấu hình, thuật toán mã hóa lỗi thời, thiếu cờ bảo mật cookie, hoặc vi phạm kiến trúc mã nguồn. | Cảnh báo chi tiết trên Step Summary và Báo cáo kiểm định. | Tối đa 24 giờ làm việc |
+| **INFO (Low/Audit)** | Các gợi ý tối ưu mã nguồn, chuẩn phong cách lập trình an toàn, hoặc phát hiện đoạn mã rác không sử dụng. | Ghi nhận trong danh mục cải tiến kỹ thuật. | Đưa vào backlog xử lý theo sprint |
+
+#### 2.3.3. Tự động che giấu dữ liệu nhạy cảm trong báo cáo và trực quan hóa kết quả
+Để tuân thủ triệt để nguyên tắc không để lộ dữ liệu bí mật (Zero-Trust Data Protection) trong môi trường CI/CD:
+* Kịch bản `ci/semgrep_report.py` và `ci/sonarqube.py` tự động tích hợp cơ chế làm sạch dữ liệu (`redact`). Toàn bộ các chuỗi mã token (`SONAR_TOKEN`), khóa định danh SSH, chuỗi mật khẩu kết nối database có trong log kiểm thử đều được tự động thay thế thành chuỗi `[REDACTED]` trước khi bất kỳ dòng nhật ký nào được xuất ra bảng điều khiển hoặc tệp báo cáo.
+* **Trực quan hóa kết quả kiểm định:** Kịch bản tự động bóc tách ngữ cảnh mã nguồn xung quanh vị trí lỗi, hiển thị rõ ràng dòng mã đóng vai trò **Source** (dữ liệu đầu vào) và dòng mã đóng vai trò **Sink** (thực thi nhạy cảm) ngay trên giao diện GitHub Actions Step Summary.
+* Báo cáo kiểm định chi tiết được lưu trữ dưới dạng artifact độc lập (`reports/semgrep/report.html` và `reports/sonarqube-report.html`) với thời hạn lưu trữ 30 ngày phục vụ công tác kiểm toán tuân thủ.
+
+#### 2.3.4. Quy trình thẩm định ngoại lệ và xử lý cảnh báo giả (False Positive Handling Protocol)
+Trường hợp một phát hiện từ SonarQube hoặc Semgrep được xác định là cảnh báo giả hoặc rủi ro đã có cơ chế phòng thủ bù trừ ở tầng biên (Compensating Controls tại WAF/Cloudflare):
+1. Kỹ sư phát triển lập biểu mẫu giải trình kỹ thuật gồm đường dẫn tệp tin, dòng mã phát hiện, bằng chứng chứng minh luồng thực thi không thể bị khai thác và cơ chế phòng thủ bổ sung.
+2. Trưởng nhóm An toàn thông tin (SecOps Lead) trực tiếp xác minh lại trên môi trường lab thực nghiệm.
+3. Khi được phê duyệt, ngoại lệ sẽ được xử lý:
+   * Đối với SonarQube: Đánh dấu trạng thái `False Positive` hoặc `Won't Fix` trên giao diện quản trị có ghi kèm mã ticket phê duyệt.
+   * Đối với Semgrep: Chèn chú thích nội dòng `// nosemgrep: <rule-id>` kèm lý do và ngày phê duyệt, hoặc cập nhật trường loại trừ `pattern-not` trong bộ quy tắc `ci/semgrep-local-rules.yml`.
 
 ---
 ## CHƯƠNG 3: ĐÓNG GÓI VÀ TỰ ĐỘNG TRIỂN KHAI LÊN MÁY CHỦ THỰC TẾ
