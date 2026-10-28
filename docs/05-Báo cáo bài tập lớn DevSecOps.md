@@ -555,28 +555,38 @@ graph TD
 
 ### 1.4. Năm kịch bản triển khai hệ thống trong thực tế
 
-Để định hình rõ ràng ranh giới bài toán và cung cấp bức tranh toàn cảnh cho toàn bộ công trình ngay từ đầu, phần này mô hình hóa không gian bài toán triển khai thực tế của hệ thống InlaneWeb Logistics Portal. Trong môi trường công nghiệp, việc chuyển giao một hệ thống từ máy trạm của lập trình viên lên môi trường máy chủ sản xuất không thể chỉ giả định một kịch bản lý tưởng, mà bắt buộc phải chuẩn hóa toàn bộ các tình huống nghiệp vụ, tài nguyên và khả năng chịu lỗi.
+Để định hình rõ ràng ranh giới bài toán và cung cấp bức tranh toàn cảnh cho toàn bộ công trình ngay từ đầu, phần này mô hình hóa không gian bài toán triển khai thực tế của hệ thống InlaneWeb Logistics Portal. Trong môi trường công nghiệp, việc chuyển giao một hệ thống từ máy trạm của lập trình viên lên môi trường máy chủ sản xuất không thể chỉ giả định một kịch bản lý tưởng, mà bắt buộc phải chuẩn hóa toàn bộ các tình huống nghiệp vụ, tài nguyên và khả năng chịu lỗi theo quy trình vận hành tiêu chuẩn.
 
-Dựa trên tài liệu vận hành chuẩn [`docs/04-Hướng dẫn cấu hình và triển khai production.md`](file:///d:/PTIT-DevOps-SonarQube/docs/04-H%C6%B0%E1%BB%9Bng%20d%E1%BA%ABn%20c%E1%BA%A5u%20h%C3%ACnh%20v%C3%A0%20tri%E1%BB%83n%20khai%20production.md), bài toán triển khai được mô hình hóa qua **5 kịch bản thực tiễn cốt lõi**:
+Hệ thống triển khai áp dụng kiến trúc chuyển giao liên tục tách rời (Decoupled Continuous Deployment) giữa hạ tầng giám sát tập trung và tải làm việc nghiệp vụ web, bảo đảm việc cập nhật mã nguồn diễn ra nhanh chóng, sẵn sàng cao (High Availability) và không làm gián đoạn luồng thu thập nhật ký. Toàn bộ chu trình vận hành được thiết kế và kiểm chứng qua **5 kịch bản thực tiễn cốt lõi**:
 
-#### 1.4.1. Kịch bản 1: Khởi động hệ thống lần đầu trên máy chủ mới
-* **Bối cảnh bài toán:** Đặt trong tình huống đưa hệ thống lên một máy chủ Linux VPS hoàn toàn mới, chưa có dữ liệu và chưa có bất kỳ container Docker nào hoạt động trước đó.
-* **Quy trình chuẩn hóa 4 bước:**
-  1. *Thiết lập môi trường nền tảng:* Cài đặt Docker Engine 24+, Docker Compose V2, cấu hình tường lửa UFW (chỉ mở cổng `22` SSH, cổng dịch vụ web và phân quyền người dùng không dùng `root`).
-  2. *Thiết lập mạng nội bộ độc lập:* Khởi tạo mạng bridge `inlaneweb_net` phục vụ việc giao tiếp nội bộ giữa các container mà không cần công khai cổng cơ sở dữ liệu ra ngoài Internet.
-  3. *Ủy quyền mật mã tự động:* Sinh cặp khóa bất đối xứng Ed25519 (`id_ed25519_inlaneweb`), nạp khóa công khai vào `~/.ssh/authorized_keys` của VPS và lưu khóa riêng vào GitHub Secrets (`PROD_SSH_KEY`).
-  4. *Lựa chọn cấu hình nạp ban đầu:*
-     * **Phương án 1A — Triển khai tinh gọn chỉ chạy ứng dụng web:** Dành cho môi trường giới hạn tài nguyên RAM từ 1GB đến 2GB. Kỹ sư chỉ nạp duy nhất tệp [`docker-compose.prod.yml`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/docker-compose.prod.yml), thực hiện kéo 2 hình ảnh `inlaneweb` và `inlaneweb-db` từ GHCR và kích hoạt. Phương án này tối ưu hóa 100% tài nguyên CPU và RAM cho ứng dụng web.
-     * **Phương án 1B — Triển khai toàn diện cả ứng dụng và giám sát:** Nạp bổ sung tệp [`docker-compose.monitoring.yml`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/docker-compose.monitoring.yml), khởi chạy song song toàn bộ cụm Loki 3.0, Promtail 3.0, Grafana 11.0 và tác tử giám sát Autoheal, kích hoạt đầy đủ năng lực quan sát và tự phục hồi ngay từ thời điểm khởi tạo ban đầu.
+#### 1.4.1. Kịch bản 1: Khởi động hệ thống lần đầu trên máy chủ mới (Bootstrap Deployment)
+* **Bối cảnh bài toán:** Đặt trong tình huống đưa hệ thống lên một máy chủ Linux VPS hoàn toàn mới, chưa có dữ liệu và chưa có bất kỳ container Docker nào hoạt động trước đó. Kịch bản này đòi hỏi chuẩn bị đầy đủ hạ tầng nền tảng, thiết lập bảo mật SSH và lựa chọn phương án khởi tạo dịch vụ phù hợp với năng lực phần cứng.
+* **Quy trình chuẩn hóa 5 bước vận hành:**
+  1. *Thiết lập môi trường nền tảng:* Cài đặt Docker Engine 24+ và Docker Compose V2 từ kho lưu trữ chính thức của Docker. Cấu hình tường lửa UFW (Uncomplicated Firewall) bảo vệ máy chủ: chỉ mở cổng `22` cho phiên SSH quản trị, cổng dịch vụ web và phân quyền người dùng phi đặc quyền thuộc nhóm `docker` (`usermod -aG docker $USER`) để vận hành an toàn mà không cần quyền `root`.
+  2. *Thiết lập mạng nội bộ độc lập:* Khởi tạo mạng cầu nối `inlaneweb_net` bằng lệnh `docker network create inlaneweb_net`. Mạng này đóng vai trò phân cách giao tiếp nội bộ giữa các container mà không cần công khai cổng cơ sở dữ liệu (`3306`) hay cổng lưu trữ nhật ký (`3100`) ra ngoài giao diện mạng công cộng.
+  3. *Ủy quyền mật mã tự động qua cặp khóa Ed25519:* Sinh cặp khóa mật mã bất đối xứng độ bảo mật cao:
+     ```bash
+     ssh-keygen -t ed25519 -C "github-actions-cd@inlaneweb" -f ~/.ssh/id_ed25519_inlaneweb -N ""
+     ```
+     Khóa công khai (`id_ed25519_inlaneweb.pub`) được nạp vào tệp `~/.ssh/authorized_keys` trên máy chủ VPS, phân quyền nghiêm ngặt `chmod 600`. Khóa riêng (`id_ed25519_inlaneweb`) được lưu trữ an toàn trong kho bí mật GitHub Secrets với tên biến `PROD_SSH_KEY`.
+  4. *Khai báo các biến môi trường kết nối trong GitHub Secrets:* Để GitHub Actions Runner có thể tự động triển khai, quản trị viên cấu hình 5 biến bí mật trọng yếu trên giao diện kho lưu trữ:
+     * `PROD_HOST`: Địa chỉ IP công cộng hoặc tên miền FQDN của máy chủ VPS.
+     * `PROD_USER`: Tên tài khoản người dùng trên VPS có quyền thực thi Docker (ví dụ: `ubuntu` hoặc `deploy`).
+     * `PROD_SSH_KEY`: Toàn văn khóa riêng Ed25519 phục vụ xác thực không tương tác.
+     * `PROD_PORT`: Cổng SSH quản trị của máy chủ (mặc định: `22`).
+     * `PROD_PATH`: Đường dẫn thư mục triển khai ứng dụng trên VPS (mặc định: `/opt/inlaneweb`).
+  5. *Lựa chọn cấu hình nạp ban đầu theo nguyên lý ảnh tự chứa (Self-contained Images):* Máy chủ VPS tuyệt đối không cần cài đặt Git và không clone mã nguồn dự án. Kỹ sư lựa chọn giữa hai phương án vận hành:
+     * **Phương án 1A — Triển khai tinh gọn chỉ chạy ứng dụng web:** Dành cho môi trường giới hạn tài nguyên RAM từ 1GB đến 2GB. Kỹ sư chỉ nạp tệp điều phối `docker-compose.prod.yml`, thực hiện kéo 2 hình ảnh `inlaneweb` và `inlaneweb-db` từ GitHub Container Registry (GHCR) và kích hoạt. Phương án này tối ưu hóa 100% tài nguyên CPU và RAM cho ứng dụng web.
+     * **Phương án 1B — Triển khai toàn diện cả ứng dụng và cụm giám sát:** Nạp bổ sung tệp điều phối `docker-compose.monitoring.yml`, khởi chạy song song toàn bộ cụm Loki 3.0, Promtail 3.0, Grafana 11.0 và tác tử giám sát Autoheal, kích hoạt đầy đủ năng lực quan sát nhật ký và tự phục hồi ngay từ thời điểm khởi tạo ban đầu.
 
 #### 1.4.2. Kịch bản 2: Tự động triển khai phiên bản mới
-* **Bối cảnh bài toán:** Chu kỳ phát hành tính năng định kỳ từ môi trường phát triển lên Production khi hoàn thành một mốc phiên bản.
+* **Bối cảnh bài toán:** Chu kỳ phát hành tính năng định kỳ từ môi trường phát triển lên Production khi hoàn thành một mốc phiên bản hoặc bản vá nóng.
 * **Chu trình vận hành 5 giai đoạn khép kín:**
   1. *Kiểm soát tại nhánh tích hợp:* Các tính năng được merge vào nhánh `dev` sau khi vượt qua Stage 1 Policy Guard và Stage 2 SonarQube kết hợp Semgrep.
-  2. *Mở Pull Request phát hành chính thức:* Trưởng nhóm tạo PR từ `dev` vào `main` với tiêu đề tuân thủ nghiêm ngặt biểu thức chính quy: `release: vX.Y.Z - <mô tả>`.
-  3. *Tiền thẩm định môi trường tạm thời tại Stage 3:* GitHub Actions Runner kích hoạt bộ kiểm thử 21 trường hợp trong [`ci/validate_configs.py`](file:///d:/PTIT-DevOps-SonarQube/ci/validate_configs.py), dựng môi trường thử nghiệm tạm thời, xác thực endpoint `/health` trả về HTTP 200 và Loki `/ready`, sau đó đóng gói hình ảnh bất biến gán nhãn commit SHA và đẩy lên GHCR.
-  4. *Kích hoạt chuyển giao liên tục tại Stage 4:* Khi PR được hợp nhất vào `main`, sự kiện push kích hoạt runner thiết lập phiên SSH Ed25519 tới máy chủ VPS.
-  5. *Cập nhật không làm gián đoạn dịch vụ:* Kéo hình ảnh mới nhất từ GHCR và thực thi tái tạo container:
+  2. *Mở Pull Request phát hành chính thức:* Trưởng nhóm tạo Pull Request từ `dev` vào `main` với tiêu đề tuân thủ nghiêm ngặt biểu thức chính quy: `release: vX.Y.Z - <mô tả>`.
+  3. *Tiền thẩm định môi trường tạm thời tại Stage 3:* GitHub Actions Runner kích hoạt bộ kiểm thử 21 trường hợp trong kiểm định cấu hình tự động, dựng môi trường thử nghiệm tạm thời (Ephemeral Stack), xác thực endpoint `/health` trả về HTTP 200 và Loki `/ready`, sau đó đóng gói hình ảnh bất biến gán nhãn commit SHA và đẩy lên GHCR.
+  4. *Kích hoạt chuyển giao liên tục tại Stage 4:* Khi Pull Request được hợp nhất vào `main`, sự kiện push kích hoạt runner thiết lập phiên SSH Ed25519 tới máy chủ VPS.
+  5. *Cập nhật không làm gián đoạn dịch vụ (Zero-Downtime Rollout):* Kéo hình ảnh mới nhất từ GHCR và thực thi tái tạo container:
      ```bash
      INLANEWEB_IMAGE=ghcr.io/wtfwhoyouare/inlaneweb:<sha> \
      INLANEWEB_DB_IMAGE=ghcr.io/wtfwhoyouare/inlaneweb-db:<sha> \
@@ -584,44 +594,44 @@ Dựa trên tài liệu vận hành chuẩn [`docs/04-Hướng dẫn cấu hình
      ```
      Toàn bộ tiến trình diễn ra dưới 15 giây, dịch vụ chuyển tiếp lưu lượng liền mạch mà không làm rớt kết nối của người dùng.
 
-#### 1.4.3. Kịch bản 3: Triển khai chọn lọc theo dịch vụ thay đổi
+#### 1.4.3. Kịch bản 3: Triển khai chọn lọc theo dịch vụ thay đổi (Selective & Decoupled Deployment)
 * **Bối cảnh bài toán:** Tối ưu hóa tài nguyên máy chủ và loại bỏ điểm mù giám sát khi các thay đổi biệt lập chỉ thuộc về hạ tầng giám sát hoặc chỉ thuộc về nghiệp vụ web và database.
 * **Cơ chế phân luồng thực thi:**
   * Thông qua lệnh so sánh sai khác tệp tin `git diff --name-only HEAD~1 HEAD`, đường ống phân tích phạm vi thay đổi:
-    * **Nhánh thay đổi giám sát thuần túy (`InlaneWeb/monitoring/**`):** Đường ống bỏ qua hoàn toàn Job 2 tải làm việc web, chỉ kích hoạt Job 1 thực thi cập nhật khối giám sát qua lệnh `docker compose -f docker-compose.monitoring.yml up -d`. Vùng chứa web và database hoàn toàn không bị tác động, người dùng không nhận biết được sự thay đổi.
-    * **Nhánh thay đổi mã nguồn nghiệp vụ (`InlaneWeb/web/**`, `InlaneWeb/db/**`):** Đường ống bỏ qua Job 1, chỉ kích hoạt Job 2. Khối hạ tầng quan sát Loki và Promtail hoạt động liên tục 24/7, ghi nhận trọn vẹn toàn bộ các sự kiện khởi động lại của container web mà không để xảy ra bất kỳ điểm mù giám sát nào.
+    * **Nhánh thay đổi giám sát thuần túy (`InlaneWeb/monitoring/**`):** Đường ống bỏ qua hoàn toàn Job 2 tải làm việc web, chỉ kích hoạt Job 1 thực thi cập nhật khối giám sát qua lệnh `docker compose -f docker-compose.monitoring.yml up -d --remove-orphans`. Vùng chứa web và database hoàn toàn không bị tác động, người dùng không nhận biết được sự thay đổi.
+    * **Nhánh thay đổi mã nguồn nghiệp vụ (`InlaneWeb/web/**`, `InlaneWeb/db/**`):** Đường ống bỏ qua Job 1, chỉ kích hoạt Job 2. Khối hạ tầng quan sát Loki và Promtail hoạt động liên tục 24/7, ghi nhận trọn vẹn toàn bộ các sự kiện khởi động lại của container web mà không để xảy ra bất kỳ điểm mù giám sát nào (Zero Blind-spot Logging).
 
 #### 1.4.4. Kịch bản 4: Xử lý độ trễ khởi động của cơ sở dữ liệu
-* **Bối cảnh bài toán:** Trong các phiên bản phát hành lớn có nạp các script cập nhật cấu trúc bảng dữ liệu, hoặc khi MariaDB cần thời gian khởi tạo vùng đệm bộ nhớ, container database sẽ cần từ 10 đến 30 giây để sẵn sàng tiếp nhận kết nối. Nếu container web khởi động đồng thời, các truy vấn đầu tiên sẽ gặp lỗi từ chối kết nối khiến endpoint `/health` trả về mã lỗi HTTP 503.
+* **Bối cảnh bài toán:** Trong các phiên bản phát hành lớn có nạp các script cập nhật cấu trúc bảng dữ liệu, hoặc khi MariaDB cần thời gian khởi tạo vùng đệm bộ nhớ (InnoDB Buffer Pool), container database sẽ cần từ 10 đến 30 giây để sẵn sàng tiếp nhận kết nối. Nếu container web khởi động đồng thời, các truy vấn đầu tiên sẽ gặp lỗi từ chối kết nối khiến endpoint `/health` trả về mã lỗi HTTP 503.
 * **Cơ chế xử lý lỗi chủ động:**
   * Kịch bản CI/CD không vội vã đánh giá thất bại mà kích hoạt thuật toán thăm dò thích ứng:
-    $$\text{Tình trạng} = \text{Probe}(\text{URL} = \texttt{http://127.0.0.1:8080/health}, \quad \Delta t = 2\text{s}, \quad N_{max} = 30)$$
-  * Runner duy trì vòng lặp kiểm tra trạng thái sức khỏe định kỳ mỗi 2 giây, cho phép chờ đợi tối đa lên tới 60 giây.
-  * Khi cơ sở dữ liệu hoàn tất việc nạp dữ liệu và phản hồi bình thường, endpoint `/health` trả về mã HTTP 200, quy trình lập tức xác nhận thành công.
-  * Nếu vượt quá ngưỡng 30 chu kỳ mà hệ thống vẫn không phản hồi, cơ chế chẩn đoán sự cố tự động được kích hoạt, trích xuất 50 dòng log cuối cùng của cả hai container `ilfreight_web` và `ilfreight_db` hiển thị trực tiếp lên bảng điều khiển để kỹ sư điều tra nguyên nhân.
+    $$\text{Tình trạng} = \text{Probe}(\text{URL} = \texttt{http://127.0.0.1:8088/health}, \quad \Delta t = 3\text{s}, \quad N_{max} = 30)$$
+  * Runner duy trì vòng lặp kiểm tra trạng thái sức khỏe định kỳ mỗi 3 giây, cho phép chờ đợi tối đa lên tới 90 giây.
+  * Khi cơ sở dữ liệu hoàn tất việc nạp dữ liệu và phản hồi bình thường, endpoint `/health` trả về mã HTTP 200, quy trình lập tức xác nhận thành công mà không cần chờ hết chu kỳ.
+  * Nếu vượt quá ngưỡng 30 chu kỳ mà hệ thống vẫn không phản hồi, cơ chế chẩn đoán sự cố tự động được kích hoạt, trích xuất 50 dòng log cuối cùng của cả hai container `ilfreight_web` và `ilfreight_db` hiển thị trực tiếp lên bảng điều khiển GitHub Actions để kỹ sư lập tức điều tra nguyên nhân.
 
-#### 1.4.5. Kịch bản 5: Khôi phục phiên bản cũ khi gặp sự cố
+#### 1.4.5. Kịch bản 5: Khôi phục phiên bản cũ khi gặp sự cố (Disaster Recovery & Instant Rollback)
 * **Bối cảnh bài toán:** Đảm bảo khả năng phục hồi của hệ thống khi phiên bản vừa phát hành phát sinh lỗi logic nghiêm trọng, rò rỉ dữ liệu hoặc suy giảm hiệu năng ngoài dự kiến trong môi trường thực tế.
 * **Quy trình đảo ngược trạng thái qua 2 phương án:**
-  * **Phương án 5A — Khôi phục tức thời mức hạ tầng qua SSH:** Nhờ cơ chế đóng gói ảnh bất biến có gắn thẻ băm commit SHA trên GHCR, kỹ sư vận hành có thể đảo ngược phiên bản đang chạy về phiên bản ổn định liền trước chỉ trong vòng 10 giây thông qua một câu lệnh duy nhất trên máy chủ VPS:
+  * **Phương án 5A — Khôi phục tức thời mức hạ tầng qua SSH:** Nhờ cơ chế đóng gói ảnh bất biến có gắn thẻ băm commit SHA trên GHCR, kỹ sư vận hành có thể đảo ngược phiên bản đang chạy về phiên bản ổn định liền trước chỉ trong vòng dưới 10 giây thông qua một câu lệnh duy nhất trên máy chủ VPS:
      ```bash
      cd /opt/inlaneweb
      INLANEWEB_IMAGE=ghcr.io/wtfwhoyouare/inlaneweb:<sha_on_dinh> \
      INLANEWEB_DB_IMAGE=ghcr.io/wtfwhoyouare/inlaneweb-db:<sha_on_dinh> \
      docker compose -f docker-compose.prod.yml up -d --remove-orphans
      ```
-     Nhờ cơ chế gắn kết Docker Volume `db_data` bền vững, toàn bộ dữ liệu nghiệp vụ của cơ sở dữ liệu hoàn toàn không bị ảnh hưởng hay thất thoát trong quá trình đảo ngược.
+     Nhờ cơ chế gắn kết Docker Volume `db_data` bền vững, toàn bộ dữ liệu nghiệp vụ của cơ sở dữ liệu hoàn toàn không bị ảnh hưởng hay thất thoát trong quá trình đảo ngược (RPO = 0).
   * **Phương án 5B — Đảo ngược phiên bản có truy vết lịch sử qua Git Revert:** Kỹ sư tạo một Revert PR đối với commit lỗi trên nhánh `main`. Ngay khi PR được duyệt, đường ống CI/CD sẽ tự động kích hoạt Stage 4, kéo đúng hình ảnh đã được kiểm định của commit trước đó trên GHCR về triển khai lại trên VPS. Cách tiếp cận này bảo đảm tính toàn vẹn tuyệt đối của lịch sử kiểm toán mã nguồn.
 
 #### 1.4.6. Bảng so sánh 5 kịch bản triển khai
 
-| Kịch bản Triển khai | Tác nhân Kích hoạt | Thời gian Phục hồi | Mất mát Dữ liệu | Thời gian Gián đoạn | Cơ chế Đảm bảo Tính Toàn vẹn |
+| Kịch bản Triển khai | Tác nhân Kích hoạt | Thời gian Phục hồi (RTO) | Mất mát Dữ liệu (RPO) | Thời gian Gián đoạn Dịch vụ | Cơ chế Đảm bảo Tính Toàn vẹn |
 | :--- | :--- | :---: | :---: | :---: | :--- |
-| **1. Khởi tạo máy chủ mới** | Kỹ sư SysAdmin (Thủ công) | 3 - 5 phút | 0 giây | Môi trường mới thiết lập | Khởi tạo Volume `db_data` sạch |
+| **1. Khởi tạo máy chủ mới** | Kỹ sư SysAdmin (Thủ công) | 3 - 5 phút | 0 giây | Môi trường mới thiết lập | Khởi tạo Volume `db_data` độc lập |
 | **2. Tự động cập nhật phiên bản mới** | Merge PR `main` (Tự động) | 10 - 15 giây | 0 giây | **Không gián đoạn (0s)** | Thử nghiệm tạm thời & Image Tag bất biến |
 | **3. Cập nhật theo dịch vụ thay đổi** | Commit thành phần (Tự động) | 5 - 8 giây | 0 giây | **Không gián đoạn (0s)** | Tách biệt Job Compose độc lập |
 | **4. Xử lý trễ khởi động database** | Pipeline Retry Loop (Tự động)| 20 - 45 giây | 0 giây | **Không gián đoạn (0s)** | Vòng lặp 30 lần thích ứng & Dump log |
-| **5. Khôi phục phiên bản cũ** | Kỹ sư On-Call / Git Revert | 10 - 20 giây | 0 giây | < 5 giây (Tái tạo Web) | Kéo Image Tag ổn định cũ trên GHCR |
+| **5. Khôi phục phiên bản cũ** | Kỹ sư On-Call / Git Revert | < 10 giây | 0 giây | < 5 giây (Tái tạo Web) | Kéo Image Tag ổn định cũ trên GHCR |
 
 ---
 ## CHƯƠNG 2: QUẢN LÝ MÃ NGUỒN VÀ QUÉT LỖ HỔNG BẢO MẬT Ở CÁC GIAI ĐOẠN ĐẦU
@@ -1359,7 +1369,7 @@ Phần này phân tích 6 sự cố kỹ thuật thực tế phát sinh trong qu
 
 ### 5.4. Các kịch bản tấn công thực tế và cách phát hiện qua log
 
-Nhóm nghiên cứu đã thực nghiệm trực tiếp 14 kịch bản khai thác an ninh trên hệ thống thực nghiệm [`InlaneWeb/writeup.md`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/writeup.md). Phần này phân tích chi tiết 4 kịch bản đại diện:
+Trong quá trình đánh giá an ninh thực nghiệm, hệ thống InlaneWeb Logistics Portal đã được nhóm nghiên cứu tiến hành kiểm thử xâm nhập chuyên sâu với 14 kịch bản khai thác lỗ hổng tiêm mã SQL Injection (bao quát từ các kỹ thuật khai thác dựa trên thông báo lỗi XPath, kỹ thuật kết hợp dữ liệu UNION-based, đến các kỹ thuật khai thác mù Boolean-based và Time-based). Dưới đây là phân tích chi tiết 4 kịch bản điển hình đại diện cho năng lực giám sát và phát hiện xâm nhập của hệ thống:
 
 #### 5.4.1. Tấn công trích xuất dữ liệu bằng thông báo lỗi XPath
 * **Điểm cuối bị tấn công:** `GET /ports/{code}` (Lỗ hổng V2).
@@ -1488,7 +1498,7 @@ Nghiên cứu đã hoàn thành toàn diện các mục tiêu thực tế và k�
 1. **Xây dựng hoàn chỉnh chu trình DevSecOps tự động hóa 4 giai đoạn độc lập:** Hiện thực hóa thành công quy trình tự động hóa khép kín từ khâu kiểm soát mã nguồn cục bộ tại máy lập trình viên, phân tích an ninh tĩnh đa chiều trên đám mây, kiểm thử tích hợp trên môi trường tạm thời, cho đến triển khai an toàn lên máy chủ Production thực tế có chứng chỉ SSL.
 2. **Đưa việc kiểm tra an ninh về sớm ngay khi viết mã:** Rút ngắn thời gian kiểm định an ninh từ việc chờ đợi đến cuối kỳ xuống còn **dưới 3 phút** ngay trên giao diện GitHub Actions, giúp lập trình viên phát hiện và khắc phục sai phạm ngay tại thời điểm tạo Pull Request.
 3. **Vận hành tách biệt độc lập giữa ứng dụng nghiệp vụ và hạ tầng giám sát:** Chứng minh tính hiệu quả của mô hình phân tách hai nhánh Compose độc lập: việc nâng cấp mã nguồn ứng dụng web diễn ra nhanh chóng mà cụm công cụ giám sát và thu thập log vẫn duy trì hoạt động liên tục 24/7, xóa bỏ hoàn toàn điểm mù quan sát trong quá trình phát hành.
-4. **Đóng góp bộ tài liệu kỹ thuật chuẩn công nghiệp:** Cung cấp hệ thống 5 tài liệu đặc tả kiến trúc, hướng dẫn triển khai, kịch bản thử nghiệm tấn công và báo cáo tổng kết chi tiết trong thư mục [`docs/`](file:///d:/PTIT-DevOps-SonarQube/docs), tạo tiền đề cho việc chuẩn hóa quy trình DevOps tại các đơn vị phát triển phần mềm.
+4. **Đóng góp bộ tài liệu kỹ thuật chuẩn công nghiệp:** Cung cấp bộ hồ sơ đặc tả kiến trúc, quy trình chuyển giao liên tục (Deployment Runbook), quy tắc kiểm soát mã nguồn và kịch bản thực nghiệm an ninh toàn diện, tạo tiền đề cho việc chuẩn hóa quy trình DevOps tại các đơn vị phát triển phần mềm.
 
 #### 6.1.1. Bảng phân tích tối ưu tổng chi phí sở hữu (TCO) và hiệu quả kinh tế
 
@@ -1542,6 +1552,6 @@ Một trong những đóng góp thực tiễn quan trọng của đề tài là 
 * **Minh chứng 5:** Bộ kiểm tra thẩm định cấu hình hạ tầng 21/21 test cases: [`ci/validate_configs.py`](file:///d:/PTIT-DevOps-SonarQube/ci/validate_configs.py).
 * **Minh chứng 6:** Tệp điều phối triển khai sản xuất bảo toàn dữ liệu MariaDB: [`InlaneWeb/docker-compose.prod.yml`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/docker-compose.prod.yml).
 * **Minh chứng 7:** Tệp điều phối hạ tầng giám sát tập trung bền vững 24/7: [`InlaneWeb/docker-compose.monitoring.yml`](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/docker-compose.monitoring.yml).
-* **Minh chứng 8:** Toàn văn hồ sơ thực nghiệm và phân tích 14 vector tấn công SQL Injection: [InlaneWeb/writeup.md](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/writeup.md).
+* **Minh chứng 8:** Hồ sơ thực nghiệm chi tiết và mã khai thác thực tế của 14 vector tấn công SQL Injection trên hệ thống InlaneWeb Logistics Portal.
 * **Minh chứng 9:** Cổng giám sát an ninh tập trung trực tuyến thời gian thực: `https://grafana.ecotools.online` (Bảo mật qua xác thực tài khoản quản trị viên, vô hiệu hóa hoàn toàn Anonymous Access).
 * **Minh chứng 10:** Kiến trúc điều phối mạng Docker nội bộ (`inlaneweb_net`) và cơ chế định tuyến Reverse Proxy Nginx Proxy Manager đa cổng độc lập.
