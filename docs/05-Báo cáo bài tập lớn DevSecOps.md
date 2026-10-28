@@ -787,20 +787,26 @@ Sau khi vượt qua bước kiểm tra cú pháp nhanh, hệ thống kích hoạ
 #### 2.3.2. Dò luồng dữ liệu độc hại bằng Semgrep
 Khác với các công cụ quét dựa trên biểu thức chính quy đơn thuần vốn tạo ra tỷ lệ cảnh báo giả rất cao, Semgrep Engine sử dụng phương pháp phân tích ngữ nghĩa và truy vết luồng dữ liệu ô nhiễm (Semantic Taint Analysis):
 
-* **Mô hình hóa bài toán truy vết dữ liệu:**
-  Một biến dữ liệu $x$ được coi là bị ô nhiễm (Tainted Variable) khi nó bắt nguồn từ một nguồn đầu vào không tin cậy của người dùng:
+* **Mô hình hóa bài toán truy vết dữ liệu (Taint Flow Formalization):**
+  Một biến dữ liệu $x$ được xác định là bị ô nhiễm (*Tainted Variable*) khi nó bắt nguồn từ một điểm tiếp nhận dữ liệu không tin cậy của người dùng (**Source**):
   
-  $$\text{Source} \in \{\texttt{\$_GET}, \texttt{\$_POST}, \texttt{\$_REQUEST}, \texttt{\$_COOKIE}, \texttt{\$_SERVER['QUERY\_STRING']}\}$$
+  $$\text{Source} \in \{\text{Inputs}_{\text{untrusted}}\}$$
   
-  Biến này lan truyền qua đồ thị dòng điều khiển (Control Flow Graph - CFG) mà không đi qua bất kỳ bộ lọc làm sạch hợp lệ nào:
+  Trong môi trường ứng dụng PHP, các điểm đón dữ liệu này bao gồm các biến toàn cục: `$_GET`, `$_POST`, `$_REQUEST`, `$_COOKIE`, và `$_SERVER['QUERY_STRING']`.
+
+  Biến này lan truyền qua đồ thị dòng điều khiển (Control Flow Graph - CFG) mà không đi qua bất kỳ cơ chế lọc hoặc làm sạch hợp lệ nào (**Sanitizer**):
   
-  $$\text{Sanitizer} \notin \{\texttt{mysqli\_real\_escape\_string}, \texttt{intval}, \texttt{pdo->prepare}\}$$
+  $$\text{Sanitizer} \in \{\text{Functions}_{\text{safe}}\}$$
   
-  Nếu dữ liệu bị ô nhiễm đi tới điểm tiếp nhận thực thi nguy hiểm:
+  Các cơ chế phòng vệ hợp lệ gồm: hàm xử lý chuỗi an toàn `mysqli_real_escape_string()`, ép kiểu số học `intval()`, hoặc sử dụng kỹ thuật tham số hóa câu truy vấn Prepared Statements (`$pdo->prepare()`).
+
+  Nếu luồng dữ liệu ô nhiễm không được làm sạch và chạm tới các điểm tiếp nhận thực thi nhạy cảm (**Sink**):
   
-  $$\text{Sink} \in \{\texttt{mysqli\_query}, \texttt{mysqli\_real\_query}, \texttt{mysqli\_multi\_query}, \texttt{PDO::query}\}$$
+  $$\text{Sink} \in \{\text{Functions}_{\text{critical}}\}$$
   
-  Semgrep sẽ lập tức xác lập một vi phạm an ninh nghiêm trọng tương ứng với mã định danh lỗ hổng CWE-89 cho lỗi tiêm lệnh SQL.
+  Bao gồm các hàm thực thi truy vấn cơ sở dữ liệu: `mysqli_query()`, `mysqli_real_query()`, `mysqli_multi_query()`, hoặc `PDO::query()`.
+
+  Khi đường truyền từ **Source** $\to$ **Sink** thỏa mãn điều kiện không có **Sanitizer**, Semgrep Engine sẽ lập tức xác lập một vi phạm an ninh nghiêm trọng tương ứng với mã định danh lỗ hổng **CWE-89** (SQL Injection).
 
 * **Tập luật nhận diện tùy biến địa phương (`ci/semgrep-local-rules.yml`):**
   Nhóm nghiên cứu đã phát triển bộ quy tắc chuyên biệt bổ sung vào hệ thống kiểm tra, tập trung phát hiện các mẫu vi phạm đặc thù trong kiến trúc ứng dụng:
@@ -877,9 +883,12 @@ Một trong những nguyên nhân hàng đầu khiến hệ thống Production s
 
 Sau khi môi trường tạm thời vượt qua toàn bộ các bài kiểm tra với mã phản hồi HTTP 200, hệ thống tiến hành đóng gói các vùng chứa thành các Docker Image bất biến:
 
-$$\text{Hình ảnh Web:} \quad \texttt{ghcr.io/wtfwhoyouare/inlaneweb:}\{\text{commit\_sha}\} \quad \text{và} \quad \texttt{:latest}$$
-
-$$\text{Hình ảnh Database:} \quad \texttt{ghcr.io/wtfwhoyouare/inlaneweb-db:}\{\text{commit\_sha}\} \quad \text{và} \quad \texttt{:latest}$$
+* **Hình ảnh dịch vụ Web:**
+  * Thẻ định danh phiên bản bất biến: `ghcr.io/wtfwhoyouare/inlaneweb:<commit_sha>`
+  * Thẻ định danh phiên bản mới nhất: `ghcr.io/wtfwhoyouare/inlaneweb:latest`
+* **Hình ảnh dịch vụ Cơ sở dữ liệu:**
+  * Thẻ định danh phiên bản bất biến: `ghcr.io/wtfwhoyouare/inlaneweb-db:<commit_sha>`
+  * Thẻ định danh phiên bản mới nhất: `ghcr.io/wtfwhoyouare/inlaneweb-db:latest`
 
 Việc đẩy các hình ảnh đã qua kiểm định lên GHCR đảm bảo nguyên tắc: một hình ảnh duy nhất được kiểm thử và đem đi triển khai trên toàn bộ các môi trường, loại bỏ hoàn toàn các sai khác do môi trường biên dịch gây ra.
 
