@@ -94,8 +94,9 @@ if ($path === '/login')  { page('login.php'); }
 if ($path === '/logout') { page('logout.php'); }
 
 // Trang chu & noi dung
-if ($path === '/')     { page('home.php'); }
-if ($path === '/news') { page('news.php'); }
+if ($path === '/')      { page('home.php'); }
+if ($path === '/news')  { page('news.php'); }
+if ($path === '/guide') { page('guide.php'); }                       // ?doc= -> LFI / Path Traversal
 
 // Cang bien
 if ($path === '/ports') { page('ports.php'); }                       // ?q=  -> UNION

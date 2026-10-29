@@ -27,8 +27,11 @@ render_header('Trang chủ');
 </div>
 
 <div class="card">
-    <h2>Dịch vụ</h2>
+    <h2>Dịch vụ &amp; Quy chuẩn</h2>
     <p class="muted">Freight forwarding · Port handling · Customs clearance · Warehousing · Last-mile delivery</p>
+    <div style="margin-top: 14px; display: flex; gap: 10px;">
+        <a class="btn btn-sm" href="/guide">Tra cứu Cẩm nang &amp; Quy chuẩn Vận tải &rarr;</a>
+    </div>
 </div>
 <?php
 render_footer();
