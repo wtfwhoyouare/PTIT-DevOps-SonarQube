@@ -10,7 +10,7 @@
 | **Khóa / Hệ đào tạo** | Khóa 2022 – 2027 (Khóa D22) / Đại học chính quy ngành An toàn thông tin |
 | **Thời gian thực hiện** | Học kỳ 1, Năm học 2026 – 2027 (Hoàn thành: Tháng 10/2026) |
 | **Mã nguồn dự án** | `https://github.com/wtfwhoyouare/PTIT-DevOps-SonarQube` |
-| **Trưởng nhóm** | Nguyễn Giang Nam — MSV: B22DCCN539 |
+| **Trưởng nhóm** | Nguyễn Giang Nam |
 
 ---
 
@@ -137,11 +137,11 @@ Nhóm nghiên cứu gồm 5 sinh viên, phân bổ trách nhiệm theo mô hình
 
 | Thành viên thực hiện | Vai trò trong dự án | Nội dung công việc phụ trách | Mức độ đóng góp | Vấn đề an toàn chủ trì (Chương 5) |
 | :--- | :--- | :--- | :---: | :--- |
-| **Nguyễn Giang Nam**<br>*(Trưởng nhóm / B22DCCN539)* | Kiến trúc sư DevSecOps | **A / R**: Thiết kế tổng thể đường ống CI/CD, viết Policy Guard Stage 1, cấu hình triển khai SSH Stage 4. | 100% | Kiểm soát thay đổi mã nguồn & phân nhánh (NĐ 13 Đ.13) |
-| **Nguyễn Đình Hải**<br>*(B22DCCN271)* | Kỹ sư An ninh Phần mềm | **R**: Tích hợp SAST Stage 2 với SonarQube & Semgrep, cấu hình tập luật địa phương, xuất báo cáo an ninh. | 100% | Lỗ hổng SQL Injection làm rò rỉ dữ liệu (NĐ 13 Đ.9 & GDPR) |
-| **Đào Xuân Mạnh**<br>*(B22DCCN512)* | Kỹ sư Kiểm định Chất lượng | **R**: Kiểm soát dữ liệu xác thực, phát hiện chuỗi hardcoded credentials, cấu hình Quality Gate chặn lỗi. | 100% | Lưu trữ dữ liệu xác thực & mật khẩu gán cứng (NĐ 13 Đ.13) |
-| **Lê Đức Anh**<br>*(B22DCCN085)* | Kỹ sư Tự động hóa Hạ tầng | **C / R**: Xây dựng bộ công cụ kiểm thử cấu hình tĩnh 21 trường hợp (`ci/validate_configs.py`), thiết lập mạng cô lập. | 100% | Mất an toàn cấu hình triển khai & lộ cổng CSDL (GDPR Art. 32) |
-| **Nguyễn Phương Mai**<br>*(B22DCCN521)* | Kỹ sư Giám sát & Vận hành | **C / I**: Thiết lập Promtail, Loki, Grafana; xây dựng 8 panel LogQL an ninh thời gian thực, cấu hình Autoheal. | 100% | Thiếu hụt giám sát truy vết & ứng phó sự cố (NĐ 13 Đ.17) |
+| **Nguyễn Giang Nam**<br>*(Trưởng nhóm)* | Kiến trúc sư DevSecOps | **A / R**: Thiết kế tổng thể đường ống CI/CD, viết Policy Guard Stage 1, cấu hình triển khai SSH Stage 4. | 100% | Kiểm soát thay đổi mã nguồn & phân nhánh (NĐ 13 Đ.13) |
+| **Nguyễn Đình Hải** | Kỹ sư An ninh Phần mềm | **R**: Tích hợp SAST Stage 2 với SonarQube & Semgrep, cấu hình tập luật địa phương, xuất báo cáo an ninh. | 100% | Lỗ hổng SQL Injection làm rò rỉ dữ liệu (NĐ 13 Đ.9 & GDPR) |
+| **Đào Xuân Mạnh** | Kỹ sư Kiểm định Chất lượng | **R**: Kiểm soát chất lượng mã nguồn, phát hiện lỗ hổng LFI (CWE-22) và Reflected XSS (CWE-79), cấu hình Quality Gate chặn lỗi. | 100% | Lỗ hổng LFI & Reflected XSS trong InlaneWeb (NĐ 13 Đ.13 & GDPR) |
+| **Lê Đức Anh** | Kỹ sư Tự động hóa Hạ tầng | **C / R**: Xây dựng bộ công cụ kiểm thử cấu hình tĩnh 21 trường hợp (`ci/validate_configs.py`), thiết lập mạng cô lập. | 100% | Mất an toàn cấu hình triển khai & lộ cổng CSDL (GDPR Art. 32) |
+| **Nguyễn Phương Mai** | Kỹ sư Giám sát & Vận hành | **C / I**: Thiết lập Promtail, Loki, Grafana; xây dựng 8 panel LogQL an ninh thời gian thực, cấu hình Autoheal. | 100% | Thiếu hụt giám sát truy vết & ứng phó sự cố (NĐ 13 Đ.17) |
 
 *(Quy ước RACI: **R** - Responsible; **A** - Accountable; **C** - Consulted; **I** - Informed).*
 
@@ -529,13 +529,13 @@ Nhằm đáp ứng toàn diện yêu cầu đánh giá an toàn ứng dụng và
 | :--- | :--- | :---: | :---: | :--- | :---: |
 | **1. Nguyễn Giang Nam**<br>*(Trưởng nhóm)* | Kiểm soát thay đổi mã nguồn và quản trị phân nhánh | **Triển khai & Vận hành** | **Pha Code / Commit**<br>*(Stage 1)* | **Nghị định 13/2023:** Điều 13 Khoản 1<br>**GDPR:** Article 25 (By Design) | **Policy-as-Code**<br>*(Python Harness)* |
 | **2. Nguyễn Đình Hải** | Lỗ hổng tiêm mã SQL làm rò rỉ dữ liệu cá nhân người dùng | **Mã nguồn** | **Pha Test / SAST**<br>*(Stage 2)* | **Nghị định 13/2023:** Điều 9 Khoản 2<br>**GDPR:** Article 32 (Security) | **Security-as-Code**<br>*(Semgrep Taint Flow)* |
-| **3. Đào Xuân Mạnh** | Lưu trữ dữ liệu xác thực và mật khẩu gán cứng trong mã nguồn | **Mã nguồn** | **Pha Build / Gate**<br>*(Stage 2)* | **Nghị định 13/2023:** Điều 13 Khoản 2<br>**GDPR:** Article 5(1)(f) | **Security-as-Code**<br>*(SonarQube & Semgrep)* |
+| **3. Đào Xuân Mạnh** | Lỗ hổng Local File Inclusion (CWE-22) và Reflected XSS (CWE-79) | **Mã nguồn** | **Pha Build / Gate**<br>*(Stage 2)* | **Nghị định 13/2023:** Điều 13 Khoản 2<br>**GDPR:** Article 5(1)(f) | **Security-as-Code**<br>*(SonarQube & Semgrep)* |
 | **4. Lê Đức Anh** | Mất an toàn cấu hình triển khai và nguy cơ lộ cổng cơ sở dữ liệu | **Triển khai & Vận hành** | **Pha Release / Deploy**<br>*(Stage 3 & 4)* | **Nghị định 13/2023:** Điều 13 Khoản 1<br>**GDPR:** Article 32 (Resilience) | **Security-as-Code**<br>*(Config Validator & IaC)* |
 | **5. Nguyễn Phương Mai** | Thiếu hụt giám sát truy vết và ứng phó sự cố rò rỉ dữ liệu | **Triển khai & Vận hành** | **Pha Monitor / Audit**<br>*(Stage 4 & Ops)* | **Nghị định 13/2023:** Điều 13 Khoản 3<br>**GDPR:** Article 33 (72h Notice) | **Observability-as-Code**<br>*(Promtail & Loki 3.0)* |
 
 * **5.1.1. Nguyễn Giang Nam — Quản trị phân nhánh và Policy-as-Code:** Thiếu kiểm soát nhánh khiến mã độc hoặc cửa sau có thể bị đẩy thẳng lên `main`, vi phạm nguyên tắc bảo mật thiết kế (Điều 13 NĐ 13/2023; Điều 25 GDPR). Công cụ `ci/policy_guard.py` tại Stage 1 khóa chặt nhánh chính, bắt buộc 100% thay đổi phải qua Pull Request và kiểm tra cú pháp Conventional Commits.
 * **5.1.2. Nguyễn Đình Hải — Phòng chống SQLi bảo vệ dữ liệu cá nhân:** Nối chuỗi biến người dùng vào SQL (CWE-89) gây rò rỉ danh bạ, địa chỉ và vận đơn (Điều 9 Khoản 2 NĐ 13/2023; Điều 32 GDPR). Bộ luật Semgrep Taint Flow địa phương tại Stage 2 truy vết luồng dữ liệu ô nhiễm từ nguồn (`$_GET`, `$_POST`) tới điểm chìm nguy hiểm (`query`), lập tức chặn đứng mã lỗi.
-* **5.1.3. Đào Xuân Mạnh — Triệt tiêu mật khẩu gán cứng trong mã nguồn:** Gán cứng mật khẩu CSDL hoặc API Secret vào mã nguồn (CWE-798) tạo lỗ hổng rò rỉ nghiêm trọng (Điều 13 Khoản 2 NĐ 13/2023; Điều 5(1)(f) GDPR). Bộ quét SonarQube Secrets Engine kết hợp phân tích Shannon Entropy đánh trượt Quality Gate ngay khi phát hiện chuỗi khóa bí mật.
+* **5.1.3. Đào Xuân Mạnh — Ngăn chặn LFI và Reflected XSS bảo vệ dữ liệu:** Lỗ hổng Local File Inclusion (`/guide?doc=`) và Reflected XSS (`/ports?q=`) cho phép kẻ tấn công đọc tệp nhạy cảm `/etc/passwd`, rò rỉ mã nguồn cấu hình CSDL `db.php` và đánh cắp phiên người dùng (Điều 13 Khoản 2 NĐ 13/2023; Điều 5(1)(f) GDPR). Bộ quy tắc SonarQube (`php:S2083`, `php:S5131`) kết hợp Semgrep đánh trượt Quality Gate ngay khi phát hiện hàm `include` và `echo` thiếu whitelist hoặc hàm kiểm soát `basename()`, `htmlspecialchars()`.
 * **5.1.4. Lê Đức Anh — Thẩm định cấu hình IaC và an toàn hạ tầng:** Ánh xạ cổng `3306:3306` ra ngoài Internet tạo nguy cơ bị brute-force và khai thác từ xa (Điều 13 Khoản 1 NĐ 13/2023; Điều 32 GDPR). Bộ kiểm thử `ci/validate_configs.py` thực thi 21 test case tự động, bảo đảm cổng 3306 chỉ mở nội bộ trong Docker Network `inlaneweb_net`.
 * **5.1.5. Nguyễn Phương Mai — Giám sát an ninh và ứng phó sự cố rò rỉ dữ liệu:** Thiếu giám sát làm mất "thời gian vàng" ứng phó sự cố và vi phạm thời hạn báo cáo 72 giờ (Điều 13 Khoản 3 NĐ 13/2023; Điều 33 GDPR). Cụm Promtail & Loki 3.0 thu thập log JSON và trực quan hóa lên 8 panels Grafana, cho phép định danh cuộc tấn công và lập hồ sơ điều tra tức thời.
 
