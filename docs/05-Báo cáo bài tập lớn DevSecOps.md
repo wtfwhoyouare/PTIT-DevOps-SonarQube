@@ -492,6 +492,8 @@ $$\text{Tốc độ tấn công} = \text{rate}\left(\left\{ \text{container} = \
 #### 4.2.2. Bảng điều khiển trực quan hóa 8 phân vùng giám sát an ninh
 Bảng điều khiển trung tâm mang tên *"InlaneWeb Logistics — Centralized Observability & Anomaly Dashboard"* (`inlaneweb-observability`) được nạp tự động qua cơ chế Provisioning của Grafana, chia tách thành 8 bảng hiển thị độc lập:
 
+#### Bảng 4.1: Bảng đặc tả chi tiết câu lệnh truy vấn LogQL và mẫu Regex của 8 phân vùng giám sát an ninh
+
 | Panel | Tên phân vùng giám sát | Dạng trực quan | Mục tiêu giám sát | Câu lệnh truy vấn LogQL và biểu thức chính quy (Regex) |
 | :---: | :--- | :---: | :--- | :--- |
 | **P1** | Ngoại lệ & Vết ngăn xếp ứng dụng | Logs Stream | Lỗi thời gian chạy, lỗi cú pháp hoặc ngoại lệ CSDL nội bộ | `{container="ilfreight_web"} \|~ "(?i)(APP-EXCEPTION\|cause_chain\|database_query_failure\|Fatal error\|mysqli_sql_exception)"` |
@@ -520,6 +522,8 @@ Nhằm bảo đảm tính sẵn sàng cao ($99.9\%$), hệ thống tích hợp b
 
 ### 5.1. Đánh giá an toàn ứng dụng và bảo vệ dữ liệu theo từng thành viên nhóm
 Nhằm đáp ứng toàn diện yêu cầu đánh giá an toàn ứng dụng và tuân thủ các quy định bảo vệ dữ liệu cá nhân theo **Nghị định 13/2023/NĐ-CP** và **Quy định chung về bảo vệ dữ liệu GDPR (Châu Âu)**, 5 thành viên trong nhóm nghiên cứu đảm nhiệm 5 chuyên đề an ninh độc lập trải dài trên các pha DevSecOps, bao quát cả **nhóm lỗi mã nguồn (Code)** và **nhóm lỗi triển khai/vận hành (Deployment & Operations)**:
+
+#### Bảng 5.1: Bảng tổng hợp đối chiếu 5 vấn đề an toàn ứng dụng của 5 thành viên theo Nghị định 13 và GDPR
 
 | Thành viên đảm nhiệm | Vấn đề an toàn phát hiện | Phân loại nhóm lỗi | Pha trong DevSecOps | Căn cứ vi phạm chính sách pháp lý | Cơ chế thực thi kỹ thuật |
 | :--- | :--- | :---: | :---: | :--- | :---: |
@@ -559,6 +563,8 @@ Nhóm đã khắc phục triệt để 6 sự cố hạ tầng điển hình tro
 
 #### 5.4.5. Bảng tổng hợp đối chiếu 14 kịch bản thực tế
 
+#### Bảng 5.2: Bảng tổng hợp đối chiếu 14 kịch bản thực tế và hiệu quả phòng thủ đa tầng
+
 | Mã Lỗi | Điểm cuối kiểm tra | Kỹ thuật & Hành vi thực tế | Cơ chế chặn của SonarQube & Semgrep (SAST) | Ghi vết Promtail & Grafana Loki (Ops) | Mã HTTP |
 | :---: | :--- | :--- | :--- | :--- | :---: |
 | **V1** | `GET /ports?q=` | Ghép bảng trích xuất dữ liệu bằng UNION | **CHẶN ĐỨNG** (`php:S2077` & Semgrep Taint) | **GHI VẾT 100%** (`vuln_category="sqli"`) | 200 / 500 |
@@ -592,6 +598,8 @@ Nhóm đã khắc phục triệt để 6 sự cố hạ tầng điển hình tro
 * **Tự động hóa hoàn toàn chu trình phát triển:** Loại bỏ 100% thao tác thủ công, rút ngắn thời gian phát hành tính năng xuống $< 3$ phút.
 * **Bảo vệ dữ liệu cá nhân theo pháp luật:** Toàn bộ chu trình từ viết mã, kiểm định tĩnh đến vận hành đều đáp ứng nghiêm ngặt Nghị định 13/2023/NĐ-CP và GDPR.
 * **Tối ưu hóa chi phí với nền tảng nguồn mở tự do (FOSS Stack):**
+
+#### Bảng 6.1: Bảng phân tích tối ưu tổng chi phí sở hữu (TCO) và hiệu quả kinh tế
 
 | Hạng mục chi phí | Giải pháp doanh nghiệp thương mại | Chi phí thương mại | Giải pháp đề tài (FOSS Stack) | Chi phí đề tài | Mức tiết kiệm |
 | :--- | :--- | :---: | :--- | :---: | :---: |
