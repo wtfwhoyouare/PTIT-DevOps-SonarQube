@@ -746,7 +746,7 @@ def main() -> None:
     parser.add_argument("--branch", default="namng", help="Tên nhánh cần kích hoạt (mặc định: namng)")
     parser.add_argument("--watch", nargs="?", const="latest", help="Theo dõi một Run ID cụ thể hoặc run mới nhất (latest)")
     parser.add_argument("--latest", action="store_true", help="Xem kết quả của lần chạy gần nhất")
-    parser.add_argument("--details", "--errors", action="store_true", help="In bảng chi tiết các lỗi vi phạm của lần chạy gần nhất")
+    parser.add_argument("--details", "--errors", "--error", action="store_true", help="In bảng chi tiết các lỗi vi phạm của lần chạy gần nhất")
     parser.add_argument("-m", "--member", help="Lọc lỗi theo thành viên cụ thể (namng, haind, manhdx, anhld, mainp hoặc số 1-5)")
 
     args = parser.parse_args()
@@ -755,7 +755,9 @@ def main() -> None:
         print("❌ Lỗi: Chưa phát hiện GitHub CLI (gh) hoặc chưa xác thực (gh auth login).", file=sys.stderr)
         sys.exit(1)
 
-    if args.details:
+    # Nếu truyền --details/--errors/--error HOẶC chỉ truyền -m/--member (không kèm --trigger/--watch)
+    # thì tự động hiển thị ngay báo cáo lỗi của thành viên đó
+    if args.details or (args.member and not args.trigger and not args.watch):
         run_id = get_latest_run_id()
         if run_id:
             data = fetch_run_details(run_id)
