@@ -88,7 +88,7 @@ def get_latest_run_id() -> int | None:
     return None
 
 
-def trigger_real_workflow(branch: str = "dev", enforce: bool = True) -> int | None:
+def trigger_real_workflow(branch: str = "namng", enforce: bool = True) -> int | None:
     """Kích hoạt luồng CI thật trên GitHub Actions qua workflow_dispatch."""
     print(f"🚀 {BOLD}Đang gửi lệnh kích hoạt workflow lên GitHub Actions (nhánh: {CYAN}{branch}{RESET})...{RESET}")
     enforce_str = "true" if enforce else "false"
@@ -238,8 +238,8 @@ def interactive_menu() -> None:
     while True:
         print_banner("HỆ THỐNG KÍCH HOẠT & THEO DÕI CI THẬT TRÊN GITHUB ACTIONS", CYAN)
         print("Vui lòng chọn chế độ hoạt động:")
-        print(f"  [1] 🚀 {BOLD}Kích hoạt luồng CI MỚI trên nhánh 'dev' & Stream trạng thái trực tiếp{RESET}")
-        print(f"  [2] 🚀 {BOLD}Kích hoạt luồng CI MỚI trên nhánh 'namng' & Stream trạng thái trực tiếp{RESET}")
+        print(f"  [1] 🚀 {BOLD}Kích hoạt luồng CI MỚI trên nhánh 'namng' (Chốt chặn Break-the-Build thật){RESET}")
+        print(f"  [2] 🚀 {BOLD}Kích hoạt luồng CI MỚI trên nhánh 'dev' (Môi trường tích hợp chung){RESET}")
         print(f"  [3] 📡 {BOLD}Theo dõi lần chạy CI MỚI NHẤT gần đây{RESET}")
         print(f"  [4] 🔍 {BOLD}Nhập mã Run ID cụ thể để theo dõi chi tiết{RESET}")
         print(f"  [5] 🌐 {BOLD}Mở trang GitHub Actions trên trình duyệt Web{RESET}")
@@ -251,12 +251,12 @@ def interactive_menu() -> None:
             print("\n👋 Tạm biệt!\n")
             break
         elif choice == "1":
-            run_id = trigger_real_workflow("dev", enforce=True)
+            run_id = trigger_real_workflow("namng", enforce=True)
             if run_id:
                 watch_live_ci_run(run_id)
             input("\n👉 Nhấn Enter để quay lại Menu...")
         elif choice == "2":
-            run_id = trigger_real_workflow("namng", enforce=True)
+            run_id = trigger_real_workflow("dev", enforce=True)
             if run_id:
                 watch_live_ci_run(run_id)
             input("\n👉 Nhấn Enter để quay lại Menu...")
@@ -288,7 +288,7 @@ def main() -> None:
         epilog="Ví dụ: python demo_live_ci.py --trigger --branch dev"
     )
     parser.add_argument("--trigger", action="store_true", help="Gửi lệnh kích hoạt luồng CI mới trên GitHub")
-    parser.add_argument("--branch", default="dev", help="Tên nhánh cần kích hoạt (mặc định: dev)")
+    parser.add_argument("--branch", default="namng", help="Tên nhánh cần kích hoạt (mặc định: namng)")
     parser.add_argument("--watch", nargs="?", const="latest", help="Theo dõi một Run ID cụ thể hoặc run mới nhất (latest)")
     parser.add_argument("--latest", action="store_true", help="Xem kết quả của lần chạy gần nhất")
 
@@ -324,3 +324,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

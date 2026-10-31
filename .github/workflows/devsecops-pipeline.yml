@@ -44,7 +44,7 @@ jobs:
   analyze:
     name: "[STAGE 2: Dev Gate] SonarQube SAST & Code Quality"
     needs: [branch_policy_guard]
-    if: (github.event_name == 'pull_request' && github.base_ref == 'dev') || github.ref == 'refs/heads/dev'
+    if: (github.event_name == 'pull_request' && github.base_ref == 'dev') || github.ref == 'refs/heads/dev' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
@@ -162,7 +162,7 @@ jobs:
   semgrep:
     name: "[STAGE 2: Dev Gate] Semgrep Security SAST"
     needs: [branch_policy_guard]
-    if: (github.event_name == 'pull_request' && github.base_ref == 'dev') || github.ref == 'refs/heads/dev'
+    if: (github.event_name == 'pull_request' && github.base_ref == 'dev') || github.ref == 'refs/heads/dev' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
