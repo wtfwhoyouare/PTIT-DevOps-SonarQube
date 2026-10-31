@@ -116,6 +116,248 @@ def trigger_real_workflow(branch: str = "namng", enforce: bool = True) -> int | 
     return new_id or prev_id
 
 
+def get_repo_slug() -> str:
+    """Lấy định danh repo dạng owner/repo từ git remote hoặc GitHub CLI."""
+    res = subprocess.run(
+        ["gh", "repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"],
+        capture_output=True, text=True, encoding="utf-8"
+    )
+    return res.stdout.strip() if res.returncode == 0 and res.stdout.strip() else "wtfwhoyouare/PTIT-DevOps-SonarQube"
+
+
+def fetch_job_annotations(repo_slug: str, job_id: int) -> list[dict]:
+    """Lấy danh sách các vi phạm an ninh / annotations được GitHub ghi nhận cho một Job."""
+    cmd = ["gh", "api", f"repos/{repo_slug}/check-runs/{job_id}/annotations"]
+    res = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
+    if res.returncode == 0 and res.stdout.strip():
+        try:
+            return json.loads(res.stdout)
+        except Exception:
+            pass
+    return []
+
+
+def load_or_download_artifacts(run_id: int) -> tuple[dict | None, dict | None, dict | None]:
+    """Tìm hoặc tải artifacts của run để trích xuất báo cáo semgrep.json, quality-gate.json, issues.json."""
+    cache_base = ROOT / "reports" / ".ci_cache"
+    cache_base.mkdir(parents=True, exist_ok=True)
+
+    semgrep_files = list(cache_base.glob(f"semgrep-security-report-*{run_id}*/semgrep.json"))
+    sonar_gate_files = list(cache_base.glob(f"sonarqube-report-*{run_id}*/quality-gate.json"))
+    sonar_issues_files = list(cache_base.glob(f"sonarqube-report-*{run_id}*/issues.json"))
+
+    # Cũng kiểm tra thư mục scratch/ci_artifacts nếu có sẵn
+    scratch_base = ROOT / "scratch" / "ci_artifacts"
+    if not (semgrep_files and sonar_gate_files) and scratch_base.exists():
+        if not semgrep_files:
+            semgrep_files = list(scratch_base.glob(f"semgrep-security-report-*{run_id}*/semgrep.json"))
+        if not sonar_gate_files:
+            sonar_gate_files = list(scratch_base.glob(f"sonarqube-report-*{run_id}*/quality-gate.json"))
+        if not sonar_issues_files:
+            sonar_issues_files = list(scratch_base.glob(f"sonarqube-report-*{run_id}*/issues.json"))
+
+    if not (semgrep_files and sonar_gate_files):
+        try:
+            subprocess.run(
+                ["gh", "run", "download", str(run_id), "--dir", str(cache_base)],
+                capture_output=True, text=True, timeout=15
+            )
+            semgrep_files = list(cache_base.glob(f"semgrep-security-report-*{run_id}*/semgrep.json"))
+            sonar_gate_files = list(cache_base.glob(f"sonarqube-report-*{run_id}*/quality-gate.json"))
+            sonar_issues_files = list(cache_base.glob(f"sonarqube-report-*{run_id}*/issues.json"))
+        except Exception:
+            pass
+
+    semgrep_data = None
+    sonar_gate = None
+    sonar_issues = None
+
+    if semgrep_files and semgrep_files[0].exists():
+        try:
+            semgrep_data = json.loads(semgrep_files[0].read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    if sonar_gate_files and sonar_gate_files[0].exists():
+        try:
+            sonar_gate = json.loads(sonar_gate_files[0].read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    if sonar_issues_files and sonar_issues_files[0].exists():
+        try:
+            sonar_issues = json.loads(sonar_issues_files[0].read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    return semgrep_data, sonar_gate, sonar_issues
+
+
+def display_detailed_failures(run_id: int, jobs: list[dict]) -> None:
+    """In chi tiết các lỗi an ninh, mã nguồn vi phạm khiến Pipeline bị Break-the-Build ngay trên CLI."""
+    repo_slug = get_repo_slug()
+    failed_jobs = [j for j in jobs if j.get("conclusion") == "failure"]
+
+    if not failed_jobs:
+        return
+
+    print("\n" + "=" * 88)
+    print(f"{BOLD}{RED}🚨 BẢNG CHI TIẾT CÁC LỖI VI PHẠM AN NINH & CODE QUALITY DẪN ĐẾN BREAK-THE-BUILD{RESET}")
+    print(f"🔗 Chi tiết Web Run #{run_id}: {CYAN}https://github.com/{repo_slug}/actions/runs/{run_id}{RESET}")
+    print("=" * 88)
+
+    # Nạp dữ liệu báo cáo chuyên sâu từ artifacts nếu có
+    semgrep_data, sonar_gate, sonar_issues = load_or_download_artifacts(run_id)
+
+    for job in failed_jobs:
+        j_name = job.get("name", "Unknown Job")
+        j_id = job.get("databaseId")
+
+        print(f"\n{BOLD}{BG_RED} ❌ THẤT BẠI: {j_name} {RESET} {DIM}(Check Run ID: {j_id}){RESET}")
+        print("-" * 88)
+
+        # ----------------------------------------------------------------------
+        # 1. JOB: SEMGREP SECURITY SAST
+        # ----------------------------------------------------------------------
+        if "Semgrep" in j_name:
+            if semgrep_data:
+                results = semgrep_data.get("results", [])
+                errors = [r for r in results if r.get("extra", {}).get("severity") == "ERROR"]
+                warnings = [r for r in results if r.get("extra", {}).get("severity") == "WARNING"]
+
+                print(f"📊 {BOLD}Tổng số phát hiện SAST:{RESET} {len(results)}")
+                print(f"   🔴 {BOLD}{RED}Lỗ hổng mức độ cao (ERROR / HIGH):{RESET} {len(errors)}  ➜  {RED}{BOLD}[KÍCH HOẠT CHỐT CHẶN - CHẶN ĐỨNG BUILD]{RESET}")
+                print(f"   🟡 {BOLD}{YELLOW}Cảnh báo an ninh   (WARNING / MED):{RESET} {len(warnings)}")
+                print(f"⚙️  {BOLD}Chế độ kiểm soát:{RESET} {RED}{BOLD}ENFORCE_SECURITY_GATE = true (Strict Enforcement){RESET}\n")
+
+                print(f"{BOLD}Danh sách chi tiết các lỗ hổng bảo mật nghiêm trọng:{RESET}")
+                for idx, r in enumerate(errors, 1):
+                    path = r.get("path", "")
+                    line = r.get("start", {}).get("line", 0)
+                    check_id = r.get("check_id", "unknown")
+                    msg = r.get("extra", {}).get("message", "").strip().splitlines()[0]
+                    cwe = r.get("extra", {}).get("metadata", {}).get("cwe", "")
+                    if isinstance(cwe, list):
+                        cwe = ", ".join(cwe)
+                    owasp = r.get("extra", {}).get("metadata", {}).get("owasp", "")
+                    if isinstance(owasp, list):
+                        owasp = ", ".join(owasp)
+
+                    print(f"  {BOLD}{RED}[{idx:02d}]{RESET} 🛑 {CYAN}{path}:{line}{RESET}")
+                    if cwe or owasp:
+                        print(f"       🏷️  {YELLOW}{cwe} | {owasp}{RESET}")
+                    print(f"       🛡️  Quy tắc: {MAGENTA}{check_id}{RESET}")
+                    print(f"       📝 Chi tiết: {WHITE}{msg}{RESET}")
+
+                    code_lines = r.get("extra", {}).get("lines", "").strip()
+                    if code_lines:
+                        first_code = code_lines.splitlines()[0][:85]
+                        print(f"       💻 Dòng mã: {DIM}{first_code}{RESET}")
+                    print()
+            else:
+                annotations = fetch_job_annotations(repo_slug, j_id)
+                valid = [a for a in annotations if "exit code" not in a.get("message", "")]
+                print(f"📊 {BOLD}Phát hiện {len(valid)} vi phạm an ninh (từ GitHub Actions Annotations):{RESET}\n")
+                for idx, a in enumerate(valid, 1):
+                    path = a.get("path", "")
+                    line = a.get("start_line", 0)
+                    msg = a.get("message", "").strip()
+                    loc = f"{path}:{line}" if line > 0 else path
+                    print(f"  {BOLD}{RED}[{idx:02d}]{RESET} 📁 {CYAN}{loc}{RESET}")
+                    print(f"       🛑 {WHITE}{msg.splitlines()[0]}{RESET}\n")
+
+        # ----------------------------------------------------------------------
+        # 2. JOB: SONARQUBE SAST & CODE QUALITY
+        # ----------------------------------------------------------------------
+        elif "SonarQube" in j_name:
+            if sonar_gate:
+                status = sonar_gate.get("projectStatus", {}).get("status", "UNKNOWN")
+                conditions = sonar_gate.get("projectStatus", {}).get("conditions", [])
+                print(f"📊 {BOLD}Kết quả SonarQube Quality Gate:{RESET} {RED}{BOLD}{status}{RESET}  ➜  {RED}{BOLD}[ĐÁNH TRƯỢT - FAILED]{RESET}")
+                print(f"🎯 {BOLD}Các chỉ số điều kiện Quality Gate:{RESET}")
+                for cond in conditions:
+                    c_status = cond.get("status")
+                    metric = cond.get("metricKey")
+                    thresh = cond.get("errorThreshold")
+                    actual = cond.get("actualValue")
+                    comp = cond.get("comparator")
+                    mark = f"{GREEN}✔ ĐẠT{RESET}" if c_status == "OK" else f"{RED}✖ TRƯỢT{RESET}"
+                    print(f"   {mark} Chỉ số: {CYAN}{metric:<25}{RESET} Thực tế: {WHITE}{actual:<5}{RESET} (Ngưỡng yêu cầu: {comp} {thresh})")
+
+            if sonar_issues:
+                issues = sonar_issues.get("issues", [])
+                bugs = [i for i in issues if i.get("type") == "BUG"]
+                code_smells = [i for i in issues if i.get("type") == "CODE_SMELL"]
+                vulns = [i for i in issues if i.get("type") == "VULNERABILITY"]
+
+                print(f"\n📊 {BOLD}Tổng số Issues phát hiện trên mã nguồn:{RESET} {len(issues)}")
+                print(f"   🐛 {BOLD}{RED}Bugs (Lỗi logic/vận hành):{RESET}        {len(bugs)}")
+                print(f"   🛡️ {BOLD}{RED}Vulnerabilities (Lỗ hổng bảo mật):{RESET} {len(vulns)}")
+                print(f"   🧹 {BOLD}{YELLOW}Code Smells (Mã nguồn xấu/nợ KT):{RESET}   {len(code_smells)}\n")
+
+                print(f"{BOLD}Các lỗi Bugs & Lỗ hổng bảo mật tiêu biểu (Top Issues):{RESET}")
+                top_issues = (vulns + bugs + code_smells)[:12]
+                for idx, iss in enumerate(top_issues, 1):
+                    comp = iss.get("component", "").split(":")[-1]
+                    line = iss.get("line", 0)
+                    sev = iss.get("severity", "MAJOR")
+                    i_type = iss.get("type", "BUG")
+                    msg = iss.get("message", "")
+                    rule = iss.get("rule", "")
+
+                    sev_color = RED if sev in ("BLOCKER", "CRITICAL") else YELLOW
+                    print(f"  {BOLD}[{idx:02d}]{RESET} {sev_color}[{sev} {i_type}]{RESET} 📁 {CYAN}{comp}:{line}{RESET}")
+                    print(f"       🏷️  Quy tắc: {MAGENTA}{rule}{RESET}")
+                    print(f"       📝 Chi tiết: {WHITE}{msg}{RESET}\n")
+            else:
+                annotations = fetch_job_annotations(repo_slug, j_id)
+                valid = [a for a in annotations if "exit code" not in a.get("message", "")]
+                print(f"📊 {BOLD}Phát hiện vi phạm từ SonarQube Annotations:{RESET}\n")
+                for idx, a in enumerate(valid, 1):
+                    path = a.get("path", "")
+                    line = a.get("start_line", 0)
+                    msg = a.get("message", "").strip()
+                    loc = f"{path}:{line}" if line > 0 else path
+                    print(f"  {BOLD}{RED}[{idx:02d}]{RESET} 📁 {CYAN}{loc}{RESET}")
+                    print(f"       🛑 {WHITE}{msg.splitlines()[0]}{RESET}\n")
+
+        # ----------------------------------------------------------------------
+        # 3. CÁC JOB KHÁC (POLICY GUARD, DOCKER BUILD, v.v.)
+        # ----------------------------------------------------------------------
+        else:
+            annotations = fetch_job_annotations(repo_slug, j_id)
+            valid = [a for a in annotations if "exit code" not in a.get("message", "")]
+            if valid:
+                print(f"📊 {BOLD}Các vi phạm quy tắc:{RESET}\n")
+                for idx, a in enumerate(valid, 1):
+                    path = a.get("path", "")
+                    title = a.get("title", "")
+                    msg = a.get("message", "").strip()
+                    print(f"  {BOLD}{RED}[{idx:02d}]{RESET} 📁 {CYAN}{path}{RESET}")
+                    if title:
+                        print(f"       📌 {YELLOW}{title}{RESET}")
+                    print(f"       🛑 {WHITE}{msg}{RESET}\n")
+            else:
+                cmd = ["gh", "run", "view", str(run_id), "--job", str(j_id), "--log-failed"]
+                res = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
+                if res.returncode == 0:
+                    lines = [l for l in res.stdout.splitlines() if "error" in l.lower() or "fail" in l.lower()]
+                    for l in lines[-8:]:
+                        print(f"    {RED}{l}{RESET}")
+
+    # Khuyến nghị khắc phục (Remediation)
+    print("=" * 88)
+    print(f"{BOLD}{YELLOW}💡 HƯỚNG DẪN KHẮC PHỤC MÃ NGUỒN ĐỂ MỞ KHÓA PIPELINE (ACTION ITEMS):{RESET}")
+    print(f"  1. 🛡️  {BOLD}{CYAN}SQL Injection:{RESET} Chuyển toàn bộ câu lệnh SQL sang Prepared Statements ($mysqli->prepare).")
+    print(f"     ➔ Các file: login.php, admin_report_export.php, admin_dashboard.php, admin_console.php, account.php")
+    print(f"  2. 🔑 {BOLD}{CYAN}Hardcoded Secrets:{RESET} Chuyển mật khẩu mặc định sang biến môi trường (getenv / .env).")
+    print(f"     ➔ Các file: InlaneWeb/web/src/lib/db.php, docker-compose.yml, docker-compose.prod.yml")
+    print(f"  3. 🐳 {BOLD}{CYAN}Docker Security:{RESET} Bổ sung chỉ thị 'USER mysql' vào cuối file InlaneWeb/db/Dockerfile.")
+    print(f"  4. 📐 {BOLD}{CYAN}SonarQube Quality Gate:{RESET} Bổ sung thuộc tính 'id' và thẻ 'label' cho các ô input form.")
+    print(f"     ➔ Các file: ports.php, account.php, login.php")
+    print("=" * 88 + "\n")
+
+
 def fetch_run_details(run_id: int) -> dict | None:
     """Lấy dữ liệu chi tiết của một Run ID bao gồm jobs và steps."""
     cmd = [
@@ -211,17 +453,18 @@ def watch_live_ci_run(run_id: int, poll_interval: float = 3.0) -> int:
 
         # Kiểm tra nếu workflow đã hoàn tất
         if overall_status == "completed":
-            print("\n" + "=" * 82)
+            print("\n" + "=" * 88)
             if overall_conclusion == "success":
                 print(f"{GREEN}{BOLD}🎉 [CI HOÀN TẤT THÀNH CÔNG] Toàn bộ các chốt chặn Security Gate & Quality Gate ĐẠT CHUẨN!{RESET}")
                 print(f"{GREEN}✔ Cho phép hợp nhất Pull Request hoặc triển khai lên môi trường tiếp theo.{RESET}")
-                print("=" * 82 + "\n")
+                print("=" * 88 + "\n")
                 return 0
             else:
                 print(f"{RED}{BOLD}🛑 [CI CHẶN ĐỨNG - BREAK-THE-BUILD] Pipeline đã phát hiện vi phạm và dừng thực thi!{RESET}")
                 print(f"{RED}✖ Trạng thái kết luận: {overall_conclusion.upper() if overall_conclusion else 'FAILED'}{RESET}")
                 print(f"{RED}✖ Nút Merge trên Pull Request bị khóa tự động để bảo vệ hệ thống.{RESET}")
-                print("=" * 82 + "\n")
+                print("=" * 88)
+                display_detailed_failures(run_id, jobs)
                 return 1
 
         time.sleep(poll_interval)
@@ -242,10 +485,11 @@ def interactive_menu() -> None:
         print(f"  [2] 🚀 {BOLD}Kích hoạt luồng CI MỚI trên nhánh 'dev' (Môi trường tích hợp chung){RESET}")
         print(f"  [3] 📡 {BOLD}Theo dõi lần chạy CI MỚI NHẤT gần đây{RESET}")
         print(f"  [4] 🔍 {BOLD}Nhập mã Run ID cụ thể để theo dõi chi tiết{RESET}")
-        print(f"  [5] 🌐 {BOLD}Mở trang GitHub Actions trên trình duyệt Web{RESET}")
+        print(f"  [5] 🚨 {BOLD}Xem BẢNG CHI TIẾT LỖI VI PHẠM (SAST & Quality Gate) của lần chạy gần nhất{RESET}")
+        print(f"  [6] 🌐 {BOLD}Mở trang GitHub Actions trên trình duyệt Web{RESET}")
         print(f"  [0] Thoát chương trình\n")
 
-        choice = input("👉 Nhập lựa chọn (0-5): ").strip()
+        choice = input("👉 Nhập lựa chọn (0-6): ").strip()
 
         if choice == "0":
             print("\n👋 Tạm biệt!\n")
@@ -268,13 +512,25 @@ def interactive_menu() -> None:
                 print("❌ Không tìm thấy lần chạy nào gần đây.")
             input("\n👉 Nhấn Enter để quay lại Menu...")
         elif choice == "4":
-            custom_id = input("👉 Nhập mã Run ID (ví dụ 41179102416): ").strip()
+            custom_id = input("👉 Nhập mã Run ID (ví dụ 41179854251): ").strip()
             if custom_id.isdigit():
                 watch_live_ci_run(int(custom_id))
             else:
                 print("⚠️ Mã Run ID không hợp lệ!")
             input("\n👉 Nhấn Enter để quay lại Menu...")
         elif choice == "5":
+            run_id = get_latest_run_id()
+            if run_id:
+                data = fetch_run_details(run_id)
+                if data:
+                    jobs = data.get("jobs", [])
+                    display_detailed_failures(run_id, jobs)
+                else:
+                    print("❌ Không thể nạp chi tiết lần chạy.")
+            else:
+                print("❌ Không tìm thấy lần chạy nào gần đây.")
+            input("\n👉 Nhấn Enter để quay lại Menu...")
+        elif choice == "6":
             url = "https://github.com/wtfwhoyouare/PTIT-DevOps-SonarQube/actions"
             print(f"🌐 Đang mở: {url}")
             if os.name == "nt":
@@ -285,17 +541,28 @@ def interactive_menu() -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Kích hoạt và theo dõi luồng CI thật trên GitHub Actions thời gian thực",
-        epilog="Ví dụ: python demo_live_ci.py --trigger --branch dev"
+        epilog="Ví dụ: python demo_live_ci.py --trigger --branch namng"
     )
     parser.add_argument("--trigger", action="store_true", help="Gửi lệnh kích hoạt luồng CI mới trên GitHub")
     parser.add_argument("--branch", default="namng", help="Tên nhánh cần kích hoạt (mặc định: namng)")
     parser.add_argument("--watch", nargs="?", const="latest", help="Theo dõi một Run ID cụ thể hoặc run mới nhất (latest)")
     parser.add_argument("--latest", action="store_true", help="Xem kết quả của lần chạy gần nhất")
+    parser.add_argument("--details", "--errors", action="store_true", help="In bảng chi tiết các lỗi vi phạm của lần chạy gần nhất")
 
     args = parser.parse_args()
 
     if not check_gh_installed():
         print("❌ Lỗi: Chưa phát hiện GitHub CLI (gh) hoặc chưa xác thực (gh auth login).", file=sys.stderr)
+        sys.exit(1)
+
+    if args.details:
+        run_id = get_latest_run_id()
+        if run_id:
+            data = fetch_run_details(run_id)
+            if data:
+                display_detailed_failures(run_id, data.get("jobs", []))
+                sys.exit(0 if data.get("conclusion") == "success" else 1)
+        print("❌ Không tìm thấy lần chạy nào gần đây.", file=sys.stderr)
         sys.exit(1)
 
     if args.trigger:
