@@ -257,6 +257,31 @@ def resolve_member_key(key: str | None) -> str | None:
     return None
 
 
+def get_current_git_branch() -> str:
+    """Lấy tên nhánh git hiện tại trong workspace."""
+    try:
+        res = subprocess.run(["git", "branch", "--show-current"], capture_output=True, text=True, encoding="utf-8")
+        b = res.stdout.strip()
+        if b:
+            return b
+    except Exception:
+        pass
+    return "namng"
+
+
+def resolve_member_from_branch(branch_name: str | None) -> str | None:
+    """Tự động nhận diện thành viên phụ trách từ tên nhánh Git."""
+    if not branch_name:
+        return None
+    b = branch_name.strip().lower()
+    if b in ("dev", "main", "master", "release", "all"):
+        return None
+    for m_id in MEMBER_SCOPE_MAP.keys():
+        if m_id in b:
+            return m_id
+    return None
+
+
 def get_member_for_file(file_path: str) -> str | None:
     """Xác định thành viên phụ trách dựa trên đường dẫn tệp mã nguồn vi phạm."""
     norm = file_path.replace("\\", "/").lower()
@@ -696,7 +721,7 @@ def interactive_menu() -> None:
         elif choice == "1":
             run_id = trigger_real_workflow("namng", enforce=True)
             if run_id:
-                watch_live_ci_run(run_id)
+                watch_live_ci_run(run_id, target_member="namng")
             input("\n👉 Nhấn Enter để quay lại Menu...")
         elif choice == "2":
             run_id = trigger_real_workflow("dev", enforce=True)
@@ -749,10 +774,11 @@ def interactive_menu() -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Kích hoạt và theo dõi luồng CI thật trên GitHub Actions thời gian thực",
-        epilog="Ví dụ: python demo_live_ci.py --errors -m haind"
+        epilog="Ví dụ: python demo_live_ci.py --trigger --branch namng"
     )
     parser.add_argument("--trigger", action="store_true", help="Gửi lệnh kích hoạt luồng CI mới trên GitHub")
-    parser.add_argument("--branch", default="namng", help="Tên nhánh cần kích hoạt (mặc định: namng)")
+    parser.add_argument("--branch", default=None, help="Tên nhánh cần kích hoạt hoặc kiểm tra (mặc định: nhánh git hiện tại)")
+    parser.add_argument("--all", action="store_true", help="Hiển thị kết quả toàn bộ 5 thành viên (bỏ qua tự động lọc theo nhánh)")
     parser.add_argument("--watch", nargs="?", const="latest", help="Theo dõi một Run ID cụ thể hoặc run mới nhất (latest)")
     parser.add_argument("--latest", action="store_true", help="Xem kết quả của lần chạy gần nhất")
     parser.add_argument("--details", "--errors", "--error", action="store_true", help="In bảng chi tiết các lỗi vi phạm của lần chạy gần nhất")
@@ -765,22 +791,36 @@ def main() -> None:
         print("❌ Lỗi: Chưa phát hiện GitHub CLI (gh) hoặc chưa xác thực (gh auth login).", file=sys.stderr)
         sys.exit(1)
 
-    # Nếu truyền --details/--errors/--error HOẶC chỉ truyền -m/--member (không kèm --trigger/--watch)
-    # thì tự động hiển thị ngay báo cáo lỗi của thành viên đó
-    if args.details or (args.member and not args.trigger and not args.watch):
+    # Xác định nhánh hoạt động: nếu người dùng không truyền thì lấy nhánh git hiện tại
+    active_branch = args.branch or get_current_git_branch()
+
+    # Tự động nhận diện thành viên mục tiêu:
+    # 1. Ưu tiên cờ -m / --member nếu người dùng chỉ định rõ
+    # 2. Nếu không có -m nhưng có tên nhánh cá nhân (ví dụ: namng, haind...), tự động nhận diện
+    # 3. Nếu truyền cờ --all, hoặc cờ --errors (không kèm -m), hoặc nhánh là dev/main thì target_member = None (toàn bộ)
+    target_member = None
+    if not args.all and not (args.details and not args.member):
+        if args.member:
+            target_member = resolve_member_key(args.member)
+        elif active_branch:
+            target_member = resolve_member_from_branch(active_branch)
+
+    # Chế độ xem báo cáo nhanh: khi có --details, --errors, -m, hoặc chỉ định branch mà không kèm action
+    is_quick_view = args.details or args.member or (args.branch and not args.trigger and not args.watch and not args.latest)
+    if is_quick_view:
         run_id = get_latest_run_id()
         if run_id:
             data = fetch_run_details(run_id)
             if data:
-                display_detailed_failures(run_id, data.get("jobs", []), target_member=args.member, show_verbose=args.verbose)
+                display_detailed_failures(run_id, data.get("jobs", []), target_member=target_member, show_verbose=args.verbose)
                 sys.exit(0 if data.get("conclusion") == "success" else 1)
         print("❌ Không tìm thấy lần chạy nào gần đây.", file=sys.stderr)
         sys.exit(1)
 
     if args.trigger:
-        run_id = trigger_real_workflow(args.branch, enforce=True)
+        run_id = trigger_real_workflow(active_branch, enforce=True)
         if run_id:
-            sys.exit(watch_live_ci_run(run_id, target_member=args.member, show_verbose=args.verbose))
+            sys.exit(watch_live_ci_run(run_id, target_member=target_member, show_verbose=args.verbose))
         sys.exit(1)
 
     if args.watch:
@@ -789,19 +829,13 @@ def main() -> None:
         else:
             run_id = int(args.watch)
         if run_id:
-            sys.exit(watch_live_ci_run(run_id, target_member=args.member, show_verbose=args.verbose))
+            sys.exit(watch_live_ci_run(run_id, target_member=target_member, show_verbose=args.verbose))
         sys.exit(1)
 
     if args.latest:
         run_id = get_latest_run_id()
         if run_id:
-            # Nếu có cờ --member, in trực tiếp bảng chi tiết của thành viên đó
-            if args.member:
-                data = fetch_run_details(run_id)
-                if data:
-                    display_detailed_failures(run_id, data.get("jobs", []), target_member=args.member)
-                    sys.exit(0 if data.get("conclusion") == "success" else 1)
-            sys.exit(watch_live_ci_run(run_id, target_member=args.member, show_verbose=args.verbose))
+            sys.exit(watch_live_ci_run(run_id, target_member=target_member, show_verbose=args.verbose))
         sys.exit(1)
 
     interactive_menu()
