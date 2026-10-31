@@ -38,8 +38,6 @@ if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8")
 
 ROOT = Path(__file__).resolve().parent
-if ROOT.name == "demo":
-    ROOT = ROOT.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
@@ -208,35 +206,35 @@ MEMBER_SCOPE_MAP = {
         "order": 1,
         "keywords": ["ports.php", "news.php", "docker-compose.yml"],
         "scope": "Cổng thông tin công cộng, Quản lý quy chuẩn phân nhánh & Tra cứu cảng biển",
-        "script": "python demo/demo_live_ci.py -m 1"
+        "script": "demo_01_namng.py"
     },
     "haind": {
         "name": "Nguyễn Đình Hải",
         "order": 2,
         "keywords": ["login.php", "port_detail.php", "track_api.php", "db.php"],
         "scope": "Kiểm định Taint Analysis, Module Xác thực người dùng & Theo dõi Vận đơn",
-        "script": "python demo/demo_live_ci.py -m 2"
+        "script": "demo_02_haind.py"
     },
     "manhdx": {
         "name": "Đào Xuân Mạnh",
         "order": 3,
         "keywords": ["guide.php", "report_download.php", "admin_report_export.php"],
         "scope": "Kiểm soát Quality Gate, Module Cẩm nang Hàng hải & Hệ thống Kết xuất Báo cáo",
-        "script": "python demo/demo_live_ci.py -m 3"
+        "script": "demo_03_manhdx.py"
     },
     "anhld": {
         "name": "Lê Đức Anh",
         "order": 4,
         "keywords": ["account.php", "account_update.php", "shipment_detail.php", "docker-compose.prod.yml"],
         "scope": "Quản lý Tài khoản & Hồ sơ Đối tác, Theo dõi Chi tiết Vận tải & An toàn Cấu hình IaC",
-        "script": "python demo/demo_live_ci.py -m 4"
+        "script": "demo_04_anhld.py"
     },
     "mainp": {
         "name": "Nguyễn Phương Mai",
         "order": 5,
         "keywords": ["comment_add.php", "comment_delete.php", "admin_console.php", "admin_dashboard.php", "db/Dockerfile", "Dockerfile"],
         "scope": "Hệ thống Bình luận Tương tác Đối tác, Phân hệ Quản trị Admin & Tuân thủ Luật",
-        "script": "python demo/demo_live_ci.py -m 5"
+        "script": "demo_05_mainp.py"
     }
 }
 
@@ -276,8 +274,7 @@ def render_single_member_breakdown(
     semgrep_list: list[dict],
     sonar_list: list[dict],
     annos_list: list[dict],
-    show_header: bool = True,
-    show_verbose: bool = False
+    show_header: bool = True
 ) -> None:
     """In phần báo cáo lỗi chi tiết cho một thành viên cụ thể với bố cục trực quan, dễ đọc, chuẩn developer CLI."""
     m_catalog = MEMBERS_CATALOG.get(m_id)
@@ -287,7 +284,7 @@ def render_single_member_breakdown(
     name = m_catalog.get("name", m_info.get("name", m_id)) if m_catalog else m_info.get("name", m_id)
     role = m_catalog.get("role", "") if m_catalog else ""
     scope = m_catalog.get("scope", m_info.get("scope", "")) if m_catalog else m_info.get("scope", "")
-    script_cmd = f"python demo/demo_live_ci.py -m {order}"
+    script = f"demo_{order:02d}_{m_id}.py"
 
     if show_header:
         print("\n" + "═" * width)
@@ -295,7 +292,7 @@ def render_single_member_breakdown(
         if role:
             print(f"  💼 {BOLD}Vai trò:{RESET}           {role}")
         print(f"  🎯 {BOLD}Phân hệ phụ trách:{RESET} {CYAN}{scope}{RESET}")
-        print(f"  ⚡ {BOLD}Lệnh kiểm tra riêng:{RESET} {YELLOW}{script_cmd}{RESET}")
+        print(f"  ⚡ {BOLD}Script chạy riêng:{RESET} {YELLOW}python {script}{RESET}")
         print("═" * width)
 
     if m_catalog:
@@ -378,7 +375,7 @@ def render_single_member_breakdown(
                     print(f"  │       {DIM}{lno:3d} │ {text}{RESET}")
             print(f"  {BOLD}└{'─' * card_w}┘{RESET}")
 
-        # 4. PHẦN C: CÁC PHÁT HIỆN BỔ SUNG TRONG LẦN CHẠY CI THỰC TẾ (NẾU CÓ CỜ --verbose)
+        # 4. PHẦN C: CÁC PHÁT HIỆN BỔ SUNG TRONG LẦN CHẠY CI THỰC TẾ (NẾU CÓ)
         primary_files = {v.get("file", "").replace("\\", "/") for v in vulns}
         if cq:
             primary_files.add(cq.get("file", "").replace("\\", "/"))
@@ -388,7 +385,7 @@ def render_single_member_breakdown(
             if r.get("path", "").replace("\\", "/") not in primary_files or r.get("start", {}).get("line") not in [v.get("line") for v in vulns]
         ]
 
-        if show_verbose and extra_semgrep:
+        if extra_semgrep:
             print(f"\n{CYAN}{BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{RESET}")
             print(f"🔍 {BOLD}{CYAN}PHẦN C: CÁC PHÁT HIỆN CẤU HÌNH BỔ SUNG TỪ CI CLOUD ({len(extra_semgrep)} phát hiện){RESET}")
             print(f"{CYAN}{BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{RESET}")
@@ -400,9 +397,8 @@ def render_single_member_breakdown(
                 cwe = r.get("extra", {}).get("metadata", {}).get("cwe", "")
                 if isinstance(cwe, list):
                     cwe = cwe[0] if cwe else ""
-                cwe_str = str(cwe).split(":")[0][:20] if cwe else "CWE"
                 print(f"\n  {BOLD}┌{'─' * card_w}┐{RESET}")
-                print(f"  {BOLD}│ PHÁT HIỆN CI [{idx:02d}]: {CYAN}{path}:{line}{RESET}  |  {YELLOW}{cwe_str}{RESET}")
+                print(f"  {BOLD}│ PHÁT HIỆN CI [{idx:02d}]: {CYAN}{path}:{line}{RESET}  |  {YELLOW}{cwe}{RESET}")
                 print(f"  {BOLD}├{'─' * card_w}┤{RESET}")
                 print(f"  │ 🛡️  {BOLD}Quy tắc vi phạm:{RESET} {MAGENTA}{check_id}{RESET}")
                 print(f"  │ 📝 {BOLD}Chi tiết đánh giá:{RESET} {WHITE}{msg[:100]}...{RESET}")
@@ -419,7 +415,7 @@ def render_single_member_breakdown(
     print()
 
 
-def display_detailed_failures(run_id: int, jobs: list[dict], target_member: str | None = None, show_verbose: bool = False) -> None:
+def display_detailed_failures(run_id: int, jobs: list[dict], target_member: str | None = None) -> None:
     """In chi tiết các lỗi an ninh, mã nguồn vi phạm khiến Pipeline bị Break-the-Build ngay trên CLI.
     
     Hỗ trợ gom nhóm tự động theo từng thành viên hoặc lọc riêng cho 1 thành viên cụ thể.
@@ -449,7 +445,7 @@ def display_detailed_failures(run_id: int, jobs: list[dict], target_member: str 
     if target_info:
         print(f"{BOLD}{BG_BLUE} 👤 BẢNG LỖI VI PHẠM CỦA: [{target_info['order']}] {target_info['name'].upper()} ({resolved_key}) {RESET}")
         print(f"📌 {BOLD}Phạm vi phụ trách:{RESET} {CYAN}{target_info['scope']}{RESET}")
-        print(f"⚡ {BOLD}Lệnh kiểm tra riêng:{RESET} {YELLOW}{target_info['script']}{RESET}")
+        print(f"⚡ {BOLD}Script demo độc lập:{RESET} {YELLOW}python {target_info['script']}{RESET}")
     else:
         print(f"{BOLD}{RED}🚨 BẢNG CHI TIẾT CÁC LỖI VI PHẠM GOM NHÓM THEO TỪNG THÀNH VIÊN (BREAK-THE-BUILD){RESET}")
         print(f"💡 {DIM}Hệ thống tự động phân loại vi phạm vào đúng thành viên phụ trách theo bảng phân nhiệm RACI.{RESET}")
@@ -488,7 +484,7 @@ def display_detailed_failures(run_id: int, jobs: list[dict], target_member: str 
         print(f"\n💡 {BOLD}MẸO XEM NHANH DỄ ĐỌC THEO TỪNG THÀNH VIÊN (KÈM DÒNG CODE VÀ SOURCE/SINK):{RESET}")
         print(f"   Chạy lệnh kèm cờ {YELLOW}-m <1-5>{RESET} để xem riêng 1 phân hệ thay vì in toàn bộ 5 người:")
         for m_id, info in MEMBER_SCOPE_MAP.items():
-            print(f"   • {YELLOW}python -X utf8 demo/demo_live_ci.py -m {info['order']}{RESET}  ➜  {info['name']}")
+            print(f"   • {YELLOW}python -X utf8 demo_live_ci.py --errors -m {info['order']}{RESET}  ➜  {info['name']}")
         print("─" * 88)
 
     # Trích xuất danh sách kết quả
@@ -510,8 +506,7 @@ def display_detailed_failures(run_id: int, jobs: list[dict], target_member: str 
 
         render_single_member_breakdown(
             m_id, m_info, m_semgrep, m_sonar, m_annos,
-            show_header=(target_info is None),
-            show_verbose=show_verbose
+            show_header=(target_info is None)
         )
 
     # Kiểm tra các lỗi chung ngoài phạm vi phân chia cá nhân (nếu xem toàn bộ)
@@ -535,20 +530,20 @@ def display_detailed_failures(run_id: int, jobs: list[dict], target_member: str 
 
     # Khuyến nghị khắc phục (Remediation)
     print("=" * 88)
-    print(f"{BOLD}{YELLOW}💡 HƯỚNG DẪN KIỂM TRA & KHẮC PHỤC (ACTION ITEMS):{RESET}")
+    print(f"{BOLD}{YELLOW}💡 HƯỚNG DẪN KHẮC PHỤC (ACTION ITEMS):{RESET}")
     if target_info:
-        print(f"  👉 Để xem chi tiết các lỗi vi phạm và ngữ cảnh dòng mã của {target_info['name']}:")
-        print(f"     {CYAN}python demo/demo_live_ci.py -m {target_info['order']}{RESET}")
-        print(f"  👉 Để kích hoạt luồng CI thật kiểm định trên GitHub Actions:")
-        print(f"     {CYAN}python demo/demo_live_ci.py --trigger{RESET}")
+        print(f"  👉 Để xem demo chi tiết từng dòng mã và kịch bản vá lỗi cho {target_info['name']}, chạy lệnh:")
+        print(f"     {CYAN}python {target_info['script']}{RESET}")
+        print(f"  👉 Để xem demo kịch bản sau khi vá lỗi hoàn tất (Remediation Passed):")
+        print(f"     {CYAN}python {target_info['script']} --fix{RESET}")
     else:
-        print(f"  👉 Xem riêng báo cáo lỗi của từng thành viên:")
-        print(f"     - [1] Nguyễn Giang Nam:  {CYAN}python demo/demo_live_ci.py -m 1{RESET}")
-        print(f"     - [2] Nguyễn Đình Hải:   {CYAN}python demo/demo_live_ci.py -m 2{RESET}")
-        print(f"     - [3] Đào Xuân Mạnh:     {CYAN}python demo/demo_live_ci.py -m 3{RESET}")
-        print(f"     - [4] Lê Đức Anh:        {CYAN}python demo/demo_live_ci.py -m 4{RESET}")
-        print(f"     - [5] Nguyễn Phương Mai: {CYAN}python demo/demo_live_ci.py -m 5{RESET}")
-        print(f"  👉 Kích hoạt luồng CI thật: {CYAN}python demo/demo_live_ci.py --trigger{RESET}")
+        print(f"  👉 Mỗi thành viên có thể kiểm tra và chạy kịch bản vá lỗi riêng bằng script tương ứng:")
+        print(f"     - Nguyễn Giang Nam:  {CYAN}python demo_01_namng.py{RESET}")
+        print(f"     - Nguyễn Đình Hải:   {CYAN}python demo_02_haind.py{RESET}")
+        print(f"     - Đào Xuân Mạnh:     {CYAN}python demo_03_manhdx.py{RESET}")
+        print(f"     - Lê Đức Anh:        {CYAN}python demo_04_anhld.py{RESET}")
+        print(f"     - Nguyễn Phương Mai: {CYAN}python demo_05_mainp.py{RESET}")
+        print(f"  👉 Xem riêng lỗi của 1 người trên CI: {CYAN}python demo_live_ci.py --errors -m <namng|haind|manhdx|anhld|mainp>{RESET}")
     print("=" * 88 + "\n")
 
 
@@ -753,7 +748,6 @@ def main() -> None:
     parser.add_argument("--latest", action="store_true", help="Xem kết quả của lần chạy gần nhất")
     parser.add_argument("--details", "--errors", "--error", action="store_true", help="In bảng chi tiết các lỗi vi phạm của lần chạy gần nhất")
     parser.add_argument("-m", "--member", help="Lọc lỗi theo thành viên cụ thể (namng, haind, manhdx, anhld, mainp hoặc số 1-5)")
-    parser.add_argument("-v", "--verbose", action="store_true", help="Hiển thị thêm các cảnh báo cấu hình bổ sung từ CI Cloud (Phần C)")
 
     args = parser.parse_args()
 
@@ -768,7 +762,7 @@ def main() -> None:
         if run_id:
             data = fetch_run_details(run_id)
             if data:
-                display_detailed_failures(run_id, data.get("jobs", []), target_member=args.member, show_verbose=args.verbose)
+                display_detailed_failures(run_id, data.get("jobs", []), target_member=args.member)
                 sys.exit(0 if data.get("conclusion") == "success" else 1)
         print("❌ Không tìm thấy lần chạy nào gần đây.", file=sys.stderr)
         sys.exit(1)

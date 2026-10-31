@@ -2,7 +2,7 @@
 
 > **Mã hiệu tài liệu:** `DOC-DEMO-LIVE-CI`  
 > **Áp dụng cho:** Hệ thống DevSecOps CI/CD kiểm định an ninh & chất lượng mã nguồn tự động  
-> **Vị trí script:** [`demo/demo_live_ci.py`](demo_live_ci.py) (hoặc qua alias [`demo/demo_ci.py`](demo_ci.py))  
+> **Vị trí script:** [`demo/demo_live_ci.py`](demo_live_ci.py)  
 > **Dự án:** InlaneWeb Logistics Portal — Học viện Công nghệ Bưu chính Viễn thông (PTIT)
 
 ---
@@ -101,7 +101,7 @@ Với mỗi thành viên, hệ thống kết xuất báo cáo chuẩn xác **05 
 
 ## 4. HƯỚNG DẪN SỬ DỤNG (CLI CHEATSHEET)
 
-Người dùng có thể thực thi thông qua tệp chính [`demo/demo_live_ci.py`](demo_live_ci.py) hoặc alias ngắn gọn [`demo/demo_ci.py`](demo_ci.py).
+Người dùng thực thi thông qua tệp chính [`demo/demo_live_ci.py`](demo_live_ci.py).
 
 > [!TIP]
 > Trên hệ điều hành Windows, luôn thêm cờ `-X utf8` vào lệnh `python` để kích hoạt bộ mã UTF-8 tiêu chuẩn, đảm bảo hiển thị đúng các khung viền Unicode và tiếng Việt có dấu.
@@ -169,8 +169,6 @@ Chạy script không kèm tham số để mở bảng chọn menu giao diện ng
 
 ```powershell
 python -X utf8 demo/demo_live_ci.py
-# hoặc
-python -X utf8 demo/demo_ci.py
 ```
 
 Menu điều khiển sẽ xuất hiện:
@@ -199,3 +197,4 @@ Vui lòng chọn chế độ hoạt động:
 | **Phân quyền trách nhiệm (RACI)** | Tự động phân loại 20 lỗi SAST và 5 lỗi Code Quality vào đúng 5 thành viên | [`docs/02-Quy tắc triển khai.md`](../docs/02-Quy%20t%E1%BA%AFc%20tri%E1%BB%83n%20khai.md) |
 | **Phân tích dòng dữ liệu (Taint Flow)** | Hiển thị rõ ràng Source (Input người dùng) và Sink (Hàm thực thi nhạy cảm) | [`docs/03-Kiểm soát an ninh và chất lượng mã nguồn.md`](../docs/03-Ki%E1%BB%83m%20so%C3%A1t%20an%20ninh%20v%C3%A0%20ch%E1%BA%A5t%20l%C6%B0%E1%BB%A3ng%20m%C3%A3%20ngu%E1%BB%93n.md) |
 | **Tuân thủ pháp lý & Bảo vệ dữ liệu** | Viện dẫn Nghị định 13/2023/NĐ-CP và GDPR trong từng thẻ lỗ hổng | [`docs/05-Báo cáo bài tập lớn DevSecOps.md`](../docs/05-B%C3%A1o%20c%C3%A1o%20b%C3%A0i%20t%E1%BA%ADp%20l%E1%BB%9Bn%20DevSecOps.md) |
+
