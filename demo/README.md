@@ -99,92 +99,68 @@ Với mỗi thành viên, hệ thống kết xuất báo cáo chuẩn xác **07 
 
 ---
 
-## 4. HƯỚNG DẪN SỬ DỤNG (CLI CHEATSHEET)
-
-Người dùng thực thi thông qua tệp chính [`demo/demo_live_ci.py`](demo_live_ci.py).
+## 4. HƯỚNG DẪN SỬ DỤNG NHANH (QUICK START CHEATSHEET)
 
 > [!TIP]
-> Trên hệ điều hành Windows, luôn thêm cờ `-X utf8` vào lệnh `python` để kích hoạt bộ mã UTF-8 tiêu chuẩn, đảm bảo hiển thị đúng các khung viền Unicode và tiếng Việt có dấu.
+> **Lưu ý trên Windows:** Luôn thêm cờ `-X utf8` (`python -X utf8 demo/demo_live_ci.py ...`) để kích hoạt chuẩn mã hóa UTF-8, đảm bảo hiển thị đúng bảng Unicode và tiếng Việt.
 
-### 4.1. Lọc xem chi tiết theo từng thành viên (Khuyên dùng khi thuyết trình)
-Xem riêng 5 lỗi thuộc phân hệ của từng người mà không cần gõ thêm cờ phụ:
+### 4.1. Ba câu lệnh quan trọng nhất cần nhớ:
 
-```powershell
-# [1] Xem phân hệ Nguyễn Giang Nam (namng)
-python -X utf8 demo/demo_live_ci.py -m 1
+1. **Xem nhanh 7 lỗi vi phạm của một thành viên (Khuyên dùng khi thuyết trình):**
+   ```powershell
+   python -X utf8 demo/demo_live_ci.py -m 1
+   ```
+   *(Thay số `1` bằng `2, 3, 4, 5` hoặc username: 1-`namng`, 2-`haind`, 3-`manhdx`, 4-`anhld`, 5-`mainp`. Hệ thống trích xuất ngay 4 lỗi SAST + 3 lỗi SonarQube Code Quality kèm ngữ cảnh dòng code thực tế).*
 
-# [2] Xem phân hệ Nguyễn Đình Hải (haind)
-python -X utf8 demo/demo_live_ci.py -m 2
+2. **Xem Bảng ma trận điều hành tổng hợp toàn bộ nhóm:**
+   ```powershell
+   python -X utf8 demo/demo_live_ci.py --errors
+   ```
+   *(Hiển thị bảng tổng quan phân bổ vi phạm của 5 thành viên ở đầu trang, sau đó lần lượt kết xuất chi tiết toàn bộ 35 lỗi).*
 
-# [3] Xem phân hệ Đào Xuân Mạnh (manhdx)
-python -X utf8 demo/demo_live_ci.py -m 3
-
-# [4] Xem phân hệ Lê Đức Anh (anhld)
-python -X utf8 demo/demo_live_ci.py -m 4
-
-# [5] Xem phân hệ Nguyễn Phương Mai (mainp)
-python -X utf8 demo/demo_live_ci.py -m 5
-```
-*(Bạn cũng có thể lọc theo username: `-m namng`, `-m haind`, `-m manhdx`, `-m anhld`, `-m mainp`)*.
-
----
-
-### 4.2. Xem Bảng tổng hợp điều hành toàn nhóm
-Hiển thị Bảng điều hành tổng quan 5 người ở đầu trang, sau đó lần lượt kết xuất chi tiết lỗi của từng thành viên:
-
-```powershell
-python -X utf8 demo/demo_live_ci.py --errors
-```
+3. **Kích hoạt luồng CI MỚI THẬT trên GitHub Actions:**
+   ```powershell
+   python -X utf8 demo/demo_live_ci.py --trigger --branch namng
+   ```
+   *(Bắn sự kiện `workflow_dispatch` lên GitHub Cloud, cấp Run ID mới toanh, stream Live Dashboard tiến độ 4 Stage và chứng minh cơ chế Break-the-Build ngắt luồng CI).*  
+   *Mẹo kết hợp: Thêm `-m 1` để sau khi CI ngắt sẽ tự động in đúng bảng lỗi của thành viên đó:*
+   ```powershell
+   python -X utf8 demo/demo_live_ci.py --trigger -m 1
+   ```
 
 ---
 
-### 4.3. Kích hoạt một đợt chạy CI MỚI trên GitHub Actions
-Gửi lệnh trigger trực tiếp lên nhánh phát triển và tự động bật màn hình theo dõi tiến trình:
+### 4.2. Chế độ Menu tương tác bấm phím (Không cần nhớ lệnh):
 
-```powershell
-# Kích hoạt trên nhánh namng (nhánh đang demo)
-python -X utf8 demo/demo_live_ci.py --trigger --branch namng
-
-# Kích hoạt trên nhánh dev (nhánh tích hợp chung)
-python -X utf8 demo/demo_live_ci.py --trigger --branch dev
-```
-
----
-
-### 4.4. Theo dõi một lần chạy CI đang thực thi
-Theo dõi trực tiếp quá trình quét của các Stage trên Cloud:
-
-```powershell
-# Theo dõi lần chạy mới nhất
-python -X utf8 demo/demo_live_ci.py --watch
-
-# Theo dõi một mã Run ID cụ thể (ví dụ: 41179854251)
-python -X utf8 demo/demo_live_ci.py --watch 41179854251
-```
-
----
-
-### 4.5. Chế độ Menu tương tác (Interactive Mode)
-Chạy script không kèm tham số để mở bảng chọn menu giao diện người dùng:
-
+Chỉ cần gõ lệnh không kèm cờ tham số:
 ```powershell
 python -X utf8 demo/demo_live_ci.py
 ```
-
-Menu điều khiển sẽ xuất hiện:
+Menu điều khiển sẽ xuất hiện để bạn chọn tác vụ bằng phím số:
 ```text
-==================================================================================
-        HỆ THỐNG KÍCH HOẠT & THEO DÕI CI THẬT TRÊN GITHUB ACTIONS                 
-==================================================================================
-Vui lòng chọn chế độ hoạt động:
-  [1] 🚀 Kích hoạt luồng CI MỚI trên nhánh 'namng' (Chốt chặn Break-the-Build thật)
+  [1] 🚀 Kích hoạt luồng CI MỚI trên nhánh 'namng' (Manual Trigger)
   [2] 🚀 Kích hoạt luồng CI MỚI trên nhánh 'dev' (Môi trường tích hợp chung)
-  [3] 📡 Theo dõi lần chạy CI MỚI NHẤT gần đây
+  [3] 📡 Theo dõi lần chạy CI MỚI NHẤT gần đây (Live Watch)
   [4] 🔍 Nhập mã Run ID cụ thể để theo dõi chi tiết
-  [5] 🚨 Xem BẢNG CHI TIẾT LỖI VI PHẠM (SAST & Quality Gate) của lần chạy gần nhất
+  [5] 🚨 Xem BẢNG CHI TIẾT LỖI VI PHẠM (SAST & Quality Gate) của từng thành viên
   [6] 🌐 Mở trang GitHub Actions trên trình duyệt Web
   [0] Thoát chương trình
 ```
+
+---
+
+### 4.3. Bảng tra cứu toàn bộ tham số (Arguments Reference):
+
+| Tham số / Cờ lệnh | Mục đích & Ý nghĩa | Ví dụ thực tế |
+| :--- | :--- | :--- |
+| *(Không tham số)* | Mở Menu tương tác chọn bằng phím số | `python -X utf8 demo/demo_live_ci.py` |
+| `-m <1-5 hoặc ID>` | Xem báo cáo 7 lỗi vi phạm của 1 thành viên | `python -X utf8 demo/demo_live_ci.py -m 1` |
+| `--errors` / `--details` | Xem Bảng ma trận điều hành toàn bộ 5 người | `python -X utf8 demo/demo_live_ci.py --errors` |
+| `--trigger` | Kích hoạt luồng CI mới thật trên GitHub Actions | `python -X utf8 demo/demo_live_ci.py --trigger` |
+| `--branch <tên_nhánh>` | Chỉ định nhánh kích hoạt (mặc định: `namng`) | `python -X utf8 demo/demo_live_ci.py --trigger --branch dev` |
+| `--trigger -m <1-5>` | Kích hoạt CI mới + tự động in lỗi người đó khi xong | `python -X utf8 demo/demo_live_ci.py --trigger -m 2` |
+| `--watch [run_id]` | Theo dõi trực tiếp tiến trình một Run ID đang chạy | `python -X utf8 demo/demo_live_ci.py --watch` |
+| `-v` / `--verbose` | Hiển thị thêm các cảnh báo cấu hình bổ sung (Phần C) | `python -X utf8 demo/demo_live_ci.py -m 1 -v` |
 
 ---
 
