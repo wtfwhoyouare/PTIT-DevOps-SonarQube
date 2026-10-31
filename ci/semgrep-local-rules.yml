@@ -25,10 +25,30 @@ rules:
           regex: '^(?!["'']?\$\{)[A-Za-z0-9_!@#.$-]+$'
     paths:
       include:
-        - "**/docker-compose.yml"
-        - "**/compose.yml"
-        - "**/compose.yaml"
+        - "**/docker-compose*.yml"
+        - "**/docker-compose*.yaml"
+        - "**/compose*.yml"
+        - "**/compose*.yaml"
     metadata:
       cwe: "CWE-798: Use of Hard-coded Credentials"
       owasp: "A07:2021 Identification and Authentication Failures"
       presentation: configuration
+
+  - id: php-dynamic-file-inclusion
+    languages: [php]
+    severity: ERROR
+    message: Dynamic file inclusion via user-controllable variable. This creates potential Local File Inclusion (LFI) or PHP Stream Wrapper (CWE-98) vulnerabilities.
+    patterns:
+      - pattern-either:
+          - pattern: include $VAR;
+          - pattern: include_once $VAR;
+          - pattern: require $VAR;
+          - pattern: require_once $VAR;
+      - pattern-not: require __DIR__ . $EXPR;
+      - pattern-not: require_once __DIR__ . $EXPR;
+      - pattern-not: include __DIR__ . $EXPR;
+      - pattern-not: include_once __DIR__ . $EXPR;
+    metadata:
+      cwe: "CWE-98: Improper Control of Generation of Code ('PHP Remote File Inclusion')"
+      owasp: "A03:2021 - Injection"
+      presentation: code
