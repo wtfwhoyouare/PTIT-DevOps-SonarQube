@@ -160,3 +160,25 @@ docker compose -f docker-compose.monitoring.yml up -d
 * **Healthcheck API:** `http://localhost:8080/health`
 * **Grafana Dashboard:** `http://localhost:3000` (Tài khoản mặc định: `admin` / `admin`)
 * **Loki Ingestion Status:** `http://localhost:3100/ready`
+
+---
+
+## 6. KỊCH BẢN DEMO KIỂM ĐỊNH CI THỜI GIAN THỰC (LIVE CI RUNNER)
+
+Toàn bộ công cụ và tài liệu hướng dẫn demo luồng CI thật được tổ chức tập trung tại thư mục [\demo/\](demo/):
+
+* **Tài liệu hướng dẫn chi tiết:** [**Hướng dẫn kỹ thuật & Cơ chế hoạt động của Live CI Runner (demo/README.md)**](demo/README.md)
+* **Kích hoạt luồng CI thật trên GitHub Actions:**
+  \\powershell
+  python -X utf8 demo/demo_live_ci.py --trigger --branch namng
+  \* **Xem chi tiết lỗi vi phạm theo từng thành viên (1-5):**
+  \\powershell
+  python -X utf8 demo/demo_live_ci.py -m 1   # Nguyễn Giang Nam
+  python -X utf8 demo/demo_live_ci.py -m 2   # Nguyễn Đình Hải
+  python -X utf8 demo/demo_live_ci.py -m 3   # Đào Xuân Mạnh
+  python -X utf8 demo/demo_live_ci.py -m 4   # Lê Đức Anh
+  python -X utf8 demo/demo_live_ci.py -m 5   # Nguyễn Phương Mai
+  \* **Xem Bảng điều hành tổng hợp toàn bộ 5 thành viên:**
+  \\powershell
+  python -X utf8 demo/demo_live_ci.py --errors
+  \
