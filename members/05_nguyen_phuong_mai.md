@@ -372,70 +372,98 @@ $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
 ## PHẦN B: KIỂM ĐỊNH CHẤT LƯỢNG MÃ NGUỒN (SONARQUBE CODE QUALITY)
 
-Trong mô hình DevSecOps hiện đại, bên cạnh các lỗ hổng an ninh mạng (Security Gate), dự án triển khai quy chuẩn kiểm soát kép **Dual-Gate (Security Gate + Quality Gate)**. Công cụ **SonarQube Scanner** được kích hoạt tại Stage 2 để kiểm tra tiêu chuẩn trợ năng và độ tin cậy giao diện phân hệ Quản trị Admin. Bất kỳ lỗi thuộc nhóm **New Bugs** nào xuất hiện trên nhánh tính năng (`feature/*`) đều sẽ trực tiếp đánh rớt Quality Gate (**FAILED**) và kích hoạt cơ chế Break-the-Build.
+Trong mô hình DevSecOps hiện đại, bên cạnh các lỗ hổng an ninh mạng (Security Gate), dự án triển khai quy chuẩn kiểm soát kép **Dual-Gate (Security Gate + Quality Gate)**. Công cụ **SonarQube Scanner** được kích hoạt tại Stage 2 để kiểm tra tiêu chuẩn trợ năng giao diện Admin, chuẩn Clean Code PSR-1 và quy cách định dạng tệp PSR-12.
 
-### 1. Tổng quan Lỗi Chất lượng Mã nguồn Phụ trách
+Bất kỳ lỗi thuộc nhóm **New Bugs** hoặc vi phạm chuẩn mã nguồn nào xuất hiện trên nhánh tính năng (`feature/*`) đều sẽ trực tiếp đánh rớt Quality Gate (**FAILED**) và kích hoạt cơ chế ngắt tiến trình (Break-the-Build).
 
-| Tiêu chí Thẩm định | Nội dung Chi tiết từ SonarQube Scanner |
-| :--- | :--- |
-| **Tên vấn đề Code Quality** | **Admin Filter Input Without Associated Label (Accessibility Bug)** |
-| **Mã quy tắc vi phạm (Rule Key)** | [`Web:InputWithoutLabelCheck`](https://rules.sonarsource.com/html/RSPEC-InputWithoutLabelCheck) |
-| **Phân loại vấn đề (Issue Type)** | 🐞 **BUG** (Lỗi khiếm khuyết phần mềm ảnh hưởng chức năng & trợ năng bảng điều khiển) |
-| **Mức độ nghiêm trọng (Severity)**| 🟠 **MAJOR** |
-| **Tệp tin & Vị trí vi phạm** | [InlaneWeb/web/src/pages/admin_dashboard.php:26](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/pages/admin_dashboard.php#L26) |
-| **Phạm vi tiêu chuẩn áp dụng** | **WCAG 2.1 Level A (Criteria 1.3.1, 4.1.2)** & **ISO/IEC 40500:2012** |
-| **Trạng thái Quality Gate** | ❌ **FAILED** (Vi phạm điều kiện tiên quyết: `0 New Bugs on New Code`) |
+Phân hệ phụ trách của Nguyễn Phương Mai gồm **03 lỗi chất lượng mã nguồn thực tế** được SonarQube ghi nhận trong `reports/sonarqube_ci/issues.json`:
 
-### 2. Bằng chứng Mã nguồn Vi phạm (Non-compliant Code)
-Tại bảng điều khiển Quản trị viên (`InlaneWeb/web/src/pages/admin_dashboard.php`), trường input tìm kiếm khách hàng được định nghĩa độc lập mà không có thuộc tính `id` và nhãn `<label>` trợ năng:
+### 1. Bảng Tổng hợp 03 Lỗi Code Quality Phụ trách
 
+| Mã | Tên Vấn đề Code Quality | Tệp & Vị trí Vi phạm | Quy tắc SonarQube | Phân loại | Mức độ | Tiêu chuẩn Vi phạm |
+| :---: | :--- | :--- | :--- | :---: | :---: | :--- |
+| **CQ-01** | Admin Filter Input Without Associated Label | [admin_dashboard.php:26](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/pages/admin_dashboard.php#L26) | `Web:InputWithoutLabelCheck` | 🐞 BUG | 🟠 MAJOR | WCAG 2.1 Level A (Criteria 1.3.1, 4.1.2) |
+| **CQ-02** | Missing Trailing Newline at End of File | [admin_console.php:55](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/pages/admin_console.php#L55) | `php:S113` | 🧹 CODE_SMELL | 🟡 MINOR | PSR-12 File Formatting Standard |
+| **CQ-03** | Template Helper Function Naming Violates camelCase | [layout.php:13](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/lib/layout.php#L13) | `php:S100` | 🧹 CODE_SMELL | 🟡 MINOR | PSR-1 Basic Coding Standard |
+
+---
+
+### 2. Chi tiết Từng Lỗi Chất lượng Mã nguồn & Kịch bản Khắc phục
+
+#### CQ-01: Admin Log Filter Input Without Associated Label (Accessibility Bug)
+* **Vị trí vi phạm:** [InlaneWeb/web/src/pages/admin_dashboard.php:26](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/pages/admin_dashboard.php#L26)
+* **Quy tắc SonarQube:** [`Web:InputWithoutLabelCheck`](https://rules.sonarsource.com/html/RSPEC-InputWithoutLabelCheck) (Major Bug)
+* **Bằng chứng mã nguồn vi phạm (Non-compliant Code):**
 ```html
-<!-- Dòng 24-28 (InlaneWeb/web/src/pages/admin_dashboard.php) - MÃ NGUỒN VI PHẠM -->
-<div class="card">
-    <h2>Tìm khách hàng</h2>
-    <form class="searchbar" action="/admin" method="get">
-        <input type="text" name="customer" value="<?= htmlspecialchars($_GET['customer'] ?? '') ?>" placeholder="Tên khách hàng...">
-        <button class="btn" type="submit">Tìm</button>
-    </form>
+<!-- Dòng 25-27 (InlaneWeb/web/src/pages/admin_dashboard.php) - MÃ NGUỒN VI PHẠM -->
+<form method="get" action="/admin">
+    <input type="text" name="filter" value="<?= htmlspecialchars($filter) ?>" placeholder="Lọc theo hành động hoặc username...">
+    <button class="btn" type="submit">Lọc nhật ký</button>
+```
+* **Cơ chế phân tích của SonarQube:** Ô nhập liệu lọc dữ liệu quản trị thiếu hoàn toàn thuộc tính `id` và nhãn `<label>` trợ năng, vi phạm nguyên tắc trợ năng WCAG 2.1.
+* **Phương án khắc phục chuẩn hóa (Clean Code Refactoring):**
+```html
+<!-- Dòng 25-28 (InlaneWeb/web/src/pages/admin_dashboard.php) - MÃ NGUỒN ĐÃ KHẮC PHỤC -->
+<form method="get" action="/admin">
+    <label for="admin-filter-log" class="form-label sr-only">Lọc nhật ký quản trị:</label>
+    <input id="admin-filter-log" type="text" name="filter" value="<?= htmlspecialchars($filter) ?>" placeholder="Lọc theo hành động hoặc username...">
+    <button class="btn" type="submit">Lọc nhật ký</button>
 ```
 
-### 3. Cơ chế Phân tích của SonarQube Web/HTML Analyzer
-* **Động cơ phân tích DOM Tree:** Bộ phân tích `sonar-html-plugin` kiểm tra toàn bộ cây DOM trong các trang quản trị (`admin_dashboard.php`).
-* **Nguyên nhân phát hiện vi phạm:** Quy tắc `Web:InputWithoutLabelCheck` phát hiện ô nhập liệu `<input type="text" name="customer">` không có nhãn `<label for="...">` hoặc `aria-label` đi kèm.
-* **Hậu quả kỹ thuật:**
-  - Vi phạm quy định tiếp cận bình đẳng đối với giao diện quản trị viên theo chuẩn WCAG 2.1.
-  - Khi quản trị viên sử dụng các công cụ điều khiển giọng nói hoặc thiết bị trợ thính/đọc màn hình, hệ thống không thể định vị chính xác chức năng của ô tìm kiếm khách hàng.
+---
 
-### 4. Tác động tới Quality Gate trong Quy trình CI/CD
-* **Chính sách Quality Gate (`ci/sonarqube-quality-gate.json`):**
-  - Số lượng Lỗi mới (New Bugs): Yêu cầu `= 0`.
-  - Mức độ tin cậy mã nguồn (Reliability Rating): Bắt buộc đạt `A`.
-* **Kịch bản gãy vỡ (Break-the-Build):** Vì SonarQube phân loại lỗi này là **BUG (Major)**, chỉ số New Bugs tăng từ `0` lên `1`, dẫn tới Quality Gate lập tức chuyển trạng thái sang ❌ **FAILED**. Pipeline CI từ chối hoàn thành Stage 2 và ngăn chặn việc đẩy mã nguồn lên môi trường Production.
+#### CQ-02: Missing Trailing Newline at End of Admin Console File (PSR-12 Code Smell)
+* **Vị trí vi phạm:** [InlaneWeb/web/src/pages/admin_console.php:55](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/pages/admin_console.php#L55)
+* **Quy tắc SonarQube:** [`php:S113`](https://rules.sonarsource.com/php/RSPEC-113) (Minor Code Smell)
+* **Bằng chứng mã nguồn vi phạm (Non-compliant Code):**
+```php
+// Dòng 54-55 (InlaneWeb/web/src/pages/admin_console.php) - MÃ NGUỒN VI PHẠM
+echo '<p class="muted"><a href="/admin">← Về dashboard</a></p></div>';
+render_footer(); // <--- Tệp kết thúc ngay tại đây, thiếu ký tự xuống dòng EOF
+```
+* **Cơ chế phân tích của SonarQube:** Bộ phân tích cú pháp phát hiện tệp mã nguồn không kết thúc bằng một dòng trống mới (`
+`). Tiêu chuẩn PSR-12 Mục 2.2 và quy chuẩn POSIX bắt buộc tất cả tệp mã nguồn phải kết thúc bằng ký tự newline, tránh cảnh báo `\ No newline at end of file` trên Git diff.
+* **Phương án khắc phục chuẩn hóa (Clean Code Refactoring):**
+```php
+// Dòng 54-56 (InlaneWeb/web/src/pages/admin_console.php) - MÃ NGUỒN ĐÃ KHẮC PHỤC
+echo '<p class="muted"><a href="/admin">← Về dashboard</a></p></div>';
+render_footer();
 
-### 5. Phương án Khắc phục Chuẩn hóa (Clean Code Refactoring)
-Bổ sung thẻ `<label for="admin-customer-search">` và thuộc tính `id="admin-customer-search"` trên thẻ `<input>`, kết hợp lớp `.sr-only` hoặc hiển thị rõ ràng trên giao diện Admin:
-
-```html
-<!-- Dòng 24-29 (InlaneWeb/web/src/pages/admin_dashboard.php) - MÃ NGUỒN ĐÃ KHẮC PHỤC -->
-<div class="card">
-    <h2>Tìm khách hàng</h2>
-    <form class="searchbar" action="/admin" method="get">
-        <label for="admin-customer-search" class="sr-only">Tra cứu tên khách hàng:</label>
-        <input id="admin-customer-search" type="text" name="customer" value="<?= htmlspecialchars($_GET['customer'] ?? '', ENT_QUOTES, 'UTF-8') ?>" placeholder="Tên khách hàng...">
-        <button class="btn" type="submit">Tìm</button>
-    </form>
 ```
 
-### 6. Kết quả Thẩm định Sau Khắc phục (Quality Gate Passed)
+---
+
+#### CQ-03: Template Helper Function Naming Violates PSR-1 camelCase (Clean Code Smell)
+* **Vị trí vi phạm:** [InlaneWeb/web/src/lib/layout.php:13](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/lib/layout.php#L13)
+* **Quy tắc SonarQube:** [`php:S100`](https://rules.sonarsource.com/php/RSPEC-100) (Minor Code Smell)
+* **Bằng chứng mã nguồn vi phạm (Non-compliant Code):**
+```php
+// Dòng 12-14 (InlaneWeb/web/src/lib/layout.php) - MÃ NGUỒN VI PHẠM
+function render_header(string $title = 'IlFreight Logistics'): void
+{
+    $u = current_user();
+```
+* **Cơ chế phân tích của SonarQube:** Hàm `render_header` sử dụng quy ước snake_case vi phạm biểu thức chính quy ^[a-z][a-zA-Z0-9]*$. Tiêu chuẩn Clean Code PSR-1 khuyến nghị mọi hàm tiện ích kết xuất giao diện phải được đặt tên theo quy ước camelCase (`renderHeader`).
+* **Phương án khắc phục chuẩn hóa (Clean Code Refactoring):**
+```php
+// Dòng 12-14 (InlaneWeb/web/src/lib/layout.php) - MÃ NGUỒN ĐÃ KHẮC PHỤC
+function renderHeader(string $title = 'IlFreight Logistics'): void
+{
+    $u = current_user();
+```
+
+---
+
+### 3. Kết quả Thẩm định Chất lượng SonarQube Trước & Sau Khắc phục
 
 | Chỉ số Chất lượng (Metrics) | Trước khi Sửa (Dirty State) | Sau khi Sửa (Clean Code State) | Trạng thái Thẩm định |
 | :--- | :---: | :---: | :---: |
 | **New Bugs** | `1` (Major) | `0` | ✅ Đạt chuẩn (Thỏa mãn = 0) |
+| **Code Smells** | `2` (Minor PSR) | `0` | ✅ Đạt chuẩn Tuyệt đối |
 | **Reliability Rating** | `C` | `A` | ✅ Đạt chuẩn Tuyệt đối |
 | **SonarQube Quality Gate** | ❌ **FAILED** | 🟢 **PASSED** | ✅ Cho phép Merge Pull Request |
 
 ---
-
 ## BÀI TOÁN OBSERVABILITY-AS-CODE (SaC) & GIÁM SÁT SỰ CỐ AN NINH (DEVSECOPS)
 
 Để đáp ứng quy định khắt khe của **Nghị định 13/2023/NĐ-CP (Điều 13 Khoản 3 & Điều 17)** và **GDPR (Article 33)** về nghĩa vụ phát hiện và **báo cáo sự cố rò rỉ dữ liệu trong vòng 72 giờ**, nhóm đã xây dựng hệ thống **Observability-as-Code** tại **Stage 4 (Monitor & Audit)**:

@@ -348,23 +348,28 @@ secrets:
 
 ## PHẦN B: KIỂM ĐỊNH CHẤT LƯỢNG MÃ NGUỒN (SONARQUBE CODE QUALITY)
 
-Trong mô hình DevSecOps hiện đại, bên cạnh các lỗ hổng an ninh mạng (Security Gate), dự án triển khai quy chuẩn kiểm soát kép **Dual-Gate (Security Gate + Quality Gate)**. Công cụ **SonarQube Scanner** được kích hoạt tại Stage 2 để kiểm tra toàn diện các chỉ số tin cậy (Reliability), khả năng bảo trì (Maintainability) và khả năng tiếp cận (Accessibility - WCAG 2.1). Bất kỳ lỗi thuộc nhóm **New Bugs** nào xuất hiện trên nhánh tính năng (`feature/*`) đều sẽ trực tiếp đánh rớt Quality Gate (**FAILED**) và kích hoạt cơ chế Break-the-Build.
+Trong mô hình DevSecOps hiện đại, bên cạnh các lỗ hổng an ninh mạng (Security Gate), dự án triển khai quy chuẩn kiểm soát kép **Dual-Gate (Security Gate + Quality Gate)**. Công cụ **SonarQube Scanner** được kích hoạt tại Stage 2 để kiểm tra toàn diện các chỉ số tin cậy (Reliability), khả năng bảo trì (Maintainability), tiêu chuẩn Clean Code PSR và khả năng tiếp cận (Accessibility - WCAG 2.1).
 
-### 1. Tổng quan Lỗi Chất lượng Mã nguồn Phụ trách
+Bất kỳ lỗi thuộc nhóm **New Bugs** hoặc vi phạm nghiêm trọng nào xuất hiện trên nhánh tính năng (`feature/*`) đều sẽ trực tiếp đánh rớt Quality Gate (**FAILED**) và kích hoạt cơ chế ngắt tiến trình (Break-the-Build).
 
-| Tiêu chí Thẩm định | Nội dung Chi tiết từ SonarQube Scanner |
-| :--- | :--- |
-| **Tên vấn đề Code Quality** | **Input Control Missing ID & Associated Accessible Label (Web Accessibility Bug)** |
-| **Mã quy tắc vi phạm (Rule Key)** | [`Web:InputWithoutLabelCheck`](https://rules.sonarsource.com/html/RSPEC-InputWithoutLabelCheck) / `Web:S6853` |
-| **Phân loại vấn đề (Issue Type)** | 🐞 **BUG** (Lỗi khiếm khuyết phần mềm ảnh hưởng chức năng & trợ năng) |
-| **Mức độ nghiêm trọng (Severity)**| 🟠 **MAJOR** |
-| **Tệp tin & Vị trí vi phạm** | [InlaneWeb/web/src/pages/ports.php:26](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/pages/ports.php#L26) |
-| **Phạm vi tiêu chuẩn áp dụng** | **WCAG 2.1 Level A (Criteria 1.3.1, 4.1.2)** & **ISO/IEC 40500:2012** |
-| **Trạng thái Quality Gate** | ❌ **FAILED** (Vi phạm điều kiện tiên quyết: `0 New Bugs on New Code`) |
+Phân hệ phụ trách của Nguyễn Giang Nam gồm **03 lỗi chất lượng mã nguồn thực tế** được SonarQube ghi nhận trong `reports/sonarqube_ci/issues.json`:
 
-### 2. Bằng chứng Mã nguồn Vi phạm (Non-compliant Code)
-Tại trang Tra cứu Cảng biển (`InlaneWeb/web/src/pages/ports.php`), phần tử `<input>` phục vụ tìm kiếm được khai báo mà không có định danh `id` và không được liên kết với nhãn `<label>` trợ năng:
+### 1. Bảng Tổng hợp 03 Lỗi Code Quality Phụ trách
 
+| Mã | Tên Vấn đề Code Quality | Tệp & Vị trí Vi phạm | Quy tắc SonarQube | Phân loại | Mức độ | Tiêu chuẩn Vi phạm |
+| :---: | :--- | :--- | :--- | :---: | :---: | :--- |
+| **CQ-01** | Input Control Missing ID & Associated Label | [ports.php:26](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/pages/ports.php#L26) | `Web:InputWithoutLabelCheck` | 🐞 BUG | 🟠 MAJOR | WCAG 2.1 Level A (Criteria 1.3.1, 4.1.2) |
+| **CQ-02** | Homepage Search Input Missing ID & Label | [home.php:9](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/pages/home.php#L9) | `Web:InputWithoutLabelCheck` | 🐞 BUG | 🟠 MAJOR | WCAG 2.1 / ISO/IEC 40500:2012 |
+| **CQ-03** | Router Navigation Using 'require' Instead of 'require_once' | [index.php:44](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/index.php#L44) | `php:S2003` | 🐞 BUG | 🟡 MINOR | SonarQube PHP Reliability Standard |
+
+---
+
+### 2. Chi tiết Từng Lỗi Chất lượng Mã nguồn & Kịch bản Khắc phục
+
+#### CQ-01: Input Control Missing ID & Associated Label (Web Accessibility Bug)
+* **Vị trí vi phạm:** [InlaneWeb/web/src/pages/ports.php:26](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/pages/ports.php#L26)
+* **Quy tắc SonarQube:** [`Web:InputWithoutLabelCheck`](https://rules.sonarsource.com/html/RSPEC-InputWithoutLabelCheck) (Major Bug)
+* **Bằng chứng mã nguồn vi phạm (Non-compliant Code):**
 ```html
 <!-- Dòng 25-28 (InlaneWeb/web/src/pages/ports.php) - MÃ NGUỒN VI PHẠM -->
 <form class="searchbar" action="/ports" method="get">
@@ -372,24 +377,8 @@ Tại trang Tra cứu Cảng biển (`InlaneWeb/web/src/pages/ports.php`), phầ
     <button class="btn" type="submit">Tra cứu</button>
 </form>
 ```
-
-### 3. Cơ chế Phân tích của SonarQube Web/HTML Analyzer
-* **Động cơ phân tích DOM Tree:** Bộ phân tích `sonar-html-plugin` duyệt cây cú pháp trừu tượng (AST) của các tệp giao diện PHP/HTML.
-* **Nguyên nhân phát hiện vi phạm:** Quy tắc `Web:InputWithoutLabelCheck` yêu cầu mọi phần tử nhập liệu (`<input>`, `<textarea>`, `<select>`) phải có một nhãn rõ ràng đại diện thông qua một trong các hình thức:
-  1. Thẻ `<label for="element_id">` liên kết trực tiếp với thuộc tính `id` của input.
-  2. Input được bọc trực tiếp bên trong thẻ `<label>`.
-  3. Thuộc tính `aria-label` hoặc `aria-labelledby` được khai báo hợp lệ.
-* **Hậu quả kỹ thuật:** Nếu thiếu nhãn, các phần mềm đọc màn hình (Screen Readers) cho người khuyết tật không thể xác định mục đích của ô nhập liệu, dẫn đến trải nghiệm người dùng kém và vi phạm pháp lý về quyền tiếp cận công nghệ thông tin.
-
-### 4. Tác động tới Quality Gate trong Quy trình CI/CD
-* **Chính sách Quality Gate (`ci/sonarqube-quality-gate.json`):**
-  - Số lượng Lỗi mới (New Bugs): Yêu cầu `= 0`.
-  - Mức độ tin cậy mã nguồn (Reliability Rating): Bắt buộc đạt `A`.
-* **Kịch bản gãy vỡ (Break-the-Build):** Do SonarQube phân loại lỗi này là **BUG (Major)**, chỉ số New Bugs tăng từ `0` lên `1`, dẫn tới Quality Gate lập tức chuyển trạng thái sang ❌ **FAILED**. Script `ci/demo_runner.py` và workflow GitHub Actions sẽ từ chối việc hợp nhất mã nguồn vào nhánh chính.
-
-### 5. Phương án Khắc phục Chuẩn hóa (Clean Code Refactoring)
-Bổ sung thuộc tính `id="port-search-input"` cho trường nhập liệu, đồng thời thêm thẻ `<label for="port-search-input">` với lớp CSS `.sr-only` (Screen Reader Only) để đảm bảo tính mỹ thuật giao diện nhưng đầy đủ khả năng trợ năng:
-
+* **Cơ chế phân tích của SonarQube:** Bộ phân tích `sonar-html-plugin` duyệt DOM Tree và phát hiện ô input tìm kiếm không có thuộc tính `id` gắn kết với thẻ `<label>`, khiến trình đọc màn hình (Screen Readers) không nhận diện được đối tượng nhập liệu.
+* **Phương án khắc phục chuẩn hóa (Clean Code Refactoring):**
 ```html
 <!-- Dòng 25-29 (InlaneWeb/web/src/pages/ports.php) - MÃ NGUỒN ĐÃ KHẮC PHỤC -->
 <form class="searchbar" action="/ports" method="get">
@@ -399,16 +388,67 @@ Bổ sung thuộc tính `id="port-search-input"` cho trường nhập liệu, đ
 </form>
 ```
 
-### 6. Kết quả Thẩm định Sau Khắc phục (Quality Gate Passed)
+---
 
-| Chỉ số Chất lượng (Metrics) | Trước khi Sửa (Dirty State) | Sau khi Sửa (Clean Code State) | Trạng thái Thẩm định |
-| :--- | :---: | :---: | :---: |
-| **New Bugs** | `1` (Major) | `0` | ✅ Đạt chuẩn (Thỏa mãn = 0) |
-| **Reliability Rating** | `C` | `A` | ✅ Đạt chuẩn Tuyệt đối |
-| **SonarQube Quality Gate** | ❌ **FAILED** | 🟢 **PASSED** | ✅ Cho phép Merge Pull Request |
+#### CQ-02: Homepage Search Input Missing ID & Label (Web Accessibility Bug)
+* **Vị trí vi phạm:** [InlaneWeb/web/src/pages/home.php:9](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/pages/home.php#L9)
+* **Quy tắc SonarQube:** [`Web:InputWithoutLabelCheck`](https://rules.sonarsource.com/html/RSPEC-InputWithoutLabelCheck) (Major Bug)
+* **Bằng chứng mã nguồn vi phạm (Non-compliant Code):**
+```html
+<!-- Dòng 8-11 (InlaneWeb/web/src/pages/home.php) - MÃ NGUỒN VI PHẠM -->
+<form class="searchbar" action="/ports" method="get">
+    <input type="text" name="q" placeholder="Nhập mã cảng, ví dụ: CN, SG, DXB..." autofocus>
+    <button class="btn" type="submit">Tra cứu cảng</button>
+</form>
+```
+* **Cơ chế phân tích của SonarQube:** Tương tự `ports.php`, thanh tìm kiếm chính trên trang chủ thiếu định danh truy cập `id` và nhãn `label`, vi phạm trực tiếp tiêu chuẩn giao diện WCAG 2.1 dành cho thiết bị ngoại vi hỗ trợ.
+* **Phương án khắc phục chuẩn hóa (Clean Code Refactoring):**
+```html
+<!-- Dòng 8-12 (InlaneWeb/web/src/pages/home.php) - MÃ NGUỒN ĐÃ KHẮC PHỤC -->
+<form class="searchbar" action="/ports" method="get">
+    <label for="home-search-q" class="sr-only">Tra cứu cảng biển IlFreight:</label>
+    <input id="home-search-q" type="text" name="q" placeholder="Nhập mã cảng, ví dụ: CN, SG, DXB..." autofocus>
+    <button class="btn" type="submit">Tra cứu cảng</button>
+</form>
+```
 
 ---
 
+#### CQ-03: Router Navigation Using 'require' Instead of 'require_once' (Reliability Bug)
+* **Vị trí vi phạm:** [InlaneWeb/web/src/index.php:44](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/index.php#L44)
+* **Quy tắc SonarQube:** [`php:S2003`](https://rules.sonarsource.com/php/RSPEC-2003) (Minor Bug)
+* **Bằng chứng mã nguồn vi phạm (Non-compliant Code):**
+```php
+// Dòng 42-46 (InlaneWeb/web/src/index.php) - MÃ NGUỒN VI PHẠM
+function page(string $file): void
+{
+    require __DIR__ . '/pages/' . $file;
+    exit;
+}
+```
+* **Cơ chế phân tích của SonarQube:** Bộ phân tích `sonar-php-plugin` phát hiện câu lệnh `require` không có cơ chế chặn trùng lặp nạp file. Khi router thực hiện include các tệp module con hoặc các tệp đã nạp thư viện chung, việc gọi lại `require` có nguy cơ gây lỗi nghiêm trọng `Fatal error: Cannot redeclare class/function` dẫn đến crash runtime.
+* **Phương án khắc phục chuẩn hóa (Clean Code Refactoring):**
+```php
+// Dòng 42-46 (InlaneWeb/web/src/index.php) - MÃ NGUỒN ĐÃ KHẮC PHỤC
+function page(string $file): void
+{
+    require_once __DIR__ . '/pages/' . $file;
+    exit;
+}
+```
+
+---
+
+### 3. Kết quả Thẩm định Chất lượng SonarQube Trước & Sau Khắc phục
+
+| Chỉ số Chất lượng (Metrics) | Trước khi Sửa (Dirty State) | Sau khi Sửa (Clean Code State) | Trạng thái Thẩm định |
+| :--- | :---: | :---: | :---: |
+| **New Bugs** | `3` (2 Major, 1 Minor) | `0` | ✅ Đạt chuẩn (Thỏa mãn = 0) |
+| **Reliability Rating** | `C` | `A` | ✅ Đạt chuẩn Tuyệt đối |
+| **Accessibility Compliance** | Vi phạm WCAG 2.1 | Đạt chuẩn ISO/IEC 40500 | ✅ Đạt chuẩn Trợ năng |
+| **SonarQube Quality Gate** | ❌ **FAILED** | 🟢 **PASSED** | ✅ Cho phép Merge Pull Request |
+
+---
 ## BÀI TOÁN SECURITY-AS-CODE (SaC) TRONG QUY TRÌNH DEVSECOPS
 
 Với vai trò Trưởng nhóm và Kiến trúc sư DevSecOps, Nguyễn Giang Nam đã thiết lập cơ chế **Security-as-Code** tự động tại **Stage 2 (Automated SAST & Secret Scanning)** trong tệp `.github/workflows/ci.yml`:

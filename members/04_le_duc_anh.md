@@ -383,71 +383,98 @@ def test_production_compose_no_hardcoded_passwords(compose_prod_data):
 
 ## PHẦN B: KIỂM ĐỊNH CHẤT LƯỢNG MÃ NGUỒN (SONARQUBE CODE QUALITY)
 
-Trong mô hình DevSecOps hiện đại, bên cạnh các lỗ hổng an ninh mạng (Security Gate), dự án triển khai quy chuẩn kiểm soát kép **Dual-Gate (Security Gate + Quality Gate)**. Công cụ **SonarQube Scanner** được kích hoạt tại Stage 2 để kiểm tra toàn diện chất lượng giao diện người dùng và tiêu chuẩn khả năng tiếp cận (Accessibility - WCAG 2.1). Bất kỳ vi phạm nào thuộc nhóm **Major Code Smells** trên New Code đều sẽ làm tụt hạng khả năng bảo trì và đánh rớt **SonarQube Quality Gate** (**FAILED**).
+Trong mô hình DevSecOps hiện đại, bên cạnh các lỗ hổng an ninh mạng (Security Gate), dự án triển khai quy chuẩn kiểm soát kép **Dual-Gate (Security Gate + Quality Gate)**. Công cụ **SonarQube Scanner** được kích hoạt tại Stage 2 để kiểm tra toàn diện chất lượng giao diện người dùng và tiêu chuẩn khả năng tiếp cận (Accessibility - WCAG 2.1).
 
-### 1. Tổng quan Lỗi Chất lượng Mã nguồn Phụ trách
+Bất kỳ vi phạm nào thuộc nhóm **Major Code Smells** hoặc **New Bugs** trên New Code đều sẽ làm tụt hạng khả năng bảo trì và đánh rớt **SonarQube Quality Gate** (**FAILED**).
 
-| Tiêu chí Thẩm định | Nội dung Chi tiết từ SonarQube Scanner |
-| :--- | :--- |
-| **Tên vấn đề Code Quality** | **Form Label Not Associated With Input Control (Accessibility Code Smell)** |
-| **Mã quy tắc vi phạm (Rule Key)** | [`Web:S6853`](https://rules.sonarsource.com/html/RSPEC-6853) / `Web:LabelWithoutControlCheck` |
-| **Phân loại vấn đề (Issue Type)** | ♨️ **CODE_SMELL** (Mùi mã nguồn trợ năng giao diện Web) |
-| **Mức độ nghiêm trọng (Severity)**| 🟠 **MAJOR** |
-| **Tệp tin & Vị trí vi phạm** | [InlaneWeb/web/src/pages/account.php:28](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/pages/account.php#L28) |
-| **Phạm vi tiêu chuẩn áp dụng** | **WCAG 2.1 Success Criterion 1.3.1 (Info and Relationships), 4.1.2** & **ISO/IEC 40500** |
-| **Trạng thái Quality Gate** | ❌ **FAILED** (Vi phạm điều kiện: `Maintainability Rating must be A on New Code`) |
+Phân hệ phụ trách của Lê Đức Anh gồm **03 lỗi chất lượng mã nguồn thực tế** được SonarQube ghi nhận trong `reports/sonarqube_ci/issues.json`:
 
-### 2. Bằng chứng Mã nguồn Vi phạm (Non-compliant Code)
-Tại trang Hồ sơ & Tài khoản người dùng (`InlaneWeb/web/src/pages/account.php`), thẻ `<label>` hiển thị nhãn Email không chứa thuộc tính `for` liên kết tới định danh `id` của thẻ `<input>`:
+### 1. Bảng Tổng hợp 03 Lỗi Code Quality Phụ trách
 
+| Mã | Tên Vấn đề Code Quality | Tệp & Vị trí Vi phạm | Quy tắc SonarQube | Phân loại | Mức độ | Tiêu chuẩn Vi phạm |
+| :---: | :--- | :--- | :--- | :---: | :---: | :--- |
+| **CQ-01** | Form Label Not Associated With Input Control | [account.php:28](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/pages/account.php#L28) | `Web:S6853` | 🧹 CODE_SMELL | 🟠 MAJOR | WCAG 2.1 Level A (Criteria 1.3.1, 4.1.2) |
+| **CQ-02** | User Profile Email Input Missing ID & Label | [account.php:29](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/pages/account.php#L29) | `Web:InputWithoutLabelCheck` | 🐞 BUG | 🟠 MAJOR | WCAG 2.1 / ISO/IEC 40500:2012 |
+| **CQ-03** | Shipment Tracking Note Input Missing ID & Label | [shipment_detail.php:48](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/pages/shipment_detail.php#L48) | `Web:InputWithoutLabelCheck` | 🐞 BUG | 🟠 MAJOR | WCAG 2.1 Web Accessibility Bug |
+
+---
+
+### 2. Chi tiết Từng Lỗi Chất lượng Mã nguồn & Kịch bản Khắc phục
+
+#### CQ-01: Form Label Not Associated With Input Control (Accessibility Code Smell)
+* **Vị trí vi phạm:** [InlaneWeb/web/src/pages/account.php:28](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/pages/account.php#L28)
+* **Quy tắc SonarQube:** [`Web:S6853`](https://rules.sonarsource.com/html/RSPEC-6853) (Major Code Smell)
+* **Bằng chứng mã nguồn vi phạm (Non-compliant Code):**
 ```html
-<!-- Dòng 26-31 (InlaneWeb/web/src/pages/account.php) - MÃ NGUỒN VI PHẠM -->
-<form action="/account/update" method="post">
-    <div class="form-row">
-        <label>Email</label>
-        <input type="text" name="email" value="<?= htmlspecialchars($u['email']) ?>">
-    </div>
-    <button class="btn" type="submit">Lưu thay đổi</button>
-</form>
+<!-- Dòng 27-30 (InlaneWeb/web/src/pages/account.php) - MÃ NGUỒN VI PHẠM -->
+<div class="form-row">
+    <label>Email</label>
+    <input type="text" name="email" value="<?= htmlspecialchars($u['email']) ?>">
+</div>
+```
+* **Cơ chế phân tích của SonarQube:** Thẻ `<label>` không chứa thuộc tính `for` liên kết tới `id` của ô nhập liệu và cũng không bọc trực tiếp phần tử điều khiển. Điều này vi phạm nghiêm trọng tiêu chuẩn trợ năng quốc tế ISO/IEC 40500:2012.
+* **Phương án khắc phục chuẩn hóa (Clean Code Refactoring):**
+```html
+<!-- Dòng 27-30 (InlaneWeb/web/src/pages/account.php) - MÃ NGUỒN ĐÃ KHẮC PHỤC -->
+<div class="form-row">
+    <label for="acc-email">Email</label>
+    <input id="acc-email" type="text" name="email" value="<?= htmlspecialchars($u['email']) ?>">
+</div>
 ```
 
-### 3. Cơ chế Phân tích của SonarQube Web Analyzer
-* **Động cơ phân tích DOM Tree:** Bộ phân tích `sonar-html-plugin` quét toàn bộ cấu trúc biểu mẫu (Forms) trong mã nguồn giao diện.
-* **Nguyên nhân phát hiện vi phạm:** Quy tắc `Web:S6853` yêu cầu mọi phần tử nhãn `<label>` phải được gắn kết tường minh với điều khiển nhập liệu tương ứng bằng thuộc tính `for="control_id"`, hoặc phần tử điều khiển phải được đặt lồng bên trong thẻ `<label>`.
-* **Hậu quả kỹ thuật:**
-  - Người dùng khiếm thị sử dụng Screen Reader không được thông báo ngữ cảnh khi con trỏ di chuyển vào ô nhập Email.
-  - Người dùng phổ thông không thể click vào nhãn để tự động kích hoạt (focus) ô nhập liệu, làm suy giảm tính tiện dụng (Usability) của giao diện Web Portal.
+---
 
-### 4. Tác động tới Quality Gate trong Quy trình CI/CD
-* **Chính sách Quality Gate (`ci/sonarqube-quality-gate.json`):**
-  - Tỷ lệ nợ kỹ thuật (Technical Debt Ratio) trên mã mới: Yêu cầu `<= 5%`.
-  - Mức độ bảo trì mã mới (New Maintainability Rating): Bắt buộc đạt `A`.
-* **Kịch bản gãy vỡ (Break-the-Build):** Sự xuất hiện của lỗi Major Code Smell làm gia tăng nợ kỹ thuật trên New Code, khiến chỉ số Maintainability Rating bị hạ xuống mức `B`, kích hoạt trạng thái ❌ **FAILED** của Quality Gate và chặn việc tự động hợp nhất Pull Request.
-
-### 5. Phương án Khắc phục Chuẩn hóa (Clean Code Refactoring)
-Thiết lập thuộc tính `id="account-email-input"` trên thẻ `<input>`, đồng thời bổ sung thuộc tính `for="account-email-input"` trên thẻ `<label>` tương ứng:
-
+#### CQ-02: User Profile Email Input Missing ID & Label Association (Web Accessibility Bug)
+* **Vị trí vi phạm:** [InlaneWeb/web/src/pages/account.php:29](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/pages/account.php#L29)
+* **Quy tắc SonarQube:** [`Web:InputWithoutLabelCheck`](https://rules.sonarsource.com/html/RSPEC-InputWithoutLabelCheck) (Major Bug)
+* **Bằng chứng mã nguồn vi phạm (Non-compliant Code):**
 ```html
-<!-- Dòng 26-31 (InlaneWeb/web/src/pages/account.php) - MÃ NGUỒN ĐÃ KHẮC PHỤC -->
-<form action="/account/update" method="post">
-    <div class="form-row">
-        <label for="account-email-input">Địa chỉ Email:</label>
-        <input id="account-email-input" type="email" name="email" value="<?= htmlspecialchars($u['email'], ENT_QUOTES, 'UTF-8') ?>">
-    </div>
-    <button class="btn" type="submit">Lưu thay đổi</button>
-</form>
+<!-- Dòng 28-30 (InlaneWeb/web/src/pages/account.php) - MÃ NGUỒN VI PHẠM -->
+<input type="text" name="email" value="<?= htmlspecialchars($u['email']) ?>">
+```
+* **Cơ chế phân tích của SonarQube:** Đi cùng với Code Smell `Web:S6853` ở trên, SonarQube đồng thời ghi nhận phần tử `<input>` là một lỗi **Bug (Major)** do thiếu thuộc tính định danh duy nhất `id`.
+* **Phương án khắc phục chuẩn hóa (Clean Code Refactoring):**
+```html
+<!-- Bổ sung thuộc tính id="acc-email" đồng bộ với nhãn mô tả -->
+<input id="acc-email" type="text" name="email" value="<?= htmlspecialchars($u['email']) ?>">
 ```
 
-### 6. Kết quả Thẩm định Sau Khắc phục (Quality Gate Passed)
+---
+
+#### CQ-03: Shipment Tracking Note Input Missing ID & Label (Web Accessibility Bug)
+* **Vị trí vi phạm:** [InlaneWeb/web/src/pages/shipment_detail.php:48](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/pages/shipment_detail.php#L48)
+* **Quy tắc SonarQube:** [`Web:InputWithoutLabelCheck`](https://rules.sonarsource.com/html/RSPEC-InputWithoutLabelCheck) (Major Bug)
+* **Bằng chứng mã nguồn vi phạm (Non-compliant Code):**
+```html
+<!-- Dòng 46-49 (InlaneWeb/web/src/pages/shipment_detail.php) - MÃ NGUỒN VI PHẠM -->
+<form action="/shipments/<?= intval($id) ?>/comments" method="post">
+    <div class="form-row">
+        <textarea name="content" rows="3" placeholder="Nhập bình luận..."></textarea>
+    </div>
+```
+* **Cơ chế phân tích của SonarQube:** Khung soạn thảo `textarea` phản hồi đơn hàng hoàn toàn không có nhãn chỉ dẫn hay định danh trợ năng, vi phạm quy tắc bắt buộc của SonarQube Web Analyzer.
+* **Phương án khắc phục chuẩn hóa (Clean Code Refactoring):**
+```html
+<!-- Dòng 46-50 (InlaneWeb/web/src/pages/shipment_detail.php) - MÃ NGUỒN ĐÃ KHẮC PHỤC -->
+<form action="/shipments/<?= intval($id) ?>/comments" method="post">
+    <div class="form-row">
+        <label for="comment-content" class="sr-only">Nội dung phản hồi vận đơn:</label>
+        <textarea id="comment-content" name="content" rows="3" placeholder="Nhập bình luận..."></textarea>
+    </div>
+```
+
+---
+
+### 3. Kết quả Thẩm định Chất lượng SonarQube Trước & Sau Khắc phục
 
 | Chỉ số Chất lượng (Metrics) | Trước khi Sửa (Dirty State) | Sau khi Sửa (Clean Code State) | Trạng thái Thẩm định |
 | :--- | :---: | :---: | :---: |
-| **New Major Code Smells** | `1` (Major) | `0` | ✅ Đạt chuẩn (Thỏa mãn = 0) |
+| **New Bugs** | `2` (Major) | `0` | ✅ Đạt chuẩn (Thỏa mãn = 0) |
+| **New Code Smells** | `1` (Major) | `0` | ✅ Đạt chuẩn Tuyệt đối |
 | **Maintainability Rating** | `B` | `A` | ✅ Đạt chuẩn Tuyệt đối |
 | **SonarQube Quality Gate** | ❌ **FAILED** | 🟢 **PASSED** | ✅ Cho phép Merge Pull Request |
 
 ---
-
 ## BÀI TOÁN POLICY-AS-CODE (PaC) TRONG QUY TRÌNH DEVSECOPS
 
 Nhằm ngăn chặn các lỗi cấu hình hạ tầng và bí mật cứng (Hardcoded Secrets) lặp lại trên môi trường sản xuất, nhóm đã triển khai giải pháp **Policy-as-Code** tự động hóa tại **Stage 3 (Pre-deployment Validation)** trong tệp `ci/validate_configs.py`:

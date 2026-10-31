@@ -287,67 +287,97 @@ $sql = "CREATE TABLE `report_" . $safe_name . "` AS SELECT tracking_no, status F
 
 ## PHẦN B: KIỂM ĐỊNH CHẤT LƯỢNG MÃ NGUỒN (SONARQUBE CODE QUALITY)
 
-Trong mô hình DevSecOps hiện đại, bên cạnh các lỗ hổng an ninh mạng (Security Gate), dự án triển khai quy chuẩn kiểm soát kép **Dual-Gate (Security Gate + Quality Gate)**. Công cụ **SonarQube Scanner** được kích hoạt tại Stage 2 để kiểm soát độ tin cậy vận hành (Reliability) và an toàn thực thi mã nguồn. Bất kỳ lỗi thuộc nhóm **Bugs** ảnh hưởng đến sự ổn định của hệ thống đều sẽ khiến **SonarQube Quality Gate** bị đánh rớt (**FAILED**) và kích hoạt cơ chế Break-the-Build.
+Trong mô hình DevSecOps hiện đại, bên cạnh các lỗ hổng an ninh mạng (Security Gate), dự án triển khai quy chuẩn kiểm soát kép **Dual-Gate (Security Gate + Quality Gate)**. Công cụ **SonarQube Scanner** được kích hoạt tại Stage 2 để kiểm soát độ tin cậy vận hành (Reliability), tiêu chuẩn định dạng mã nguồn sạch PSR-12 và an toàn thực thi tệp.
 
-### 1. Tổng quan Lỗi Chất lượng Mã nguồn Phụ trách
+Bất kỳ lỗi thuộc nhóm **Bugs** hoặc vi phạm ảnh hưởng đến sự ổn định của hệ thống đều sẽ khiến **SonarQube Quality Gate** bị đánh rớt (**FAILED**) và kích hoạt cơ chế ngắt tiến trình (Break-the-Build).
 
-| Tiêu chí Thẩm định | Nội dung Chi tiết từ SonarQube Scanner |
-| :--- | :--- |
-| **Tên vấn đề Code Quality** | **Use 'include_once' Instead of 'include' (Reliability & Execution Safety Bug)** |
-| **Mã quy tắc vi phạm (Rule Key)** | [`php:S2003`](https://rules.sonarsource.com/php/RSPEC-2003) |
-| **Phân loại vấn đề (Issue Type)** | 🐞 **BUG** (Lỗi khiếm khuyết độ tin cậy & an toàn thực thi mã nguồn) |
-| **Mức độ nghiêm trọng (Severity)**| 🟡 **MINOR** |
-| **Tệp tin & Vị trí vi phạm** | [InlaneWeb/web/src/pages/guide.php:56](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/pages/guide.php#L56) |
-| **Phạm vi tiêu chuẩn áp dụng** | **SonarQube Reliability Rules** & **PHP Architecture Best Practices** |
-| **Trạng thái Quality Gate** | ❌ **FAILED** (Vi phạm điều kiện tiên quyết: `0 New Bugs on New Code`) |
+Phân hệ phụ trách của Đào Xuân Mạnh gồm **03 lỗi chất lượng mã nguồn thực tế** được SonarQube ghi nhận trong `reports/sonarqube_ci/issues.json`:
 
-### 2. Bằng chứng Mã nguồn Vi phạm (Non-compliant Code)
-Tại trang Cẩm nang Hàng hải (`InlaneWeb/web/src/pages/guide.php`), tệp tài liệu được nạp động bằng lệnh `include` thay vì chỉ thị bảo vệ `include_once`:
+### 1. Bảng Tổng hợp 03 Lỗi Code Quality Phụ trách
 
-```php
-// Dòng 53-57 (InlaneWeb/web/src/pages/guide.php) - MÃ NGUỒN VI PHẠM
-try {
-    if (@file_exists($target_file) || str_contains($doc, '..') || str_starts_with($doc, 'php://') || str_starts_with($doc, 'data://')) {
-        // Nạp và hiển thị nội dung tệp
-        include $target_file;
-    }
-```
-
-### 3. Cơ chế Phân tích của SonarQube PHP Analyzer
-* **Động cơ phân tích cú pháp AST:** Bộ phân tích `sonar-php-plugin` nhận diện các cấu trúc lệnh nạp tệp trong PHP (`include`, `require`, `include_once`, `require_once`).
-* **Nguyên nhân phát hiện vi phạm:** Quy tắc `php:S2003` ("The 'include_once' or 'require_once' statement should be used instead of 'include' or 'require'") khuyến cáo và bắt buộc chuyển đổi sang `include_once` khi nạp các tệp chứa định nghĩa hàm, lớp hoặc cấu hình.
-* **Hậu quả kỹ thuật:**
-  - Nếu tệp đích chứa khai báo lớp hoặc hàm, việc gọi `include` nhiều lần trong cùng một chu kỳ Request sẽ gây ra lỗi nghiêm trọng không thể phục hồi: `Fatal error: Cannot redeclare function/class ...`.
-  - Tiêu tốn bộ nhớ vô ích (Memory Leak) do việc nạp và biên dịch lại cùng một tệp mã nguồn nhiều lần trong Runtime.
-
-### 4. Tác động tới Quality Gate trong Quy trình CI/CD
-* **Chính sách Quality Gate (`ci/sonarqube-quality-gate.json`):**
-  - Số lượng Lỗi mới (New Bugs): Yêu cầu `= 0`.
-  - Mức độ tin cậy mã nguồn (Reliability Rating): Bắt buộc đạt `A`.
-* **Kịch bản gãy vỡ (Break-the-Build):** Vì `php:S2003` được phân loại là **BUG**, sự xuất hiện của nó trên New Code làm chỉ số New Bugs tăng lên, kích hoạt điều kiện Fail Quality Gate. Pipeline tự động phong tỏa tiến trình Deploy.
-
-### 5. Phương án Khắc phục Chuẩn hóa (Clean Code Refactoring)
-Thay thế lệnh `include` bằng `include_once`, kết hợp với biến đường dẫn đã được kiểm tra tính hợp lệ trong danh sách trắng (Whitelist):
-
-```php
-// Dòng 53-57 (InlaneWeb/web/src/pages/guide.php) - MÃ NGUỒN ĐÃ KHẮC PHỤC
-try {
-    if (@file_exists($target_file) && in_array(basename($target_file), $allowed_guides, true)) {
-        // Nạp tệp an toàn đúng 1 lần duy nhất trong chu kỳ thực thi
-        include_once $target_file;
-    }
-```
-
-### 6. Kết quả Thẩm định Sau Khắc phục (Quality Gate Passed)
-
-| Chỉ số Chất lượng (Metrics) | Trước khi Sửa (Dirty State) | Sau khi Sửa (Clean Code State) | Trạng thái Thẩm định |
-| :--- | :---: | :---: | :---: |
-| **New Bugs** | `1` (Minor) | `0` | ✅ Đạt chuẩn (Thỏa mãn = 0) |
-| **Reliability Rating** | `B` | `A` | ✅ Đạt chuẩn Tuyệt đối |
-| **SonarQube Quality Gate** | ❌ **FAILED** | 🟢 **PASSED** | ✅ Cho phép Merge Pull Request |
+| Mã | Tên Vấn đề Code Quality | Tệp & Vị trí Vi phạm | Quy tắc SonarQube | Phân loại | Mức độ | Tiêu chuẩn Vi phạm |
+| :---: | :--- | :--- | :--- | :---: | :---: | :--- |
+| **CQ-01** | Use 'include_once' Instead of 'include' | [guide.php:56](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/pages/guide.php#L56) | `php:S2003` | 🐞 BUG | 🟡 MINOR | SonarQube PHP Reliability Standard |
+| **CQ-02** | Export Filter Input Missing ID & Label | [admin_report_export.php:37](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/pages/admin_report_export.php#L37) | `Web:InputWithoutLabelCheck` | 🐞 BUG | 🟠 MAJOR | WCAG 2.1 Level A (Criteria 1.3.1) |
+| **CQ-03** | Trailing Whitespace Violation in Guide Module | [guide.php:7](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/pages/guide.php#L7) | `php:S1131` | 🧹 CODE_SMELL | 🟡 MINOR | PSR-12 Clean Code Formatting |
 
 ---
 
+### 2. Chi tiết Từng Lỗi Chất lượng Mã nguồn & Kịch bản Khắc phục
+
+#### CQ-01: Use 'include_once' Instead of 'include' (Reliability Bug)
+* **Vị trí vi phạm:** [InlaneWeb/web/src/pages/guide.php:56](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/pages/guide.php#L56)
+* **Quy tắc SonarQube:** [`php:S2003`](https://rules.sonarsource.com/php/RSPEC-2003) (Minor Bug)
+* **Bằng chứng mã nguồn vi phạm (Non-compliant Code):**
+```php
+// Dòng 55-57 (InlaneWeb/web/src/pages/guide.php) - MÃ NGUỒN VI PHẠM
+// Lỗi: include tệp động không kiểm soát nạp lặp
+include $doc;
+```
+* **Cơ chế phân tích của SonarQube:** Bộ phân tích `sonar-php-plugin` phát hiện việc dùng câu lệnh `include` nạp tệp tài liệu thay vì `include_once`. Nếu tài liệu chứa các hàm trợ giúp hoặc hằng số được định nghĩa trong luồng xử lý trước đó, việc nạp lại sẽ gây lỗi `Cannot redeclare function` khiến tiến trình xử lý request bị gián đoạn.
+* **Phương án khắc phục chuẩn hóa (Clean Code Refactoring):**
+```php
+// Dòng 55-57 (InlaneWeb/web/src/pages/guide.php) - MÃ NGUỒN ĐÃ KHẮC PHỤC
+include_once $allowed_file_path;
+```
+
+---
+
+#### CQ-02: Export Filter Report Name Input Missing ID & Label Association (Web Accessibility Bug)
+* **Vị trí vi phạm:** [InlaneWeb/web/src/pages/admin_report_export.php:37](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/pages/admin_report_export.php#L37)
+* **Quy tắc SonarQube:** [`Web:InputWithoutLabelCheck`](https://rules.sonarsource.com/html/RSPEC-InputWithoutLabelCheck) (Major Bug)
+* **Bằng chứng mã nguồn vi phạm (Non-compliant Code):**
+```html
+<!-- Dòng 35-38 (InlaneWeb/web/src/pages/admin_report_export.php) - MÃ NGUỒN VI PHẠM -->
+<div class="form-row">
+    <label>Tên báo cáo</label>
+    <input type="text" name="report_name" placeholder="vd: q1_2024">
+</div>
+```
+* **Cơ chế phân tích của SonarQube:** Thẻ `<label>` không có thuộc tính `for` và trường `<input>` không có `id`, khiến trình duyệt và các bộ đọc màn hình không thể gắn kết nhãn văn bản với trường dữ liệu tương ứng.
+* **Phương án khắc phục chuẩn hóa (Clean Code Refactoring):**
+```html
+<!-- Dòng 35-38 (InlaneWeb/web/src/pages/admin_report_export.php) - MÃ NGUỒN ĐÃ KHẮC PHỤC -->
+<div class="form-row">
+    <label for="export-report-name">Tên báo cáo</label>
+    <input id="export-report-name" type="text" name="report_name" placeholder="vd: q1_2024">
+</div>
+```
+
+---
+
+#### CQ-03: Trailing Whitespace Violation in Guide Module (Code Style Smell)
+* **Vị trí vi phạm:** [InlaneWeb/web/src/pages/guide.php:7](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/pages/guide.php#L7)
+* **Quy tắc SonarQube:** [`php:S1131`](https://rules.sonarsource.com/php/RSPEC-1131) (Minor Code Smell)
+* **Bằng chứng mã nguồn vi phạm (Non-compliant Code):**
+```php
+// Dòng 6-8 (InlaneWeb/web/src/pages/guide.php) - MÃ NGUỒN VI PHẠM
+ * 'doc' được truyền trực tiếp vào lệnh include mà không kiểm tra whitelist hay hàm basename().
+ * 
+ * Payload mẫu khai thác (doc):
+```
+* **Cơ chế phân tích của SonarQube:** Dòng chú thích số 7 kết thúc bằng khoảng trắng thừa vô nghĩa (`* 
+`). Quy chuẩn PSR-12 Mục 2.3 nghiêm cấm mọi khoảng trắng ở cuối dòng vì nó gây sai lệch phân tích Git diff và làm nhiễu lịch sử commit của nhóm phát triển.
+* **Phương án khắc phục chuẩn hóa (Clean Code Refactoring):**
+```php
+// Dòng 6-8 (InlaneWeb/web/src/pages/guide.php) - MÃ NGUỒN ĐÃ KHẮC PHỤC
+ * 'doc' được truyền trực tiếp vào lệnh include mà không kiểm tra whitelist hay hàm basename().
+ *
+ * Payload mẫu khai thác (doc):
+```
+
+---
+
+### 3. Kết quả Thẩm định Chất lượng SonarQube Trước & Sau Khắc phục
+
+| Chỉ số Chất lượng (Metrics) | Trước khi Sửa (Dirty State) | Sau khi Sửa (Clean Code State) | Trạng thái Thẩm định |
+| :--- | :---: | :---: | :---: |
+| **New Bugs** | `2` (1 Major, 1 Minor) | `0` | ✅ Đạt chuẩn (Thỏa mãn = 0) |
+| **Code Smells** | `1` (Minor Style) | `0` | ✅ Đạt chuẩn Tuyệt đối |
+| **Reliability Rating** | `C` | `A` | ✅ Đạt chuẩn Tuyệt đối |
+| **SonarQube Quality Gate** | ❌ **FAILED** | 🟢 **PASSED** | ✅ Cho phép Merge Pull Request |
+
+---
 ## BÀI TOÁN SECURITY-AS-CODE (SaC) TRONG QUY TRÌNH DEVSECOPS
 
 Với vai trò Kỹ sư QA / DevSecOps, Đào Xuân Mạnh thiết lập chốt chặn **SonarQube Quality Gate** và tiêu chuẩn an toàn tự động:

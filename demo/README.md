@@ -91,7 +91,7 @@ Hàm `get_member_for_file(file_path)` và `render_single_member_breakdown(...)`:
   5. **Nguyễn Phương Mai (`mainp`)**: Hệ thống Bình luận & Phân hệ Quản trị Admin (`comment_add.php`, `comment_delete.php`, `admin_console.php`, `admin_dashboard.php`).
 
 ### Bước 5: Bóc tách Taint Source, Taint Sink, Pháp lý và Mã nguồn
-Với mỗi thành viên, hệ thống kết xuất báo cáo chuẩn xác **05 lỗi vi phạm nộp bài** (4 SAST + 1 Code Quality):
+Với mỗi thành viên, hệ thống kết xuất báo cáo chuẩn xác **07 lỗi vi phạm nộp bài** (4 SAST + 3 Code Quality):
 * **Taint Source**: Điểm vào của dữ liệu không an toàn (HTTP GET/POST, URL parameters, hardcoded secrets).
 * **Taint Sink**: Điểm thực thi nguy hiểm (hàm `query()`, `mysqli_multi_query()`, câu lệnh nối chuỗi SQL, phản hồi `echo` không sanitize).
 * **Căn cứ pháp lý & Chuẩn an toàn**: Trích dẫn cụ thể điều khoản của **Nghị định 13/2023/NĐ-CP** (Bảo vệ dữ liệu cá nhân), **GDPR Article 32/33**, tiêu chuẩn **ISO 27001** và **OWASP Top 10:2021**.
@@ -194,7 +194,7 @@ Vui lòng chọn chế độ hoạt động:
 | :--- | :--- | :--- |
 | **Shift-Left Security Gate** | Bắt lỗi trực tiếp tại Stage 2 Dev Gate (Semgrep + SonarQube) trước khi build Docker | [`docs/03-Kiểm soát an ninh và chất lượng mã nguồn.md`](../docs/03-Ki%E1%BB%83m%20so%C3%A1t%20an%20ninh%20v%C3%A0%20ch%E1%BA%A5t%20l%C6%B0%E1%BB%A3ng%20m%C3%A3%20ngu%E1%BB%93n.md) |
 | **Break-the-Build Enforcement** | Trả Exit code 1, ngắt luồng CI, hủy bỏ triệt để Stage 3 & 4 | [`docs/02-Quy tắc triển khai.md`](../docs/02-Quy%20t%E1%BA%AFc%20tri%E1%BB%83n%20khai.md) |
-| **Phân quyền trách nhiệm (RACI)** | Tự động phân loại 20 lỗi SAST và 5 lỗi Code Quality vào đúng 5 thành viên | [`docs/02-Quy tắc triển khai.md`](../docs/02-Quy%20t%E1%BA%AFc%20tri%E1%BB%83n%20khai.md) |
+| **Phân quyền trách nhiệm (RACI)** | Tự động phân loại 20 lỗi SAST và 15 lỗi Code Quality vào đúng 5 thành viên (7 lỗi/thành viên) | [`docs/02-Quy tắc triển khai.md`](../docs/02-Quy%20t%E1%BA%AFc%20tri%E1%BB%83n%20khai.md) |
 | **Phân tích dòng dữ liệu (Taint Flow)** | Hiển thị rõ ràng Source (Input người dùng) và Sink (Hàm thực thi nhạy cảm) | [`docs/03-Kiểm soát an ninh và chất lượng mã nguồn.md`](../docs/03-Ki%E1%BB%83m%20so%C3%A1t%20an%20ninh%20v%C3%A0%20ch%E1%BA%A5t%20l%C6%B0%E1%BB%A3ng%20m%C3%A3%20ngu%E1%BB%93n.md) |
 | **Tuân thủ pháp lý & Bảo vệ dữ liệu** | Viện dẫn Nghị định 13/2023/NĐ-CP và GDPR trong từng thẻ lỗ hổng | [`docs/05-Báo cáo bài tập lớn DevSecOps.md`](../docs/05-B%C3%A1o%20c%C3%A1o%20b%C3%A0i%20t%E1%BA%ADp%20l%E1%BB%9Bn%20DevSecOps.md) |
 

@@ -7,7 +7,7 @@ Tài liệu kỹ thuật:
   + Stage 1: Policy Guard (Policy-as-Code - PaC) — Thẩm định phân quyền RACI, Conventional Commits & Pull Request.
   + Stage 2: Shift-Left Security SAST (Security-as-Code - SaC) & SonarQube Code Quality:
              * 04 Lỗ hổng an ninh mã nguồn & cấu hình (Semgrep Taint Engine & SonarQube SAST).
-             * 01 Lỗi chất lượng mã nguồn chuyên biệt (SonarQube Code Quality: Bug / Code Smell).
+             * 03 Lỗi chất lượng mã nguồn chuyên biệt (SonarQube Code Quality: Bug / Code Smell).
   + Chốt chặn ngắt tiến trình (Break-the-Build Gate): Tự động phát hiện vi phạm và KHÓA hoàn toàn
              nút Merge vào nhánh dev, từ chối đóng gói Docker image hoặc triển khai VPS.
   + Kịch bản khắc phục (Remediation): Tái thẩm định mã an toàn và sạch (Clean Code) để mở khóa pipeline.
@@ -58,7 +58,7 @@ BG_BLUE = "\033[44m"    # Nền xanh dương
 # CƠ SỞ DỮ LIỆU CẤU HÌNH THÀNH VIÊN & DANH MỤC LỖ HỔNG (MEMBERS CATALOG)
 # Mỗi thành viên phụ trách:
 # - 04 Lỗ hổng an ninh mã nguồn / cấu hình (SAST Security Vulnerabilities)
-# - 01 Lỗi chất lượng mã nguồn chuyên biệt từ SonarQube (Bug hoặc Code Smell)
+# - 03 Lỗi chất lượng mã nguồn chuyên biệt từ SonarQube (Bug hoặc Code Smell)
 # ==============================================================================
 MEMBERS_CATALOG = {
     # --------------------------------------------------------------------------
@@ -150,18 +150,47 @@ $res = $stmt->get_result();"""
 MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}"""
             }
         ],
-        "code_quality": {
-            "name": "Input Control Missing ID & Associated Label (Web Accessibility Bug)",
-            "type": "BUG",
-            "severity": "MAJOR",
-            "rule": "Web:InputWithoutLabelCheck",
-            "file": "InlaneWeb/web/src/pages/ports.php",
-            "line": 26,
-            "desc": "Trường form tìm kiếm cảng biển thiếu thuộc tính id và thẻ label gắn kết, vi phạm tiêu chuẩn trợ năng WCAG 2.1 và độ tin cậy giao diện người dùng theo SonarQube Web Analyzer.",
-            "remediation": """// Khắc phục SonarQube Code Quality: Thêm nhãn label và id cho trường input
+        "code_quality": [
+            {
+                "name": "Input Control Missing ID & Associated Accessible Label (Web Accessibility Bug)",
+                "type": "BUG",
+                "severity": "MAJOR",
+                "rule": "Web:InputWithoutLabelCheck",
+                "file": "InlaneWeb/web/src/pages/ports.php",
+                "line": 26,
+                "desc": "Trường form tìm kiếm cảng biển thiếu thuộc tính id và thẻ label gắn kết, vi phạm tiêu chuẩn trợ năng WCAG 2.1 và độ tin cậy giao diện người dùng theo SonarQube Web Analyzer.",
+                "remediation": """// Khắc phục SonarQube Code Quality: Thêm nhãn label và id cho trường input
 <label for="port-search-input" class="sr-only">Từ khóa tìm kiếm:</label>
-<input id="port-search-input" type="text" name="q" value="<?php echo htmlspecialchars($q); ?>" ...>"""
-        }
+<input id="port-search-input" type="text" name="q" value="<?php echo htmlspecialchars($q); ?>" ...>""",
+            },
+            {
+                "name": "Homepage Search Input Missing ID & Label (Web Accessibility Bug)",
+                "type": "BUG",
+                "severity": "MAJOR",
+                "rule": "Web:InputWithoutLabelCheck",
+                "file": "InlaneWeb/web/src/pages/home.php",
+                "line": 9,
+                "desc": "Trường input tìm kiếm tại trang chủ thiếu thuộc tính id và thẻ label liên kết, khiến các công cụ hỗ trợ tiếp cận (Screen Readers) không nhận diện được ngữ cảnh điều khiển.",
+                "remediation": """// Khắc phục SonarQube Code Quality: Bổ sung thẻ label liên kết với input
+<label for="home-search-q" class="sr-only">Tra cứu cảng biển:</label>
+<input id="home-search-q" type="text" name="q" placeholder="Nhập mã cảng, ví dụ: CN, SG, DXB..." autofocus>""",
+            },
+            {
+                "name": "Router Navigation Using 'require' Instead of 'require_once' (Reliability Bug)",
+                "type": "BUG",
+                "severity": "MINOR",
+                "rule": "php:S2003",
+                "file": "InlaneWeb/web/src/index.php",
+                "line": 44,
+                "desc": "Hàm điều hướng page() sử dụng 'require' thay vì 'require_once' tiềm ẩn rủi ro nạp lại file gây lỗi xung đột định nghĩa hàm/lớp (Cannot redeclare function) khi cấu trúc trang mở rộng.",
+                "remediation": """// Khắc phục SonarQube Code Quality: Thay thế require bằng require_once
+function page(string $file): void
+{
+    require_once __DIR__ . '/pages/' . $file;
+    exit;
+}""",
+            }
+        ]
     },
 
     # --------------------------------------------------------------------------
@@ -257,19 +286,50 @@ if ($pass === false || $pass === '') {
 }"""
             }
         ],
-        "code_quality": {
-            "name": "Missing Curly Braces in Nested Statement (Clean Code Smell)",
-            "type": "CODE_SMELL",
-            "severity": "CRITICAL",
-            "rule": "php:S121",
-            "file": "InlaneWeb/web/src/pages/login.php",
-            "line": 36,
-            "desc": "Câu lệnh if lồng nhau không có cặp dấu ngoặc nhọn { }, vi phạm chuẩn PSR-12 Clean Code của SonarQube và tiềm ẩn rủi ro logic ngầm khi bảo trì mã nguồn.",
-            "remediation": """// Khắc phục SonarQube Code Quality: Bổ sung cặp dấu ngoặc nhọn { } bảo vệ khối lệnh
+        "code_quality": [
+            {
+                "name": "Missing Curly Braces in Nested Statement (Clean Code Smell)",
+                "type": "CODE_SMELL",
+                "severity": "CRITICAL",
+                "rule": "php:S121",
+                "file": "InlaneWeb/web/src/pages/login.php",
+                "line": 36,
+                "desc": "Câu lệnh if lồng nhau không có cặp dấu ngoặc nhọn { }, vi phạm chuẩn PSR-12 Clean Code của SonarQube và tiềm ẩn rủi ro logic ngầm khi bảo trì mã nguồn.",
+                "remediation": """// Khắc phục SonarQube Code Quality: Bổ sung cặp dấu ngoặc nhọn { } bảo vệ khối lệnh
 if ($error) {
     echo '<div class="alert alert-danger">' . htmlspecialchars($error) . '</div>';
-}"""
-        }
+}""",
+            },
+            {
+                "name": "Login Form Username Input Missing ID & Label Association (Web Accessibility Bug)",
+                "type": "BUG",
+                "severity": "MAJOR",
+                "rule": "Web:InputWithoutLabelCheck",
+                "file": "InlaneWeb/web/src/pages/login.php",
+                "line": 40,
+                "desc": "Trường nhập tên người dùng trong form đăng nhập có thẻ <label> nhưng không có thuộc tính 'for' và input thiếu 'id', vi phạm quy chuẩn trợ năng WCAG 2.1 Criteria 1.3.1.",
+                "remediation": """// Khắc phục SonarQube Code Quality: Bổ sung id và liên kết thẻ label qua thuộc tính for
+<div class="form-row">
+    <label for="login-username">Tên đăng nhập</label>
+    <input id="login-username" type="text" name="username" autofocus>
+</div>""",
+            },
+            {
+                "name": "Database Helper Function Naming Violates PSR-1 camelCase (Clean Code Smell)",
+                "type": "CODE_SMELL",
+                "severity": "MINOR",
+                "rule": "php:S100",
+                "file": "InlaneWeb/web/src/lib/db.php",
+                "line": 55,
+                "desc": "Hàm tiện ích 'exec_write' sử dụng ký tự gạch dưới (snake_case) thay vì tuân thủ quy ước đặt tên hàm camelCase ^[a-z][a-zA-Z0-9]*$ theo chuẩn PSR-1 và quy tắc SonarQube PHP Analyzer.",
+                "remediation": """// Khắc phục SonarQube Code Quality: Đổi tên hàm sang chuẩn camelCase
+function execWrite(string $sql): bool
+{
+    $conn = db();
+    return mysqli_query($conn, $sql) !== false;
+}""",
+            }
+        ]
     },
 
     # --------------------------------------------------------------------------
@@ -365,17 +425,44 @@ if (!isset($allowed_tables[$table_param])) {
 }"""
             }
         ],
-        "code_quality": {
-            "name": "Use 'include_once' Instead of 'include' (Reliability Bug)",
-            "type": "BUG",
-            "severity": "MINOR",
-            "rule": "php:S2003",
-            "file": "InlaneWeb/web/src/pages/guide.php",
-            "line": 56,
-            "desc": "Sử dụng lệnh include thay vì include_once có nguy cơ gây lỗi trùng khai báo hàm/lớp (Cannot redeclare class/function) và rò rỉ bộ nhớ runtime theo SonarQube PHP Analyzer.",
-            "remediation": """// Khắc phục SonarQube Code Quality: Sử dụng include_once để đảm bảo tệp chỉ nạp đúng 1 lần
-include_once $allowed_file_path;"""
-        }
+        "code_quality": [
+            {
+                "name": "Use 'include_once' Instead of 'include' (Reliability Bug)",
+                "type": "BUG",
+                "severity": "MINOR",
+                "rule": "php:S2003",
+                "file": "InlaneWeb/web/src/pages/guide.php",
+                "line": 56,
+                "desc": "Sử dụng lệnh include thay vì include_once có nguy cơ gây lỗi trùng khai báo hàm/lớp (Cannot redeclare class/function) và rò rỉ bộ nhớ runtime theo SonarQube PHP Analyzer.",
+                "remediation": """// Khắc phục SonarQube Code Quality: Sử dụng include_once để đảm bảo tệp chỉ nạp đúng 1 lần
+include_once $allowed_file_path;""",
+            },
+            {
+                "name": "Export Filter Report Name Input Missing ID & Label Association (Web Accessibility Bug)",
+                "type": "BUG",
+                "severity": "MAJOR",
+                "rule": "Web:InputWithoutLabelCheck",
+                "file": "InlaneWeb/web/src/pages/admin_report_export.php",
+                "line": 37,
+                "desc": "Trường nhập tên báo cáo kết xuất trong phân hệ admin thiếu thuộc tính id và thẻ label liên kết, vi phạm tiêu chuẩn trợ năng giao diện Web Accessibility của SonarQube.",
+                "remediation": """// Khắc phục SonarQube Code Quality: Thêm thuộc tính id và liên kết thẻ label qua thuộc tính for
+<div class="form-row">
+    <label for="export-report-name">Tên báo cáo</label>
+    <input id="export-report-name" type="text" name="report_name" placeholder="vd: q1_2024">
+</div>""",
+            },
+            {
+                "name": "Trailing Whitespace Violation in Guide Module (Code Style Smell)",
+                "type": "CODE_SMELL",
+                "severity": "MINOR",
+                "rule": "php:S1131",
+                "file": "InlaneWeb/web/src/pages/guide.php",
+                "line": 7,
+                "desc": "Dòng chú thích chứa khoảng trắng vô nghĩa ở cuối dòng (trailing whitespace), vi phạm tiêu chuẩn định dạng mã nguồn sạch PSR-12 và SonarQube Code Style Checker.",
+                "remediation": """// Khắc phục SonarQube Code Quality: Loại bỏ khoảng trắng thừa cuối dòng 7 theo chuẩn PSR-12 Clean Code
+ *""",
+            }
+        ]
     },
 
     # --------------------------------------------------------------------------
@@ -466,18 +553,48 @@ $stmt->execute();"""
 MYSQL_ROOT_PASSWORD: ${PROD_DB_ROOT_PASSWORD}"""
             }
         ],
-        "code_quality": {
-            "name": "Form Label Not Associated With Input Control (Accessibility Code Smell)",
-            "type": "CODE_SMELL",
-            "severity": "MAJOR",
-            "rule": "Web:S6853",
-            "file": "InlaneWeb/web/src/pages/account.php",
-            "line": 28,
-            "desc": "Thẻ label trong trang hồ sơ đối tác không có thuộc tính for gắn kết trực tiếp với id của input tương ứng, vi phạm tiêu chuẩn ISO/IEC 40500 và SonarQube Accessibility Rules.",
-            "remediation": """// Khắc phục SonarQube Code Quality: Gắn kết thuộc tính for và id giữa nhãn và trường nhập
+        "code_quality": [
+            {
+                "name": "Form Label Not Associated With Input Control (Accessibility Code Smell)",
+                "type": "CODE_SMELL",
+                "severity": "MAJOR",
+                "rule": "Web:S6853",
+                "file": "InlaneWeb/web/src/pages/account.php",
+                "line": 28,
+                "desc": "Thẻ label trong trang hồ sơ đối tác không có thuộc tính for gắn kết trực tiếp với id của input tương ứng, vi phạm tiêu chuẩn ISO/IEC 40500 và SonarQube Accessibility Rules.",
+                "remediation": """// Khắc phục SonarQube Code Quality: Gắn kết thuộc tính for và id giữa nhãn và trường nhập
 <label for="acc-phone">Số điện thoại liên hệ:</label>
-<input id="acc-phone" type="text" name="phone" value="...">"""
-        }
+<input id="acc-phone" type="text" name="phone" value="...">""",
+            },
+            {
+                "name": "User Profile Email Input Missing ID & Label Association (Web Accessibility Bug)",
+                "type": "BUG",
+                "severity": "MAJOR",
+                "rule": "Web:InputWithoutLabelCheck",
+                "file": "InlaneWeb/web/src/pages/account.php",
+                "line": 29,
+                "desc": "Ô nhập Email trong biểu mẫu cập nhật hồ sơ người dùng thiếu thuộc tính id và không được liên kết đúng với nhãn mô tả, gây khó khăn cho việc tự động điền form và trợ năng.",
+                "remediation": """// Khắc phục SonarQube Code Quality: Bổ sung id='acc-email' và thuộc tính for cho label
+<div class="form-row">
+    <label for="acc-email">Email</label>
+    <input id="acc-email" type="text" name="email" value="<?= htmlspecialchars($u['email']) ?>">
+</div>""",
+            },
+            {
+                "name": "Shipment Tracking Note Input Missing ID & Label (Web Accessibility Bug)",
+                "type": "BUG",
+                "severity": "MAJOR",
+                "rule": "Web:InputWithoutLabelCheck",
+                "file": "InlaneWeb/web/src/pages/shipment_detail.php",
+                "line": 48,
+                "desc": "Phần tử textarea nhập bình luận cho chi tiết vận tải thiếu thẻ label và id tương ứng, vi phạm quy tắc WCAG 2.1 và bị SonarQube đánh dấu là Bug trợ năng giao diện.",
+                "remediation": """// Khắc phục SonarQube Code Quality: Bổ sung thẻ label trợ năng cho trường bình luận
+<div class="form-row">
+    <label for="comment-content" class="sr-only">Nội dung bình luận:</label>
+    <textarea id="comment-content" name="content" rows="3" placeholder="Nhập bình luận..."></textarea>
+</div>""",
+            }
+        ]
     },
 
     # --------------------------------------------------------------------------
@@ -570,18 +687,47 @@ if (!in_array($action, $allowed_actions, true)) {
 }"""
             }
         ],
-        "code_quality": {
-            "name": "Admin Log Filter Input Without Associated Label (Accessibility Bug)",
-            "type": "BUG",
-            "severity": "MAJOR",
-            "rule": "Web:InputWithoutLabelCheck",
-            "file": "InlaneWeb/web/src/pages/admin_dashboard.php",
-            "line": 26,
-            "desc": "Trường input lọc dữ liệu điều khiển phân hệ quản trị Admin thiếu thuộc tính id và thẻ label tương ứng, vi phạm tiêu chuẩn Code Quality và Trợ năng của SonarQube.",
-            "remediation": """// Khắc phục SonarQube Code Quality: Bổ sung thẻ label liên kết rõ ràng
+        "code_quality": [
+            {
+                "name": "Admin Log Filter Input Without Associated Label (Accessibility Bug)",
+                "type": "BUG",
+                "severity": "MAJOR",
+                "rule": "Web:InputWithoutLabelCheck",
+                "file": "InlaneWeb/web/src/pages/admin_dashboard.php",
+                "line": 26,
+                "desc": "Trường input lọc dữ liệu điều khiển phân hệ quản trị Admin thiếu thuộc tính id và thẻ label tương ứng, vi phạm tiêu chuẩn Code Quality và Trợ năng của SonarQube.",
+                "remediation": """// Khắc phục SonarQube Code Quality: Bổ sung thẻ label liên kết rõ ràng
 <label for="admin-filter-log" class="form-label">Lọc dữ liệu:</label>
-<input id="admin-filter-log" type="text" name="filter" placeholder="...">"""
-        }
+<input id="admin-filter-log" type="text" name="filter" placeholder="...">""",
+            },
+            {
+                "name": "Missing Trailing Newline at End of Admin Console File (PSR-12 Code Smell)",
+                "type": "CODE_SMELL",
+                "severity": "MINOR",
+                "rule": "php:S113",
+                "file": "InlaneWeb/web/src/pages/admin_console.php",
+                "line": 55,
+                "desc": "Tệp mã nguồn kết thúc đột ngột mà không có ký tự ngắt dòng (newline) cuối tệp, vi phạm chuẩn định dạng tệp PSR-12 và tiêu chuẩn kiểm soát phiên bản Git.",
+                "remediation": """// Khắc phục SonarQube Code Quality: Bổ sung ký tự xuống dòng (\n) tại cuối tệp admin_console.php
+render_footer();
+""",
+            },
+            {
+                "name": "Template Helper Function Naming Violates PSR-1 camelCase (Clean Code Smell)",
+                "type": "CODE_SMELL",
+                "severity": "MINOR",
+                "rule": "php:S100",
+                "file": "InlaneWeb/web/src/lib/layout.php",
+                "line": 13,
+                "desc": "Hàm giao diện 'render_header' dùng phong cách snake_case vi phạm biểu thức chính quy ^[a-z][a-zA-Z0-9]*$ theo khuyến nghị mã sạch PSR-1 của SonarQube.",
+                "remediation": """// Khắc phục SonarQube Code Quality: Đổi tên hàm sang renderHeader theo chuẩn camelCase
+function renderHeader(string $title = 'IlFreight Logistics'): void
+{
+    $u = current_user();
+    // ...
+}""",
+            }
+        ]
     }
 }
 
@@ -783,11 +929,14 @@ def run_real_ci_for_member(member_key: str, remediate: bool = False, fast: bool 
                     print(f"     ✖ Điều kiện vi phạm: {BOLD}{cond.get('metricKey')}{RESET} "
                           f"(Giá trị thực tế: {cond.get('actualValue')} | Ngưỡng yêu cầu: {cond.get('errorThreshold')})")
 
-        cq = m.get("code_quality", {})
-        if cq:
+        cq_list = m.get("code_quality", [])
+        if isinstance(cq_list, dict):
+            cq_list = [cq_list]
+        for cq in cq_list:
             print(f"\n     Lỗi thuộc phân hệ: {BOLD}{cq['file']}:{cq['line']}{RESET}")
             print(f"     Quy tắc vi phạm:  {CYAN}{cq['rule']}{RESET} ({cq['type']} | {cq['severity']})")
-            print(f"     Mô tả:            {cq['desc']}\n")
+            print(f"     Mô tả:            {cq['desc']}")
+        print()
 
         # CƠ CHẾ CHẶN ĐỨNG THẬT (BREAK-THE-BUILD)
         print("=" * 80)
@@ -806,8 +955,11 @@ def run_real_ci_for_member(member_key: str, remediate: bool = False, fast: bool 
         for v in m["vulns"]:
             print(f"  ✔ Đã vá {v['name']} ({v['file']}:{v['line']})")
         if m.get("code_quality"):
-            cq = m["code_quality"]
-            print(f"  ✔ Đã chuẩn hóa {cq['name']} ({cq['file']}:{cq['line']})")
+            cq_list = m["code_quality"]
+            if isinstance(cq_list, dict):
+                cq_list = [cq_list]
+            for cq in cq_list:
+                print(f"  ✔ Đã chuẩn hóa {cq['name']} ({cq['file']}:{cq['line']})")
 
         print(f"\n  🔍 {BOLD}Tái quét bằng Semgrep Taint Engine:{RESET}   {GREEN}✔ 0 Lỗ hổng (0 ERROR, 0 WARNING){RESET}")
         print(f"  🔍 {BOLD}Tái thẩm định SonarQube Scanner:{RESET}    {GREEN}✔ Quality Gate: PASSED (Rating A, 0 Bugs){RESET}")
@@ -852,14 +1004,16 @@ def run_member_demo(member_key: str, remediate: bool = False, fast: bool = False
 
     Quy trình kết hợp song song cả 2 trụ cột DevSecOps:
     1. An ninh mã nguồn (SAST Security Vulnerabilities): 4 lỗ hổng nghiêm trọng (ERROR).
-    2. Chất lượng mã nguồn (SonarQube Code Quality): 1 lỗi Bug / Code Smell (CRITICAL / MAJOR).
+    2. Chất lượng mã nguồn (SonarQube Code Quality): 3 lỗi Bug / Code Smell từ SonarQube.
     """
     if member_key not in MEMBERS_CATALOG:
         print(f"❌ Không tìm thấy thành viên: '{member_key}'. Các mã hợp lệ: {list(MEMBERS_CATALOG.keys())}")
         return 1
 
     m = MEMBERS_CATALOG[member_key]
-    cq = m.get("code_quality", {})
+    cq_list = m.get("code_quality", [])
+    if isinstance(cq_list, dict):
+        cq_list = [cq_list]
     delay = 0.0 if fast else 0.4
 
     # Hiển thị biểu ngữ giới thiệu kịch bản
@@ -928,28 +1082,29 @@ def run_member_demo(member_key: str, remediate: bool = False, fast: bool = False
 
             print(f"  {BOLD}└─────────────────────────────────────────────────────────────────────────────┘{RESET}\n")
 
-        # PHẦN B: 1 LỖI CHẤT LƯỢNG MÃ NGUỒN TỪ SONARQUBE (CODE QUALITY ISSUE)
-        if cq:
+        # PHẦN B: CÁC LỖI CHẤT LƯỢNG MÃ NGUỒN TỪ SONARQUBE (CODE QUALITY ISSUES)
+        if cq_list:
             time.sleep(delay * 0.7)
-            cq_color = MAGENTA if cq.get("type") == "CODE_SMELL" else RED
-            print(f"  {MAGENTA}{BOLD}🧹 [B. CHẤT LƯỢNG MÃ NGUỒN] PHÁT HIỆN 01 LỖI CODE QUALITY (SONARQUBE SCANNER):{RESET}\n")
-            print(f"  {BOLD}┌─────────────────────────────────────────────────────────────────────────────┐{RESET}")
-            print(f"  {BOLD}│ LỖI CHẤT LƯỢNG: {MAGENTA}{cq['name']}{RESET}{' ' * max(1, 60 - len(cq['name']))}{BOLD}│{RESET}")
-            print(f"  {BOLD}├─────────────────────────────────────────────────────────────────────────────┤{RESET}")
-            print(f"  │ 🏷️  Phân loại:  {cq_color}{BOLD}{cq['type']}{RESET} (SonarQube {cq['type']})")
-            print(f"  │ ⚠️  Mức độ:    {BOLD}{cq['severity']}{RESET} (Severity Level)")
-            print(f"  │ 📂  Vị trí:    {BOLD}{cq['file']}:{cq['line']}{RESET}")
-            print(f"  │ 📜  Sonar Rule: {CYAN}{cq['rule']}{RESET}")
-            print(f"  │ 📝  Chi tiết:  {cq['desc']}")
-            print(f"  │")
-            print(f"  │ {BOLD}Trích xuất ngữ cảnh mã nguồn SonarQube đánh dấu:{RESET}")
+            print(f"  {MAGENTA}{BOLD}🧹 [B. CHẤT LƯỢNG MÃ NGUỒN] PHÁT HIỆN {len(cq_list):02d} LỖI CODE QUALITY (SONARQUBE SCANNER):{RESET}\n")
+            for c_idx, cq in enumerate(cq_list, 1):
+                cq_color = MAGENTA if cq.get("type") == "CODE_SMELL" else RED
+                print(f"  {BOLD}┌─────────────────────────────────────────────────────────────────────────────┐{RESET}")
+                print(f"  {BOLD}│ LỖI CHẤT LƯỢNG [{c_idx:02d}/{len(cq_list):02d}]: {MAGENTA}{cq['name'][:50]}{RESET}{' ' * max(1, 55 - len(cq['name'][:50]))}{BOLD}│{RESET}")
+                print(f"  {BOLD}├─────────────────────────────────────────────────────────────────────────────┤{RESET}")
+                print(f"  │ 🏷️  Phân loại:  {cq_color}{BOLD}{cq['type']}{RESET} (SonarQube {cq['type']})")
+                print(f"  │ ⚠️  Mức độ:    {BOLD}{cq['severity']}{RESET} (Severity Level)")
+                print(f"  │ 📂  Vị trí:    {BOLD}{cq['file']}:{cq['line']}{RESET}")
+                print(f"  │ 📜  Sonar Rule: {CYAN}{cq['rule']}{RESET}")
+                print(f"  │ 📝  Chi tiết:  {cq['desc']}")
+                print(f"  │")
+                print(f"  │ {BOLD}Trích xuất ngữ cảnh mã nguồn SonarQube đánh dấu:{RESET}")
 
-            cq_lines = extract_code_context(cq["file"], cq["line"], context_lines=2)
-            for lno, text, is_target in cq_lines:
-                prefix = f"  │   {MAGENTA}➔ {lno:3d} │ {text}{RESET}" if is_target else f"  │     {lno:3d} │ {DIM}{text}{RESET}"
-                print(prefix)
+                cq_lines = extract_code_context(cq["file"], cq["line"], context_lines=2)
+                for lno, text, is_target in cq_lines:
+                    prefix = f"  │   {MAGENTA}➔ {lno:3d} │ {text}{RESET}" if is_target else f"  │     {lno:3d} │ {DIM}{text}{RESET}"
+                    print(prefix)
 
-            print(f"  {BOLD}└─────────────────────────────────────────────────────────────────────────────┘{RESET}\n")
+                print(f"  {BOLD}└─────────────────────────────────────────────────────────────────────────────┘{RESET}\n")
 
         time.sleep(delay)
 
@@ -959,7 +1114,7 @@ def run_member_demo(member_key: str, remediate: bool = False, fast: bool = False
         print_banner("CHỐT CHẶN AN NINH & CHẤT LƯỢNG KÍCH HOẠT: CI CHẶN ĐỨNG (BREAK-THE-BUILD)", BG_RED, "#")
         print(f"  {RED}{BOLD}❌ ĐÁNH GIÁ CỔNG CHẤT LƯỢNG & AN NINH (DUAL-GATE EVALUATION):{RESET}")
         print(f"     1. {BOLD}Semgrep Security Gate:{RESET}   {RED}{BOLD}FAILED{RESET} (Phát hiện 4 lỗ hổng mức ERROR / HIGH)")
-        print(f"     2. {BOLD}SonarQube Quality Gate:{RESET} {RED}{BOLD}ERROR (FAILED){RESET} (Phát hiện 1 {cq.get('type')} mức {cq.get('severity')})")
+        print(f"     2. {BOLD}SonarQube Quality Gate:{RESET} {RED}{BOLD}ERROR (FAILED){RESET} (Phát hiện {len(cq_list)} lỗi Code Quality)")
         print(f"     3. {BOLD}Ngưỡng cho phép merge:{RESET}  {BOLD}0 Lỗ hổng ERROR & 0 Critical/Major Bugs allowed{RESET}\n")
 
         print(f"  {BOLD}🛑 CƠ CHẾ BẢO VỆ TỰ ĐỘNG CỦA CI PIPELINE:{RESET}")
@@ -985,10 +1140,11 @@ def run_member_demo(member_key: str, remediate: bool = False, fast: bool = False
             print(f"  ✔ LỖ HỔNG #{v['num']}: {v['name']} ({v['file']}:{v['line']})")
             print(f"  {GREEN}{v['remediation']}{RESET}\n")
 
-        if cq:
-            print(f"  {MAGENTA}{BOLD}[2. KHẮC PHỤC 01 LỖI CHẤT LƯỢNG MÃ NGUỒN SONARQUBE]:{RESET}")
-            print(f"  ✔ LỖI QUALITY: {cq['name']} ({cq['file']}:{cq['line']} | Rule: {cq['rule']})")
-            print(f"  {GREEN}{cq['remediation']}{RESET}\n")
+        if cq_list:
+            print(f"  {MAGENTA}{BOLD}[2. KHẮC PHỤC {len(cq_list):02d} LỖI CHẤT LƯỢNG MÃ NGUỒN SONARQUBE]:{RESET}")
+            for c_idx, cq in enumerate(cq_list, 1):
+                print(f"  ✔ LỖI QUALITY #{c_idx}: {cq['name']} ({cq['file']}:{cq['line']} | Rule: {cq['rule']})")
+                print(f"  {GREEN}{cq['remediation']}{RESET}\n")
 
         time.sleep(delay)
         print_step("STAGE 2: TÁI KIỂM ĐỊNH TOÀN DIỆN (RE-SCAN)", "Chạy lại kiểm định sau khi khắc phục mã nguồn")

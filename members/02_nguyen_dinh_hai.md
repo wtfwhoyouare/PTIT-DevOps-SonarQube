@@ -305,69 +305,101 @@ if ($pass === false || $pass === '') {
 
 ## PHẦN B: KIỂM ĐỊNH CHẤT LƯỢNG MÃ NGUỒN (SONARQUBE CODE QUALITY)
 
-Trong mô hình DevSecOps hiện đại, bên cạnh các lỗ hổng an ninh mạng (Security Gate), dự án triển khai quy chuẩn kiểm soát kép **Dual-Gate (Security Gate + Quality Gate)**. Công cụ **SonarQube Scanner** được kích hoạt tại Stage 2 để kiểm tra chuẩn Clean Code và khả năng bảo trì mã nguồn (Maintainability). Bất kỳ vi phạm nghiêm trọng nào thuộc nhóm **Critical Code Smells** trên New Code đều sẽ khiến **SonarQube Quality Gate** bị đánh rớt (**FAILED**) và kích hoạt cơ chế Break-the-Build.
+Trong mô hình DevSecOps hiện đại, bên cạnh các lỗ hổng an ninh mạng (Security Gate), dự án triển khai quy chuẩn kiểm soát kép **Dual-Gate (Security Gate + Quality Gate)**. Công cụ **SonarQube Scanner** được kích hoạt tại Stage 2 để kiểm tra toàn diện chuẩn Clean Code PSR, độ tin cậy và khả năng bảo trì mã nguồn (Maintainability).
 
-### 1. Tổng quan Lỗi Chất lượng Mã nguồn Phụ trách
+Bất kỳ vi phạm nghiêm trọng nào thuộc nhóm **Critical Code Smells** hoặc **New Bugs** trên New Code đều sẽ khiến **SonarQube Quality Gate** bị đánh rớt (**FAILED**) và kích hoạt cơ chế ngắt tiến trình (Break-the-Build).
 
-| Tiêu chí Thẩm định | Nội dung Chi tiết từ SonarQube Scanner |
-| :--- | :--- |
-| **Tên vấn đề Code Quality** | **Missing Curly Braces in Nested Control Statement (Clean Code Smell)** |
-| **Mã quy tắc vi phạm (Rule Key)** | [`php:S121`](https://rules.sonarsource.com/php/RSPEC-121) |
-| **Phân loại vấn đề (Issue Type)** | ♨️ **CODE_SMELL** (Mùi mã nguồn gây rủi ro bảo trì & logic ngầm) |
-| **Mức độ nghiêm trọng (Severity)**| 🔴 **CRITICAL** |
-| **Tệp tin & Vị trí vi phạm** | [InlaneWeb/web/src/pages/login.php:36](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/pages/login.php#L36) |
-| **Phạm vi tiêu chuẩn áp dụng** | **PSR-12 (Coding Style Standard)** & **SonarSource Clean Code Guidelines** |
-| **Trạng thái Quality Gate** | ❌ **FAILED** (Vi phạm điều kiện: `No Critical Issues on New Code`) |
+Phân hệ phụ trách của Nguyễn Đình Hải gồm **03 lỗi chất lượng mã nguồn thực tế** được SonarQube ghi nhận trong `reports/sonarqube_ci/issues.json`:
 
-### 2. Bằng chứng Mã nguồn Vi phạm (Non-compliant Code)
-Tại trang Đăng nhập người dùng (`InlaneWeb/web/src/pages/login.php`), câu lệnh điều khiển `if` hiển thị thông báo lỗi được viết mà không bao bọc bởi cặp dấu ngoặc nhọn `{ }`:
+### 1. Bảng Tổng hợp 03 Lỗi Code Quality Phụ trách
 
+| Mã | Tên Vấn đề Code Quality | Tệp & Vị trí Vi phạm | Quy tắc SonarQube | Phân loại | Mức độ | Tiêu chuẩn Vi phạm |
+| :---: | :--- | :--- | :--- | :---: | :---: | :--- |
+| **CQ-01** | Missing Curly Braces in Nested Statement | [login.php:36](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/pages/login.php#L36) | `php:S121` | 🧹 CODE_SMELL | 🔴 CRITICAL | PSR-12 Control Structures Standard |
+| **CQ-02** | Login Form Username Input Missing ID & Label | [login.php:40](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/pages/login.php#L40) | `Web:InputWithoutLabelCheck` | 🐞 BUG | 🟠 MAJOR | WCAG 2.1 Level A (Criteria 1.3.1) |
+| **CQ-03** | Database Function Naming Violates camelCase | [db.php:55](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/lib/db.php#L55) | `php:S100` | 🧹 CODE_SMELL | 🟡 MINOR | PSR-1 / PSR-12 Method Naming |
+
+---
+
+### 2. Chi tiết Từng Lỗi Chất lượng Mã nguồn & Kịch bản Khắc phục
+
+#### CQ-01: Missing Curly Braces in Nested Statement (Clean Code Smell)
+* **Vị trí vi phạm:** [InlaneWeb/web/src/pages/login.php:36](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/pages/login.php#L36)
+* **Quy tắc SonarQube:** [`php:S121`](https://rules.sonarsource.com/php/RSPEC-121) (Critical Code Smell)
+* **Bằng chứng mã nguồn vi phạm (Non-compliant Code):**
 ```php
-<!-- Dòng 34-37 (InlaneWeb/web/src/pages/login.php) - MÃ NGUỒN VI PHẠM -->
-<div class="card" style="max-width:440px;margin:0 auto;">
-    <h1>Đăng nhập</h1>
-    <?php if ($error) flash($error, 'error'); ?>
-    <form action="/login" method="post">
+// Dòng 35-37 (InlaneWeb/web/src/pages/login.php) - MÃ NGUỒN VI PHẠM
+<h1>Đăng nhập</h1>
+<?php if ($error) flash($error, 'error'); ?>
+<form action="/login" method="post">
+```
+* **Cơ chế phân tích của SonarQube:** Khối lệnh `if` lồng nhau không sử dụng cặp dấu ngoặc nhọn `{ }` để bao bọc phạm vi thực thi. Quy chuẩn mã nguồn sạch PSR-12 và SonarQube Clean Code yêu cầu tất cả các khối điều khiển rẽ nhánh phải có dấu ngoặc bảo vệ, tránh các lỗi logic ngầm nguy hiểm khi lập trình viên khác bổ sung câu lệnh vào nhánh điều kiện.
+* **Phương án khắc phục chuẩn hóa (Clean Code Refactoring):**
+```php
+// Dòng 35-39 (InlaneWeb/web/src/pages/login.php) - MÃ NGUỒN ĐÃ KHẮC PHỤC
+<h1>Đăng nhập</h1>
+<?php if ($error) {
+    flash($error, 'error');
+} ?>
+<form action="/login" method="post">
 ```
 
-### 3. Cơ chế Phân tích của SonarQube PHP Analyzer
-* **Động cơ phân tích cú pháp AST:** SonarQube PHP Analyzer phân tích cú pháp trừu tượng của toàn bộ cấu trúc điều khiển (`if`, `else`, `for`, `foreach`, `while`, `do-while`).
-* **Nguyên nhân phát hiện vi phạm:** Quy tắc `php:S121` ("Control structures should use curly braces") quy định bắt buộc mọi cấu trúc điều khiển phải dùng cặp dấu ngoặc nhọn `{ }`, ngay cả khi khối lệnh bên trong chỉ có đúng một dòng duy nhất.
-* **Hậu quả kỹ thuật:**
-  - Vi phạm chuẩn mã nguồn PHP quốc tế **PSR-12**.
-  - Tiềm ẩn rủi ro logic nghiêm trọng khi bảo trì mã nguồn trong tương lai (tương tự lỗi bảo mật nổi tiếng `goto fail;` của Apple SSL): Khi một lập trình viên khác thêm dòng mã mới ngay dưới `if` mà không nhận ra nó nằm ngoài khối điều kiện, mã nguồn sẽ thực thi sai hoàn toàn luồng logic mong muốn.
+---
 
-### 4. Tác động tới Quality Gate trong Quy trình CI/CD
-* **Chính sách Quality Gate (`ci/sonarqube-quality-gate.json`):**
-  - Mức độ vi phạm mới: Không chấp nhận lỗi mới mức **Critical**.
-  - Điểm bảo trì mới (New Maintainability Rating): Bắt buộc đạt `A`.
-* **Kịch bản gãy vỡ (Break-the-Build):** Vì quy tắc `php:S121` được xếp mức **CRITICAL**, Quality Gate lập tức chuyển trạng thái sang ❌ **FAILED**. Pipeline CI tự động ngắt tại Stage 2 và từ chối cấp quyền Merge Pull Request.
-
-### 5. Phương án Khắc phục Chuẩn hóa (Clean Code Refactoring)
-Bổ sung đầy đủ cặp dấu ngoặc nhọn `{ }` bao bọc lệnh `flash()`, đảm bảo khối lệnh rõ ràng, tường minh và tuân thủ tuyệt đối chuẩn PSR-12:
-
-```php
-<!-- Dòng 34-41 (InlaneWeb/web/src/pages/login.php) - MÃ NGUỒN ĐÃ KHẮC PHỤC -->
-<div class="card" style="max-width:440px;margin:0 auto;">
-    <h1>Đăng nhập</h1>
-    <?php 
-    if ($error) {
-        flash($error, 'error'); 
-    }
-    ?>
-    <form action="/login" method="post">
+#### CQ-02: Login Form Username Input Missing ID & Label Association (Web Accessibility Bug)
+* **Vị trí vi phạm:** [InlaneWeb/web/src/pages/login.php:40](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/pages/login.php#L40)
+* **Quy tắc SonarQube:** [`Web:InputWithoutLabelCheck`](https://rules.sonarsource.com/html/RSPEC-InputWithoutLabelCheck) (Major Bug)
+* **Bằng chứng mã nguồn vi phạm (Non-compliant Code):**
+```html
+<!-- Dòng 38-41 (InlaneWeb/web/src/pages/login.php) - MÃ NGUỒN VI PHẠM -->
+<div class="form-row">
+    <label>Tên đăng nhập</label>
+    <input type="text" name="username" autofocus>
+</div>
+```
+* **Cơ chế phân tích của SonarQube:** Thẻ `<label>` đứng độc lập không có thuộc tính `for` và trường `<input>` thiếu thuộc tính `id`. Theo WCAG 2.1 Criteria 1.3.1 (Info and Relationships), phần tử nhãn không liên kết ngữ nghĩa với phần tử điều khiển, gây lỗi giao diện trợ năng trên các trình duyệt hiện đại.
+* **Phương án khắc phục chuẩn hóa (Clean Code Refactoring):**
+```html
+<!-- Dòng 38-41 (InlaneWeb/web/src/pages/login.php) - MÃ NGUỒN ĐÃ KHẮC PHỤC -->
+<div class="form-row">
+    <label for="login-username">Tên đăng nhập</label>
+    <input id="login-username" type="text" name="username" autofocus>
+</div>
 ```
 
-### 6. Kết quả Thẩm định Sau Khắc phục (Quality Gate Passed)
+---
+
+#### CQ-03: Database Helper Function Naming Violates PSR-1 camelCase (Clean Code Smell)
+* **Vị trí vi phạm:** [InlaneWeb/web/src/lib/db.php:55](file:///d:/PTIT-DevOps-SonarQube/InlaneWeb/web/src/lib/db.php#L55)
+* **Quy tắc SonarQube:** [`php:S100`](https://rules.sonarsource.com/php/RSPEC-100) (Minor Code Smell)
+* **Bằng chứng mã nguồn vi phạm (Non-compliant Code):**
+```php
+// Dòng 54-56 (InlaneWeb/web/src/lib/db.php) - MÃ NGUỒN VI PHẠM
+/** exec_write() — chay INSERT/UPDATE/DELETE/CREATE (khong tra row). */
+function exec_write(string $sql): bool
+{
+```
+* **Cơ chế phân tích của SonarQube:** Tên hàm `exec_write` chứa ký tự gạch dưới (snake_case), vi phạm biểu thức chính quy chuẩn của SonarQube `^[a-z][a-zA-Z0-9]*$` và quy chuẩn PSR-1 (Basic Coding Standard) quy định phương thức/hàm tiện ích phải được đặt tên theo quy ước camelCase.
+* **Phương án khắc phục chuẩn hóa (Clean Code Refactoring):**
+```php
+// Dòng 54-56 (InlaneWeb/web/src/lib/db.php) - MÃ NGUỒN ĐÃ KHẮC PHỤC
+/** execWrite() — chạy INSERT/UPDATE/DELETE/CREATE (không trả row). */
+function execWrite(string $sql): bool
+{
+```
+
+---
+
+### 3. Kết quả Thẩm định Chất lượng SonarQube Trước & Sau Khắc phục
 
 | Chỉ số Chất lượng (Metrics) | Trước khi Sửa (Dirty State) | Sau khi Sửa (Clean Code State) | Trạng thái Thẩm định |
 | :--- | :---: | :---: | :---: |
-| **New Critical Code Smells**| `1` (Critical) | `0` | ✅ Đạt chuẩn (Thỏa mãn = 0) |
+| **New Critical Code Smells**| `1` (php:S121) | `0` | ✅ Đạt chuẩn (Thỏa mãn = 0) |
+| **New Bugs** | `1` (Major) | `0` | ✅ Đạt chuẩn (Thỏa mãn = 0) |
 | **Maintainability Rating** | `B` | `A` | ✅ Đạt chuẩn Tuyệt đối |
 | **SonarQube Quality Gate** | ❌ **FAILED** | 🟢 **PASSED** | ✅ Cho phép Merge Pull Request |
 
 ---
-
 ## BÀI TOÁN SECURITY-AS-CODE (SaC) TRONG QUY TRÌNH DEVSECOPS
 
 Với vai trò Kỹ sư An ninh Phần mềm, Nguyễn Đình Hải thiết lập các quy tắc **Security-as-Code** nhằm bảo vệ cơ chế xác thực và ngăn chặn bypass:

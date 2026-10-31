@@ -300,7 +300,8 @@ def render_single_member_breakdown(
 
     if m_catalog:
         vulns = m_catalog.get("vulns", [])
-        cq = m_catalog.get("code_quality")
+        cq_raw = m_catalog.get("code_quality")
+        cq_list = cq_raw if isinstance(cq_raw, list) else ([cq_raw] if cq_raw else [])
 
         # 1. BẢNG TỔNG HỢP NHANH (QUICK SUMMARY TABLE)
         print(f"\n📊 {BOLD}BẢNG TỔNG HỢP CÁC LỖI VI PHẠM TRONG PHÂN HỆ CỦA {name.upper()}:{RESET}")
@@ -314,8 +315,8 @@ def render_single_member_breakdown(
             loc = f"{Path(v.get('file', '')).name}:{v.get('line', 0)}"[:w3-2]
             cwe = v.get("cwe", "").split(":")[0][:w4-2]
             print(f"│ {RED}{BOLD}{v_code:<{w1-2}}{RESET} │ {v_name:<{w2-2}} │ {CYAN}{loc:<{w3-2}}{RESET} │ {YELLOW}{cwe:<{w4-2}}{RESET} │")
-        if cq:
-            cq_code = "CQ-01"
+        for c_idx, cq in enumerate(cq_list, 1):
+            cq_code = f"CQ-{c_idx:02d}"
             cq_name = cq.get("name", "")[:w2-2]
             loc = f"{Path(cq.get('file', '')).name}:{cq.get('line', 0)}"[:w3-2]
             rule = cq.get("rule", "")[:w4-2]
@@ -352,36 +353,38 @@ def render_single_member_breakdown(
                     print(f"  │       {DIM}{lno:3d} │ {text}{RESET}")
             print(f"  {BOLD}└{'─' * card_w}┘{RESET}")
 
-        # 3. PHẦN B: 1 LỖI CODE QUALITY TỪ SONARQUBE
-        if cq:
-            cq_color = MAGENTA if cq.get("type") == "CODE_SMELL" else RED
+        # 3. PHẦN B: CÁC LỖI CODE QUALITY TỪ SONARQUBE
+        if cq_list:
             print(f"\n{MAGENTA}{BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{RESET}")
-            print(f"{MAGENTA}{BOLD}🧹 PHẦN B: CHI TIẾT 01 LỖI CHẤT LƯỢNG MÃ NGUỒN (SONARQUBE CODE QUALITY SCANNER){RESET}")
+            print(f"{MAGENTA}{BOLD}🧹 PHẦN B: CHI TIẾT {len(cq_list):02d} LỖI CHẤT LƯỢNG MÃ NGUỒN (SONARQUBE CODE QUALITY SCANNER){RESET}")
             print(f"{MAGENTA}{BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{RESET}")
 
-            print(f"\n  {BOLD}┌{'─' * card_w}┐{RESET}")
-            print(f"  {BOLD}│ LỖI CHẤT LƯỢNG: {MAGENTA}{cq.get('name')}{RESET}")
-            print(f"  {BOLD}├{'─' * card_w}┤{RESET}")
-            print(f"  │ 📂 {BOLD}Vị trí tệp:{RESET}       {CYAN}{cq.get('file')}:{cq.get('line')}{RESET}")
-            print(f"  │ 🏷️  {BOLD}Phân loại Sonar:{RESET}   {cq_color}{BOLD}{cq.get('type')}{RESET} (SonarQube {cq.get('type')})")
-            print(f"  │ ⚠️  {BOLD}Mức độ ảnh hưởng:{RESET} {YELLOW}{BOLD}{cq.get('severity')}{RESET} Level")
-            print(f"  │ 📜 {BOLD}Mã quy tắc Sonar:{RESET}  {CYAN}{cq.get('rule')}{RESET}")
-            print(f"  │ 📝 {BOLD}Chi tiết đánh giá:{RESET} {WHITE}{cq.get('desc')}{RESET}")
-            print(f"  │")
-            print(f"  │ 💻 {BOLD}Ngữ cảnh dòng mã SonarQube đánh dấu:{RESET}")
+            for c_idx, cq in enumerate(cq_list, 1):
+                cq_color = MAGENTA if cq.get("type") == "CODE_SMELL" else RED
+                print(f"\n  {BOLD}┌{'─' * card_w}┐{RESET}")
+                print(f"  {BOLD}│ LỖI CHẤT LƯỢNG [{c_idx:02d}/{len(cq_list):02d}]: {MAGENTA}{cq.get('name')}{RESET}")
+                print(f"  {BOLD}├{'─' * card_w}┤{RESET}")
+                print(f"  │ 📂 {BOLD}Vị trí tệp:{RESET}       {CYAN}{cq.get('file')}:{cq.get('line')}{RESET}")
+                print(f"  │ 🏷️  {BOLD}Phân loại Sonar:{RESET}   {cq_color}{BOLD}{cq.get('type')}{RESET} (SonarQube {cq.get('type')})")
+                print(f"  │ ⚠️  {BOLD}Mức độ ảnh hưởng:{RESET} {YELLOW}{BOLD}{cq.get('severity')}{RESET} Level")
+                print(f"  │ 📜 {BOLD}Mã quy tắc Sonar:{RESET}  {CYAN}{cq.get('rule')}{RESET}")
+                print(f"  │ 📝 {BOLD}Chi tiết đánh giá:{RESET} {WHITE}{cq.get('desc')}{RESET}")
+                print(f"  │")
+                print(f"  │ 💻 {BOLD}Ngữ cảnh dòng mã SonarQube đánh dấu:{RESET}")
 
-            cq_lines = extract_code_context(cq.get("file", ""), cq.get("line", 0), context_lines=2)
-            for lno, text, is_target in cq_lines:
-                if is_target:
-                    print(f"  │     {MAGENTA}{BOLD}➔ {lno:3d} │ {text}{RESET}")
-                else:
-                    print(f"  │       {DIM}{lno:3d} │ {text}{RESET}")
-            print(f"  {BOLD}└{'─' * card_w}┘{RESET}")
+                cq_lines = extract_code_context(cq.get("file", ""), cq.get("line", 0), context_lines=2)
+                for lno, text, is_target in cq_lines:
+                    if is_target:
+                        print(f"  │     {MAGENTA}{BOLD}➔ {lno:3d} │ {text}{RESET}")
+                    else:
+                        print(f"  │       {DIM}{lno:3d} │ {text}{RESET}")
+                print(f"  {BOLD}└{'─' * card_w}┘{RESET}")
 
         # 4. PHẦN C: CÁC PHÁT HIỆN BỔ SUNG TRONG LẦN CHẠY CI THỰC TẾ (NẾU CÓ CỜ --verbose)
         primary_files = {v.get("file", "").replace("\\", "/") for v in vulns}
-        if cq:
-            primary_files.add(cq.get("file", "").replace("\\", "/") )
+        for cq in cq_list:
+            if cq.get("file"):
+                primary_files.add(cq.get("file", "").replace("\\", "/"))
 
         extra_semgrep = [
             r for r in semgrep_list 
@@ -474,11 +477,11 @@ def display_detailed_failures(run_id: int, jobs: list[dict], target_member: str 
         print(f"│ {'STT':<{ew1-2}} │ {'THÀNH VIÊN':<{ew2-2}} │ {'PHÂN HỆ PHỤ TRÁCH':<{ew3-2}} │ {'SAST VULN':<{ew4-2}} │ {'SONAR CQ':<{ew5-2}} │ {'TRẠNG THÁI':<{ew6-2}} │")
         print(f"├{'─'*ew1}┼{'─'*ew2}┼{'─'*ew3}┼{'─'*ew4}┼{'─'*ew5}┼{'─'*ew6}┤")
         exec_rows = [
-            ("01", "Nguyễn Giang Nam", "Tra cứu cảng biển & IaC Docker", "4 lỗi", "1 BUG", "CHẶN ĐỨNG"),
-            ("02", "Nguyễn Đình Hải", "Xác thực, API Vận tải & DB Fallback", "4 lỗi", "1 SMELL", "CHẶN ĐỨNG"),
-            ("03", "Đào Xuân Mạnh", "Đơn hàng, Lịch trình & Xử lý XML", "4 lỗi", "1 SMELL", "CHẶN ĐỨNG"),
-            ("04", "Lê Đức Anh", "Tin tức hàng hải & Giám sát Metrics", "4 lỗi", "1 SMELL", "CHẶN ĐỨNG"),
-            ("05", "Nguyễn Phương Mai", "Quản trị Admin & Hệ thống Bình luận", "4 lỗi", "1 BUG", "CHẶN ĐỨNG"),
+            ("01", "Nguyễn Giang Nam", "Tra cứu cảng biển & IaC Docker", "4 lỗi", "3 lỗi", "CHẶN ĐỨNG"),
+            ("02", "Nguyễn Đình Hải", "Xác thực, API Vận tải & DB Fallback", "4 lỗi", "3 lỗi", "CHẶN ĐỨNG"),
+            ("03", "Đào Xuân Mạnh", "Đơn hàng, Lịch trình & Xử lý XML", "4 lỗi", "3 lỗi", "CHẶN ĐỨNG"),
+            ("04", "Lê Đức Anh", "Tin tức hàng hải & Giám sát Metrics", "4 lỗi", "3 lỗi", "CHẶN ĐỨNG"),
+            ("05", "Nguyễn Phương Mai", "Quản trị Admin & Hệ thống Bình luận", "4 lỗi", "3 lỗi", "CHẶN ĐỨNG"),
         ]
         for stt, name, scope, sast, cq, status in exec_rows:
             stt_fmt = f"[{stt}]"
