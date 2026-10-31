@@ -457,6 +457,7 @@ def display_detailed_failures(run_id: int, jobs: list[dict], target_member: str 
         print(f"{BOLD}{RED}🚨 BẢNG CHI TIẾT CÁC LỖI VI PHẠM GOM NHÓM THEO TỪNG THÀNH VIÊN (BREAK-THE-BUILD){RESET}")
         print(f"💡 {DIM}Hệ thống tự động phân loại vi phạm vào đúng thành viên phụ trách theo bảng phân nhiệm RACI.{RESET}")
     print(f"🔗 Chi tiết Web Run #{run_id}: {CYAN}https://github.com/{repo_slug}/actions/runs/{run_id}{RESET}")
+    print(f"ℹ️  {DIM}Chế độ: Đang phân tích kết quả từ lần chạy CI #{run_id}. Dùng cờ {YELLOW}--trigger{DIM} nếu muốn kích hoạt lần chạy mới trên GitHub.{RESET}")
     print("=" * 88)
 
     # In tóm tắt tổng quan chỉ số Quality Gate & Semgrep
@@ -592,7 +593,7 @@ def format_status_badge(status: str, conclusion: str | None) -> str:
         return f"{DIM}{status}{RESET}"
 
 
-def watch_live_ci_run(run_id: int, poll_interval: float = 3.0) -> int:
+def watch_live_ci_run(run_id: int, poll_interval: float = 3.0, target_member: str | None = None, show_verbose: bool = False) -> int:
     """Theo dõi và stream liên tục trạng thái thời gian thực của CI run cho tới khi hoàn tất."""
     print_banner(f"📡 THEO DÕI TRỰC TIẾP LUỒNG CI TRÊN GITHUB ACTIONS — RUN #{run_id}", CYAN)
     print(f"🔗 {BOLD}Liên kết Web Dashboard:{RESET} {CYAN}https://github.com/wtfwhoyouare/PTIT-DevOps-SonarQube/actions/runs/{run_id}{RESET}")
@@ -662,7 +663,7 @@ def watch_live_ci_run(run_id: int, poll_interval: float = 3.0) -> int:
                 print(f"{RED}✖ Trạng thái kết luận: {overall_conclusion.upper() if overall_conclusion else 'FAILED'}{RESET}")
                 print(f"{RED}✖ Nút Merge trên Pull Request bị khóa tự động để bảo vệ hệ thống.{RESET}")
                 print("=" * 88)
-                display_detailed_failures(run_id, jobs)
+                display_detailed_failures(run_id, jobs, target_member=target_member, show_verbose=show_verbose)
                 return 1
 
         time.sleep(poll_interval)
@@ -779,7 +780,7 @@ def main() -> None:
     if args.trigger:
         run_id = trigger_real_workflow(args.branch, enforce=True)
         if run_id:
-            sys.exit(watch_live_ci_run(run_id))
+            sys.exit(watch_live_ci_run(run_id, target_member=args.member, show_verbose=args.verbose))
         sys.exit(1)
 
     if args.watch:
@@ -788,7 +789,7 @@ def main() -> None:
         else:
             run_id = int(args.watch)
         if run_id:
-            sys.exit(watch_live_ci_run(run_id))
+            sys.exit(watch_live_ci_run(run_id, target_member=args.member, show_verbose=args.verbose))
         sys.exit(1)
 
     if args.latest:
@@ -800,7 +801,7 @@ def main() -> None:
                 if data:
                     display_detailed_failures(run_id, data.get("jobs", []), target_member=args.member)
                     sys.exit(0 if data.get("conclusion") == "success" else 1)
-            sys.exit(watch_live_ci_run(run_id))
+            sys.exit(watch_live_ci_run(run_id, target_member=args.member, show_verbose=args.verbose))
         sys.exit(1)
 
     interactive_menu()
