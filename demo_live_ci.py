@@ -38,6 +38,10 @@ if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8")
 
 ROOT = Path(__file__).resolve().parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from ci.demo_runner import MEMBERS_CATALOG, extract_code_context
 
 # ANSI Colors
 RESET = "\033[0m"
@@ -272,68 +276,108 @@ def render_single_member_breakdown(
     annos_list: list[dict],
     show_header: bool = True
 ) -> None:
-    """In phần báo cáo lỗi chi tiết cho một thành viên cụ thể."""
+    """In phần báo cáo lỗi chi tiết cho một thành viên cụ thể với đầy đủ Source, Sink, Pháp lý và Ngữ cảnh mã nguồn."""
+    m_catalog = MEMBERS_CATALOG.get(m_id)
+
     if show_header:
-        print(f"\n{BOLD}{BG_BLUE} 👤 [{m_info['order']}] {m_info['name'].upper()} ({m_id}) {RESET}")
-        print(f"📌 {BOLD}Phạm vi phụ trách:{RESET} {CYAN}{m_info['scope']}{RESET}")
-        print(f"⚡ {BOLD}Script demo độc lập:{RESET} {YELLOW}python {m_info['script']}{RESET}")
+        order = m_catalog.get("order", m_info.get("order", 1)) if m_catalog else m_info.get("order", 1)
+        name = m_catalog.get("name", m_info.get("name", m_id)) if m_catalog else m_info.get("name", m_id)
+        role = m_catalog.get("role", "") if m_catalog else ""
+        scope = m_catalog.get("scope", m_info.get("scope", "")) if m_catalog else m_info.get("scope", "")
+        script = f"demo_{order:02d}_{m_id}.py"
+
+        print(f"\n{BOLD}{BG_BLUE} 👤 [{order}] {name.upper()} ({m_id}) {RESET}")
+        if role:
+            print(f"💼 {BOLD}Vai trò:{RESET} {role}")
+        print(f"📌 {BOLD}Phạm vi phụ trách:{RESET} {CYAN}{scope}{RESET}")
+        print(f"⚡ {BOLD}Script demo độc lập:{RESET} {YELLOW}python {script}{RESET}")
         print("-" * 88)
 
-    has_issues = False
+    if m_catalog:
+        # PHẦN A: 4 LỖ HỔNG AN NINH VỚI SOURCE & SINK
+        vulns = m_catalog.get("vulns", [])
+        print(f"\n  {RED}{BOLD}🚨 [A. AN NINH MÃ NGUỒN] PHÁT HIỆN {len(vulns)} LỖ HỔNG BẢO MẬT (SEMGREP & SONARQUBE SAST):{RESET}\n")
 
-    # 1. Semgrep SAST
-    if semgrep_list:
-        has_issues = True
-        print(f"  🛡️  {BOLD}{RED}Lỗ hổng an ninh Semgrep SAST ({len(semgrep_list)} lỗi):{RESET}")
-        for idx, r in enumerate(semgrep_list, 1):
-            path = r.get("path", "")
-            line = r.get("start", {}).get("line", 0)
-            check_id = r.get("check_id", "unknown").split(".")[-1]
-            msg = r.get("extra", {}).get("message", "").strip().splitlines()[0]
-            cwe = r.get("extra", {}).get("metadata", {}).get("cwe", "")
-            if isinstance(cwe, list):
-                cwe = cwe[0] if cwe else ""
-            print(f"     [{idx:02d}] 🛑 {CYAN}{path}:{line}{RESET} | {YELLOW}{cwe}{RESET}")
-            print(f"          Quy tắc: {MAGENTA}{check_id}{RESET}")
-            print(f"          Chi tiết: {WHITE}{msg[:100]}...{RESET}")
-            code_lines = r.get("extra", {}).get("lines", "").strip()
-            if code_lines:
-                first_code = code_lines.splitlines()[0][:80]
-                print(f"          Dòng mã: {DIM}{first_code}{RESET}")
-    elif not annos_list:
-        print(f"  🛡️  {GREEN}✔ Semgrep SAST: Không phát hiện lỗ hổng mức ERROR.{RESET}")
+        for v in vulns:
+            sev_color = RED if "ERROR" in v.get("severity", "") else YELLOW
+            v_name = v.get("name", "")
+            pad_title = 56 - len(v_name) if len(v_name) < 56 else 1
+            print(f"  {BOLD}┌─────────────────────────────────────────────────────────────────────────────┐{RESET}")
+            print(f"  {BOLD}│ LỖ HỔNG #{v['num']}: {RED}{v_name}{RESET}{' ' * pad_title}{BOLD}│{RESET}")
+            print(f"  {BOLD}├─────────────────────────────────────────────────────────────────────────────┤{RESET}")
+            print(f"  │ 🏷️  Phân loại:  {BOLD}{v.get('cwe', '')}{RESET} | {DIM}{v.get('owasp', '')}{RESET}")
+            print(f"  │ ⚠️  Mức độ:    {sev_color}{BOLD}🔴 {v.get('severity', '')}{RESET} | Động cơ: {CYAN}{v.get('engine', '')}{RESET}")
+            print(f"  │ 📂  Vị trí:    {BOLD}{v.get('file', '')}:{v.get('line', 0)}{RESET}")
+            print(f"  │ 📜  Quy tắc:   {DIM}{v.get('rule', '')}{RESET}")
+            print(f"  │ 📥  {BOLD}Source:{RESET}    {YELLOW}{v.get('source', '')}{RESET}")
+            print(f"  │ ⚡  {BOLD}Sink:{RESET}      {RED}{v.get('sink', '')}{RESET}")
+            print(f"  │ ⚖️  Pháp lý:   {DIM}{v.get('legal', '')}{RESET}")
+            print(f"  │")
+            print(f"  │ {BOLD}Trích xuất mã nguồn vi phạm (Vulnerable Code Context):{RESET}")
 
-    # 2. SonarQube Code Quality & Bugs
-    if sonar_list:
-        has_issues = True
-        print(f"\n  🐛 {BOLD}{YELLOW}Lỗi chất lượng mã nguồn SonarQube ({len(sonar_list)} lỗi):{RESET}")
-        for idx, s in enumerate(sonar_list, 1):
-            comp = s.get("component", "").split(":")[-1]
-            line = s.get("line")
-            loc_str = f"{comp}:{line}" if line else comp
-            sev = s.get("severity", "MAJOR")
-            i_type = s.get("type", "BUG")
-            rule = s.get("rule", "")
-            msg = s.get("message", "")
-            sev_color = RED if sev in ("BLOCKER", "CRITICAL") else YELLOW
-            print(f"     [{idx:02d}] {sev_color}[{sev} {i_type}]{RESET} 📁 {CYAN}{loc_str}{RESET} | {MAGENTA}{rule}{RESET}")
-            print(f"          {WHITE}{msg}{RESET}")
-    elif not annos_list:
-        print(f"  🐛 {GREEN}✔ SonarQube: Không phát hiện lỗi chất lượng mã nguồn.{RESET}")
+            code_lines = extract_code_context(v.get("file", ""), v.get("line", 0), context_lines=2)
+            for lno, text, is_target in code_lines:
+                prefix = f"  │   {RED}➔ {lno:3d} │ {text}{RESET}" if is_target else f"  │     {lno:3d} │ {DIM}{text}{RESET}"
+                print(prefix)
 
-    # 3. Fallback GitHub Annotations (nếu không có artifacts)
-    if annos_list and not (semgrep_list or sonar_list):
-        has_issues = True
-        print(f"  📊 {BOLD}Vi phạm ghi nhận từ GitHub Annotations ({len(annos_list)}):{RESET}")
-        for idx, a in enumerate(annos_list, 1):
-            path = a.get("path", "")
-            line = a.get("start_line", 0)
-            msg = a.get("message", "").strip().splitlines()[0]
-            loc = f"{path}:{line}" if line > 0 else path
-            print(f"     [{idx:02d}] 📁 {CYAN}{loc}{RESET}: {WHITE}{msg}{RESET}")
+            print(f"  {BOLD}└─────────────────────────────────────────────────────────────────────────────┘{RESET}\n")
 
-    if not has_issues:
-        print(f"  {GREEN}{BOLD}✔ Xuất sắc! Toàn bộ mã nguồn trong phạm vi phụ trách đều đạt chuẩn an ninh & chất lượng.{RESET}")
+        # PHẦN B: 1 LỖI CODE QUALITY TỪ SONARQUBE
+        cq = m_catalog.get("code_quality")
+        if cq:
+            cq_color = MAGENTA if cq.get("type") == "CODE_SMELL" else RED
+            cq_name = cq.get("name", "")
+            pad_cq = 60 - len(cq_name) if len(cq_name) < 60 else 1
+            print(f"  {MAGENTA}{BOLD}🧹 [B. CHẤT LƯỢNG MÃ NGUỒN] PHÁT HIỆN 01 LỖI CODE QUALITY (SONARQUBE SCANNER):{RESET}\n")
+            print(f"  {BOLD}┌─────────────────────────────────────────────────────────────────────────────┐{RESET}")
+            print(f"  {BOLD}│ LỖI CHẤT LƯỢNG: {MAGENTA}{cq_name}{RESET}{' ' * pad_cq}{BOLD}│{RESET}")
+            print(f"  {BOLD}├─────────────────────────────────────────────────────────────────────────────┤{RESET}")
+            print(f"  │ 🏷️  Phân loại:  {cq_color}{BOLD}{cq.get('type')}{RESET} (SonarQube {cq.get('type')})")
+            print(f"  │ ⚠️  Mức độ:    {BOLD}{cq.get('severity')}{RESET} (Severity Level)")
+            print(f"  │ 📂  Vị trí:    {BOLD}{cq.get('file')}:{cq.get('line')}{RESET}")
+            print(f"  │ 📜  Sonar Rule: {CYAN}{cq.get('rule')}{RESET}")
+            print(f"  │ 📝  Chi tiết:  {cq.get('desc', '')}")
+            print(f"  │")
+            print(f"  │ {BOLD}Trích xuất ngữ cảnh mã nguồn SonarQube đánh dấu:{RESET}")
+
+            cq_lines = extract_code_context(cq.get("file", ""), cq.get("line", 0), context_lines=2)
+            for lno, text, is_target in cq_lines:
+                prefix = f"  │   {MAGENTA}➔ {lno:3d} │ {text}{RESET}" if is_target else f"  │     {lno:3d} │ {DIM}{text}{RESET}"
+                print(prefix)
+
+            print(f"  {BOLD}└─────────────────────────────────────────────────────────────────────────────┘{RESET}\n")
+
+        # PHẦN C: CÁC PHÁT HIỆN BỔ SUNG TRONG LẦN CHẠY CI THỰC TẾ (NẾU CÓ)
+        primary_files = {v.get("file", "").replace("\\", "/") for v in vulns}
+        if cq:
+            primary_files.add(cq.get("file", "").replace("\\", "/"))
+
+        extra_semgrep = [
+            r for r in semgrep_list 
+            if r.get("path", "").replace("\\", "/") not in primary_files or r.get("start", {}).get("line") not in [v.get("line") for v in vulns]
+        ]
+
+        if extra_semgrep:
+            print(f"  🔍 {BOLD}{CYAN}Các phát hiện bổ sung từ đợt quét CI trực tiếp ({len(extra_semgrep)} phát hiện):{RESET}")
+            for idx, r in enumerate(extra_semgrep, 1):
+                path = r.get("path", "")
+                line = r.get("start", {}).get("line", 0)
+                check_id = r.get("check_id", "unknown").split(".")[-1]
+                msg = r.get("extra", {}).get("message", "").strip().splitlines()[0]
+                cwe = r.get("extra", {}).get("metadata", {}).get("cwe", "")
+                if isinstance(cwe, list):
+                    cwe = cwe[0] if cwe else ""
+                print(f"     [{idx:02d}] 🛑 {CYAN}{path}:{line}{RESET} | {YELLOW}{cwe}{RESET}")
+                print(f"          Quy tắc: {MAGENTA}{check_id}{RESET}")
+                print(f"          Chi tiết: {WHITE}{msg[:100]}...{RESET}")
+                extra_code = extract_code_context(path, line, context_lines=1)
+                for lno, text, is_target in extra_code:
+                    if is_target:
+                        print(f"          Dòng mã: {DIM}{lno:3d} │ {text}{RESET}")
+            print()
+    else:
+        # Fallback if catalog not available
+        print(f"  {YELLOW}Không tìm thấy dữ liệu catalog cho thành viên {m_id}.{RESET}")
     print()
 
 
