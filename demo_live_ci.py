@@ -193,169 +193,257 @@ def load_or_download_artifacts(run_id: int) -> tuple[dict | None, dict | None, d
     return semgrep_data, sonar_gate, sonar_issues
 
 
-def display_detailed_failures(run_id: int, jobs: list[dict]) -> None:
-    """In chi tiết các lỗi an ninh, mã nguồn vi phạm khiến Pipeline bị Break-the-Build ngay trên CLI."""
+# ==============================================================================
+# CẤU HÌNH PHÂN QUYỀN & PHẠM VI MÃ NGUỒN CỦA 5 THÀNH VIÊN (RACI SCOPE MAPPING)
+# ==============================================================================
+MEMBER_SCOPE_MAP = {
+    "namng": {
+        "name": "Nguyễn Giang Nam",
+        "order": 1,
+        "keywords": ["ports.php", "news.php", "docker-compose.yml"],
+        "scope": "Cổng thông tin công cộng, Quản lý quy chuẩn phân nhánh & Tra cứu cảng biển",
+        "script": "demo_01_namng.py"
+    },
+    "haind": {
+        "name": "Nguyễn Đình Hải",
+        "order": 2,
+        "keywords": ["login.php", "port_detail.php", "track_api.php", "db.php"],
+        "scope": "Kiểm định Taint Analysis, Module Xác thực người dùng & Theo dõi Vận đơn",
+        "script": "demo_02_haind.py"
+    },
+    "manhdx": {
+        "name": "Đào Xuân Mạnh",
+        "order": 3,
+        "keywords": ["guide.php", "report_download.php", "admin_report_export.php"],
+        "scope": "Kiểm soát Quality Gate, Module Cẩm nang Hàng hải & Hệ thống Kết xuất Báo cáo",
+        "script": "demo_03_manhdx.py"
+    },
+    "anhld": {
+        "name": "Lê Đức Anh",
+        "order": 4,
+        "keywords": ["account.php", "account_update.php", "shipment_detail.php", "docker-compose.prod.yml"],
+        "scope": "Quản lý Tài khoản & Hồ sơ Đối tác, Theo dõi Chi tiết Vận tải & An toàn Cấu hình IaC",
+        "script": "demo_04_anhld.py"
+    },
+    "mainp": {
+        "name": "Nguyễn Phương Mai",
+        "order": 5,
+        "keywords": ["comment_add.php", "comment_delete.php", "admin_console.php", "admin_dashboard.php", "db/Dockerfile", "Dockerfile"],
+        "scope": "Hệ thống Bình luận Tương tác Đối tác, Phân hệ Quản trị Admin & Tuân thủ Luật",
+        "script": "demo_05_mainp.py"
+    }
+}
+
+
+def resolve_member_key(key: str | None) -> str | None:
+    """Ánh xạ số thứ tự (1-5) hoặc bí danh sang mã định danh thành viên."""
+    if not key:
+        return None
+    k = key.strip().lower()
+    num_map = {"1": "namng", "2": "haind", "3": "manhdx", "4": "anhld", "5": "mainp"}
+    if k in num_map:
+        return num_map[k]
+    if k in MEMBER_SCOPE_MAP:
+        return k
+    for m_id, info in MEMBER_SCOPE_MAP.items():
+        if k in info["name"].lower() or k == m_id:
+            return m_id
+    return None
+
+
+def get_member_for_file(file_path: str) -> str | None:
+    """Xác định thành viên phụ trách dựa trên đường dẫn tệp mã nguồn vi phạm."""
+    norm = file_path.replace("\\", "/").lower()
+    # docker-compose.prod.yml ưu tiên gán cho anhld trước docker-compose.yml của namng
+    if "docker-compose.prod.yml" in norm:
+        return "anhld"
+    for m_id, info in MEMBER_SCOPE_MAP.items():
+        for kw in info["keywords"]:
+            if kw.lower() in norm:
+                return m_id
+    return None
+
+
+def render_single_member_breakdown(
+    m_id: str,
+    m_info: dict,
+    semgrep_list: list[dict],
+    sonar_list: list[dict],
+    annos_list: list[dict],
+    show_header: bool = True
+) -> None:
+    """In phần báo cáo lỗi chi tiết cho một thành viên cụ thể."""
+    if show_header:
+        print(f"\n{BOLD}{BG_BLUE} 👤 [{m_info['order']}] {m_info['name'].upper()} ({m_id}) {RESET}")
+        print(f"📌 {BOLD}Phạm vi phụ trách:{RESET} {CYAN}{m_info['scope']}{RESET}")
+        print(f"⚡ {BOLD}Script demo độc lập:{RESET} {YELLOW}python {m_info['script']}{RESET}")
+        print("-" * 88)
+
+    has_issues = False
+
+    # 1. Semgrep SAST
+    if semgrep_list:
+        has_issues = True
+        print(f"  🛡️  {BOLD}{RED}Lỗ hổng an ninh Semgrep SAST ({len(semgrep_list)} lỗi):{RESET}")
+        for idx, r in enumerate(semgrep_list, 1):
+            path = r.get("path", "")
+            line = r.get("start", {}).get("line", 0)
+            check_id = r.get("check_id", "unknown").split(".")[-1]
+            msg = r.get("extra", {}).get("message", "").strip().splitlines()[0]
+            cwe = r.get("extra", {}).get("metadata", {}).get("cwe", "")
+            if isinstance(cwe, list):
+                cwe = cwe[0] if cwe else ""
+            print(f"     [{idx:02d}] 🛑 {CYAN}{path}:{line}{RESET} | {YELLOW}{cwe}{RESET}")
+            print(f"          Quy tắc: {MAGENTA}{check_id}{RESET}")
+            print(f"          Chi tiết: {WHITE}{msg[:100]}...{RESET}")
+            code_lines = r.get("extra", {}).get("lines", "").strip()
+            if code_lines:
+                first_code = code_lines.splitlines()[0][:80]
+                print(f"          Dòng mã: {DIM}{first_code}{RESET}")
+    elif not annos_list:
+        print(f"  🛡️  {GREEN}✔ Semgrep SAST: Không phát hiện lỗ hổng mức ERROR.{RESET}")
+
+    # 2. SonarQube Code Quality & Bugs
+    if sonar_list:
+        has_issues = True
+        print(f"\n  🐛 {BOLD}{YELLOW}Lỗi chất lượng mã nguồn SonarQube ({len(sonar_list)} lỗi):{RESET}")
+        for idx, s in enumerate(sonar_list, 1):
+            comp = s.get("component", "").split(":")[-1]
+            line = s.get("line")
+            loc_str = f"{comp}:{line}" if line else comp
+            sev = s.get("severity", "MAJOR")
+            i_type = s.get("type", "BUG")
+            rule = s.get("rule", "")
+            msg = s.get("message", "")
+            sev_color = RED if sev in ("BLOCKER", "CRITICAL") else YELLOW
+            print(f"     [{idx:02d}] {sev_color}[{sev} {i_type}]{RESET} 📁 {CYAN}{loc_str}{RESET} | {MAGENTA}{rule}{RESET}")
+            print(f"          {WHITE}{msg}{RESET}")
+    elif not annos_list:
+        print(f"  🐛 {GREEN}✔ SonarQube: Không phát hiện lỗi chất lượng mã nguồn.{RESET}")
+
+    # 3. Fallback GitHub Annotations (nếu không có artifacts)
+    if annos_list and not (semgrep_list or sonar_list):
+        has_issues = True
+        print(f"  📊 {BOLD}Vi phạm ghi nhận từ GitHub Annotations ({len(annos_list)}):{RESET}")
+        for idx, a in enumerate(annos_list, 1):
+            path = a.get("path", "")
+            line = a.get("start_line", 0)
+            msg = a.get("message", "").strip().splitlines()[0]
+            loc = f"{path}:{line}" if line > 0 else path
+            print(f"     [{idx:02d}] 📁 {CYAN}{loc}{RESET}: {WHITE}{msg}{RESET}")
+
+    if not has_issues:
+        print(f"  {GREEN}{BOLD}✔ Xuất sắc! Toàn bộ mã nguồn trong phạm vi phụ trách đều đạt chuẩn an ninh & chất lượng.{RESET}")
+    print()
+
+
+def display_detailed_failures(run_id: int, jobs: list[dict], target_member: str | None = None) -> None:
+    """In chi tiết các lỗi an ninh, mã nguồn vi phạm khiến Pipeline bị Break-the-Build ngay trên CLI.
+    
+    Hỗ trợ gom nhóm tự động theo từng thành viên hoặc lọc riêng cho 1 thành viên cụ thể.
+    """
     repo_slug = get_repo_slug()
     failed_jobs = [j for j in jobs if j.get("conclusion") == "failure"]
 
     if not failed_jobs:
         return
 
-    print("\n" + "=" * 88)
-    print(f"{BOLD}{RED}🚨 BẢNG CHI TIẾT CÁC LỖI VI PHẠM AN NINH & CODE QUALITY DẪN ĐẾN BREAK-THE-BUILD{RESET}")
-    print(f"🔗 Chi tiết Web Run #{run_id}: {CYAN}https://github.com/{repo_slug}/actions/runs/{run_id}{RESET}")
-    print("=" * 88)
+    # Chuẩn hóa mã thành viên nếu có
+    resolved_key = resolve_member_key(target_member)
+    target_info = MEMBER_SCOPE_MAP.get(resolved_key) if resolved_key else None
 
     # Nạp dữ liệu báo cáo chuyên sâu từ artifacts nếu có
     semgrep_data, sonar_gate, sonar_issues = load_or_download_artifacts(run_id)
 
+    # Lấy annotations từ GitHub API để bổ trợ
+    all_annos = []
     for job in failed_jobs:
-        j_name = job.get("name", "Unknown Job")
-        j_id = job.get("databaseId")
+        jid = job.get("databaseId")
+        if jid:
+            all_annos.extend(fetch_job_annotations(repo_slug, jid))
+    valid_annos = [a for a in all_annos if "exit code" not in a.get("message", "")]
 
-        print(f"\n{BOLD}{BG_RED} ❌ THẤT BẠI: {j_name} {RESET} {DIM}(Check Run ID: {j_id}){RESET}")
+    print("\n" + "=" * 88)
+    if target_info:
+        print(f"{BOLD}{BG_BLUE} 👤 BẢNG LỖI VI PHẠM CỦA: [{target_info['order']}] {target_info['name'].upper()} ({resolved_key}) {RESET}")
+        print(f"📌 {BOLD}Phạm vi phụ trách:{RESET} {CYAN}{target_info['scope']}{RESET}")
+        print(f"⚡ {BOLD}Script demo độc lập:{RESET} {YELLOW}python {target_info['script']}{RESET}")
+    else:
+        print(f"{BOLD}{RED}🚨 BẢNG CHI TIẾT CÁC LỖI VI PHẠM GOM NHÓM THEO TỪNG THÀNH VIÊN (BREAK-THE-BUILD){RESET}")
+        print(f"💡 {DIM}Hệ thống tự động phân loại vi phạm vào đúng thành viên phụ trách theo bảng phân nhiệm RACI.{RESET}")
+    print(f"🔗 Chi tiết Web Run #{run_id}: {CYAN}https://github.com/{repo_slug}/actions/runs/{run_id}{RESET}")
+    print("=" * 88)
+
+    # In tóm tắt tổng quan chỉ số Quality Gate & Semgrep
+    if not target_info:
+        print(f"\n📊 {BOLD}TỔNG QUAN CHỐT CHẶN AN NINH & CHẤT LƯỢNG (STAGE 2 DEV GATE):{RESET}")
+        if sonar_gate:
+            status = sonar_gate.get("projectStatus", {}).get("status", "UNKNOWN")
+            print(f"   • SonarQube Quality Gate: {RED}{BOLD}{status}{RESET}  ➜  {RED}Trượt chỉ số Reliability Rating (Thực tế: Grade C, Yêu cầu: <= Grade A){RESET}")
+        if semgrep_data:
+            s_errors = [r for r in semgrep_data.get("results", []) if r.get("extra", {}).get("severity") == "ERROR"]
+            print(f"   • Semgrep Security Gate:  {RED}{BOLD}CHẶN ĐỨNG (BLOCKED){RESET}  ➜  {RED}Phát hiện {len(s_errors)} lỗ hổng bảo mật mức ERROR / HIGH{RESET}")
         print("-" * 88)
 
-        # ----------------------------------------------------------------------
-        # 1. JOB: SEMGREP SECURITY SAST
-        # ----------------------------------------------------------------------
-        if "Semgrep" in j_name:
-            if semgrep_data:
-                results = semgrep_data.get("results", [])
-                errors = [r for r in results if r.get("extra", {}).get("severity") == "ERROR"]
-                warnings = [r for r in results if r.get("extra", {}).get("severity") == "WARNING"]
+    # Trích xuất danh sách kết quả
+    semgrep_all = semgrep_data.get("results", []) if semgrep_data else []
+    semgrep_errors = [r for r in semgrep_all if r.get("extra", {}).get("severity") == "ERROR"]
+    sonar_all = sonar_issues.get("issues", []) if sonar_issues else []
 
-                print(f"📊 {BOLD}Tổng số phát hiện SAST:{RESET} {len(results)}")
-                print(f"   🔴 {BOLD}{RED}Lỗ hổng mức độ cao (ERROR / HIGH):{RESET} {len(errors)}  ➜  {RED}{BOLD}[KÍCH HOẠT CHỐT CHẶN - CHẶN ĐỨNG BUILD]{RESET}")
-                print(f"   🟡 {BOLD}{YELLOW}Cảnh báo an ninh   (WARNING / MED):{RESET} {len(warnings)}")
-                print(f"⚙️  {BOLD}Chế độ kiểm soát:{RESET} {RED}{BOLD}ENFORCE_SECURITY_GATE = true (Strict Enforcement){RESET}\n")
+    # Xác định danh sách thành viên cần hiển thị
+    members_to_show = [resolved_key] if resolved_key else list(MEMBER_SCOPE_MAP.keys())
 
-                print(f"{BOLD}Danh sách chi tiết các lỗ hổng bảo mật nghiêm trọng:{RESET}")
-                for idx, r in enumerate(errors, 1):
-                    path = r.get("path", "")
-                    line = r.get("start", {}).get("line", 0)
-                    check_id = r.get("check_id", "unknown")
-                    msg = r.get("extra", {}).get("message", "").strip().splitlines()[0]
-                    cwe = r.get("extra", {}).get("metadata", {}).get("cwe", "")
-                    if isinstance(cwe, list):
-                        cwe = ", ".join(cwe)
-                    owasp = r.get("extra", {}).get("metadata", {}).get("owasp", "")
-                    if isinstance(owasp, list):
-                        owasp = ", ".join(owasp)
+    for m_id in members_to_show:
+        m_info = MEMBER_SCOPE_MAP.get(m_id)
+        if not m_info:
+            continue
 
-                    print(f"  {BOLD}{RED}[{idx:02d}]{RESET} 🛑 {CYAN}{path}:{line}{RESET}")
-                    if cwe or owasp:
-                        print(f"       🏷️  {YELLOW}{cwe} | {owasp}{RESET}")
-                    print(f"       🛡️  Quy tắc: {MAGENTA}{check_id}{RESET}")
-                    print(f"       📝 Chi tiết: {WHITE}{msg}{RESET}")
+        m_semgrep = [r for r in semgrep_errors if get_member_for_file(r.get("path", "")) == m_id]
+        m_sonar = [s for s in sonar_all if get_member_for_file(s.get("component", "")) == m_id]
+        m_annos = [a for a in valid_annos if get_member_for_file(a.get("path", "")) == m_id]
 
-                    code_lines = r.get("extra", {}).get("lines", "").strip()
-                    if code_lines:
-                        first_code = code_lines.splitlines()[0][:85]
-                        print(f"       💻 Dòng mã: {DIM}{first_code}{RESET}")
-                    print()
-            else:
-                annotations = fetch_job_annotations(repo_slug, j_id)
-                valid = [a for a in annotations if "exit code" not in a.get("message", "")]
-                print(f"📊 {BOLD}Phát hiện {len(valid)} vi phạm an ninh (từ GitHub Actions Annotations):{RESET}\n")
-                for idx, a in enumerate(valid, 1):
-                    path = a.get("path", "")
-                    line = a.get("start_line", 0)
-                    msg = a.get("message", "").strip()
-                    loc = f"{path}:{line}" if line > 0 else path
-                    print(f"  {BOLD}{RED}[{idx:02d}]{RESET} 📁 {CYAN}{loc}{RESET}")
-                    print(f"       🛑 {WHITE}{msg.splitlines()[0]}{RESET}\n")
+        render_single_member_breakdown(
+            m_id, m_info, m_semgrep, m_sonar, m_annos,
+            show_header=(target_info is None)
+        )
 
-        # ----------------------------------------------------------------------
-        # 2. JOB: SONARQUBE SAST & CODE QUALITY
-        # ----------------------------------------------------------------------
-        elif "SonarQube" in j_name:
-            if sonar_gate:
-                status = sonar_gate.get("projectStatus", {}).get("status", "UNKNOWN")
-                conditions = sonar_gate.get("projectStatus", {}).get("conditions", [])
-                print(f"📊 {BOLD}Kết quả SonarQube Quality Gate:{RESET} {RED}{BOLD}{status}{RESET}  ➜  {RED}{BOLD}[ĐÁNH TRƯỢT - FAILED]{RESET}")
-                print(f"🎯 {BOLD}Các chỉ số điều kiện Quality Gate:{RESET}")
-                for cond in conditions:
-                    c_status = cond.get("status")
-                    metric = cond.get("metricKey")
-                    thresh = cond.get("errorThreshold")
-                    actual = cond.get("actualValue")
-                    comp = cond.get("comparator")
-                    mark = f"{GREEN}✔ ĐẠT{RESET}" if c_status == "OK" else f"{RED}✖ TRƯỢT{RESET}"
-                    print(f"   {mark} Chỉ số: {CYAN}{metric:<25}{RESET} Thực tế: {WHITE}{actual:<5}{RESET} (Ngưỡng yêu cầu: {comp} {thresh})")
-
-            if sonar_issues:
-                issues = sonar_issues.get("issues", [])
-                bugs = [i for i in issues if i.get("type") == "BUG"]
-                code_smells = [i for i in issues if i.get("type") == "CODE_SMELL"]
-                vulns = [i for i in issues if i.get("type") == "VULNERABILITY"]
-
-                print(f"\n📊 {BOLD}Tổng số Issues phát hiện trên mã nguồn:{RESET} {len(issues)}")
-                print(f"   🐛 {BOLD}{RED}Bugs (Lỗi logic/vận hành):{RESET}        {len(bugs)}")
-                print(f"   🛡️ {BOLD}{RED}Vulnerabilities (Lỗ hổng bảo mật):{RESET} {len(vulns)}")
-                print(f"   🧹 {BOLD}{YELLOW}Code Smells (Mã nguồn xấu/nợ KT):{RESET}   {len(code_smells)}\n")
-
-                print(f"{BOLD}Các lỗi Bugs & Lỗ hổng bảo mật tiêu biểu (Top Issues):{RESET}")
-                top_issues = (vulns + bugs + code_smells)[:12]
-                for idx, iss in enumerate(top_issues, 1):
-                    comp = iss.get("component", "").split(":")[-1]
-                    line = iss.get("line", 0)
-                    sev = iss.get("severity", "MAJOR")
-                    i_type = iss.get("type", "BUG")
-                    msg = iss.get("message", "")
-                    rule = iss.get("rule", "")
-
-                    sev_color = RED if sev in ("BLOCKER", "CRITICAL") else YELLOW
-                    print(f"  {BOLD}[{idx:02d}]{RESET} {sev_color}[{sev} {i_type}]{RESET} 📁 {CYAN}{comp}:{line}{RESET}")
-                    print(f"       🏷️  Quy tắc: {MAGENTA}{rule}{RESET}")
-                    print(f"       📝 Chi tiết: {WHITE}{msg}{RESET}\n")
-            else:
-                annotations = fetch_job_annotations(repo_slug, j_id)
-                valid = [a for a in annotations if "exit code" not in a.get("message", "")]
-                print(f"📊 {BOLD}Phát hiện vi phạm từ SonarQube Annotations:{RESET}\n")
-                for idx, a in enumerate(valid, 1):
-                    path = a.get("path", "")
-                    line = a.get("start_line", 0)
-                    msg = a.get("message", "").strip()
-                    loc = f"{path}:{line}" if line > 0 else path
-                    print(f"  {BOLD}{RED}[{idx:02d}]{RESET} 📁 {CYAN}{loc}{RESET}")
-                    print(f"       🛑 {WHITE}{msg.splitlines()[0]}{RESET}\n")
-
-        # ----------------------------------------------------------------------
-        # 3. CÁC JOB KHÁC (POLICY GUARD, DOCKER BUILD, v.v.)
-        # ----------------------------------------------------------------------
-        else:
-            annotations = fetch_job_annotations(repo_slug, j_id)
-            valid = [a for a in annotations if "exit code" not in a.get("message", "")]
-            if valid:
-                print(f"📊 {BOLD}Các vi phạm quy tắc:{RESET}\n")
-                for idx, a in enumerate(valid, 1):
-                    path = a.get("path", "")
-                    title = a.get("title", "")
-                    msg = a.get("message", "").strip()
-                    print(f"  {BOLD}{RED}[{idx:02d}]{RESET} 📁 {CYAN}{path}{RESET}")
-                    if title:
-                        print(f"       📌 {YELLOW}{title}{RESET}")
-                    print(f"       🛑 {WHITE}{msg}{RESET}\n")
-            else:
-                cmd = ["gh", "run", "view", str(run_id), "--job", str(j_id), "--log-failed"]
-                res = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
-                if res.returncode == 0:
-                    lines = [l for l in res.stdout.splitlines() if "error" in l.lower() or "fail" in l.lower()]
-                    for l in lines[-8:]:
-                        print(f"    {RED}{l}{RESET}")
+    # Kiểm tra các lỗi chung ngoài phạm vi phân chia cá nhân (nếu xem toàn bộ)
+    if not target_info:
+        shared_annos = [a for a in valid_annos if get_member_for_file(a.get("path", "")) is None]
+        shared_sonar = [s for s in sonar_all if get_member_for_file(s.get("component", "")) is None]
+        if shared_annos or shared_sonar:
+            print(f"\n{BOLD}{MAGENTA} 🌐 QUY CHUẨN CHUNG HỆ THỐNG & POLICY GUARD (.github / trang tĩnh) {RESET}")
+            print("-" * 88)
+            for a in shared_annos:
+                path = a.get("path", "")
+                title = a.get("title", "")
+                msg = a.get("message", "").strip().splitlines()[0]
+                print(f"  📁 {CYAN}{path}{RESET}: {YELLOW}{title}{RESET} {WHITE}{msg}{RESET}")
+            for s in shared_sonar[:5]:
+                comp = s.get("component", "").split(":")[-1]
+                msg = s.get("message", "")
+                rule = s.get("rule", "")
+                print(f"  📁 {CYAN}{comp}{RESET}: [{s.get('severity')}] {rule} - {WHITE}{msg}{RESET}")
+            print()
 
     # Khuyến nghị khắc phục (Remediation)
     print("=" * 88)
-    print(f"{BOLD}{YELLOW}💡 HƯỚNG DẪN KHẮC PHỤC MÃ NGUỒN ĐỂ MỞ KHÓA PIPELINE (ACTION ITEMS):{RESET}")
-    print(f"  1. 🛡️  {BOLD}{CYAN}SQL Injection:{RESET} Chuyển toàn bộ câu lệnh SQL sang Prepared Statements ($mysqli->prepare).")
-    print(f"     ➔ Các file: login.php, admin_report_export.php, admin_dashboard.php, admin_console.php, account.php")
-    print(f"  2. 🔑 {BOLD}{CYAN}Hardcoded Secrets:{RESET} Chuyển mật khẩu mặc định sang biến môi trường (getenv / .env).")
-    print(f"     ➔ Các file: InlaneWeb/web/src/lib/db.php, docker-compose.yml, docker-compose.prod.yml")
-    print(f"  3. 🐳 {BOLD}{CYAN}Docker Security:{RESET} Bổ sung chỉ thị 'USER mysql' vào cuối file InlaneWeb/db/Dockerfile.")
-    print(f"  4. 📐 {BOLD}{CYAN}SonarQube Quality Gate:{RESET} Bổ sung thuộc tính 'id' và thẻ 'label' cho các ô input form.")
-    print(f"     ➔ Các file: ports.php, account.php, login.php")
+    print(f"{BOLD}{YELLOW}💡 HƯỚNG DẪN KHẮC PHỤC (ACTION ITEMS):{RESET}")
+    if target_info:
+        print(f"  👉 Để xem demo chi tiết từng dòng mã và kịch bản vá lỗi cho {target_info['name']}, chạy lệnh:")
+        print(f"     {CYAN}python {target_info['script']}{RESET}")
+        print(f"  👉 Để xem demo kịch bản sau khi vá lỗi hoàn tất (Remediation Passed):")
+        print(f"     {CYAN}python {target_info['script']} --fix{RESET}")
+    else:
+        print(f"  👉 Mỗi thành viên có thể kiểm tra và chạy kịch bản vá lỗi riêng bằng script tương ứng:")
+        print(f"     - Nguyễn Giang Nam:  {CYAN}python demo_01_namng.py{RESET}")
+        print(f"     - Nguyễn Đình Hải:   {CYAN}python demo_02_haind.py{RESET}")
+        print(f"     - Đào Xuân Mạnh:     {CYAN}python demo_03_manhdx.py{RESET}")
+        print(f"     - Lê Đức Anh:        {CYAN}python demo_04_anhld.py{RESET}")
+        print(f"     - Nguyễn Phương Mai: {CYAN}python demo_05_mainp.py{RESET}")
+        print(f"  👉 Xem riêng lỗi của 1 người trên CI: {CYAN}python demo_live_ci.py --errors -m <namng|haind|manhdx|anhld|mainp>{RESET}")
     print("=" * 88 + "\n")
+
 
 
 def fetch_run_details(run_id: int) -> dict | None:
@@ -523,8 +611,17 @@ def interactive_menu() -> None:
             if run_id:
                 data = fetch_run_details(run_id)
                 if data:
+                    print("\n👤 Bạn muốn xem bảng lỗi vi phạm của ai?")
+                    print("  [0] Toàn bộ nhóm (Gom nhóm theo 5 thành viên)")
+                    print("  [1] Nguyễn Giang Nam (namng)")
+                    print("  [2] Nguyễn Đình Hải (haind)")
+                    print("  [3] Đào Xuân Mạnh (manhdx)")
+                    print("  [4] Lê Đức Anh (anhld)")
+                    print("  [5] Nguyễn Phương Mai (mainp)")
+                    sub_c = input("👉 Nhập lựa chọn (0-5, mặc định 0): ").strip()
+                    m_filter = None if sub_c in ("", "0") else sub_c
                     jobs = data.get("jobs", [])
-                    display_detailed_failures(run_id, jobs)
+                    display_detailed_failures(run_id, jobs, target_member=m_filter)
                 else:
                     print("❌ Không thể nạp chi tiết lần chạy.")
             else:
@@ -541,13 +638,14 @@ def interactive_menu() -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Kích hoạt và theo dõi luồng CI thật trên GitHub Actions thời gian thực",
-        epilog="Ví dụ: python demo_live_ci.py --trigger --branch namng"
+        epilog="Ví dụ: python demo_live_ci.py --errors -m haind"
     )
     parser.add_argument("--trigger", action="store_true", help="Gửi lệnh kích hoạt luồng CI mới trên GitHub")
     parser.add_argument("--branch", default="namng", help="Tên nhánh cần kích hoạt (mặc định: namng)")
     parser.add_argument("--watch", nargs="?", const="latest", help="Theo dõi một Run ID cụ thể hoặc run mới nhất (latest)")
     parser.add_argument("--latest", action="store_true", help="Xem kết quả của lần chạy gần nhất")
     parser.add_argument("--details", "--errors", action="store_true", help="In bảng chi tiết các lỗi vi phạm của lần chạy gần nhất")
+    parser.add_argument("-m", "--member", help="Lọc lỗi theo thành viên cụ thể (namng, haind, manhdx, anhld, mainp hoặc số 1-5)")
 
     args = parser.parse_args()
 
@@ -560,7 +658,7 @@ def main() -> None:
         if run_id:
             data = fetch_run_details(run_id)
             if data:
-                display_detailed_failures(run_id, data.get("jobs", []))
+                display_detailed_failures(run_id, data.get("jobs", []), target_member=args.member)
                 sys.exit(0 if data.get("conclusion") == "success" else 1)
         print("❌ Không tìm thấy lần chạy nào gần đây.", file=sys.stderr)
         sys.exit(1)
@@ -583,6 +681,12 @@ def main() -> None:
     if args.latest:
         run_id = get_latest_run_id()
         if run_id:
+            # Nếu có cờ --member, in trực tiếp bảng chi tiết của thành viên đó
+            if args.member:
+                data = fetch_run_details(run_id)
+                if data:
+                    display_detailed_failures(run_id, data.get("jobs", []), target_member=args.member)
+                    sys.exit(0 if data.get("conclusion") == "success" else 1)
             sys.exit(watch_live_ci_run(run_id))
         sys.exit(1)
 
