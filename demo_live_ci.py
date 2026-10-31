@@ -276,78 +276,106 @@ def render_single_member_breakdown(
     annos_list: list[dict],
     show_header: bool = True
 ) -> None:
-    """In phần báo cáo lỗi chi tiết cho một thành viên cụ thể với đầy đủ Source, Sink, Pháp lý và Ngữ cảnh mã nguồn."""
+    """In phần báo cáo lỗi chi tiết cho một thành viên cụ thể với bố cục trực quan, dễ đọc, chuẩn developer CLI."""
     m_catalog = MEMBERS_CATALOG.get(m_id)
+    width = 86
+
+    order = m_catalog.get("order", m_info.get("order", 1)) if m_catalog else m_info.get("order", 1)
+    name = m_catalog.get("name", m_info.get("name", m_id)) if m_catalog else m_info.get("name", m_id)
+    role = m_catalog.get("role", "") if m_catalog else ""
+    scope = m_catalog.get("scope", m_info.get("scope", "")) if m_catalog else m_info.get("scope", "")
+    script = f"demo_{order:02d}_{m_id}.py"
 
     if show_header:
-        order = m_catalog.get("order", m_info.get("order", 1)) if m_catalog else m_info.get("order", 1)
-        name = m_catalog.get("name", m_info.get("name", m_id)) if m_catalog else m_info.get("name", m_id)
-        role = m_catalog.get("role", "") if m_catalog else ""
-        scope = m_catalog.get("scope", m_info.get("scope", "")) if m_catalog else m_info.get("scope", "")
-        script = f"demo_{order:02d}_{m_id}.py"
-
-        print(f"\n{BOLD}{BG_BLUE} 👤 [{order}] {name.upper()} ({m_id}) {RESET}")
+        print("\n" + "═" * width)
+        print(f"{BOLD}{BG_BLUE}  👤 [{order}] {name.upper()} ({m_id})  {RESET}")
         if role:
-            print(f"💼 {BOLD}Vai trò:{RESET} {role}")
-        print(f"📌 {BOLD}Phạm vi phụ trách:{RESET} {CYAN}{scope}{RESET}")
-        print(f"⚡ {BOLD}Script demo độc lập:{RESET} {YELLOW}python {script}{RESET}")
-        print("-" * 88)
+            print(f"  💼 {BOLD}Vai trò:{RESET}           {role}")
+        print(f"  🎯 {BOLD}Phân hệ phụ trách:{RESET} {CYAN}{scope}{RESET}")
+        print(f"  ⚡ {BOLD}Script chạy riêng:{RESET} {YELLOW}python {script}{RESET}")
+        print("═" * width)
 
     if m_catalog:
-        # PHẦN A: 4 LỖ HỔNG AN NINH VỚI SOURCE & SINK
         vulns = m_catalog.get("vulns", [])
-        print(f"\n  {RED}{BOLD}🚨 [A. AN NINH MÃ NGUỒN] PHÁT HIỆN {len(vulns)} LỖ HỔNG BẢO MẬT (SEMGREP & SONARQUBE SAST):{RESET}\n")
+        cq = m_catalog.get("code_quality")
 
+        # 1. BẢNG TỔNG HỢP NHANH (QUICK SUMMARY TABLE)
+        print(f"\n📊 {BOLD}BẢNG TỔNG HỢP CÁC LỖI VI PHẠM TRONG PHÂN HỆ CỦA {name.upper()}:{RESET}")
+        w1, w2, w3, w4 = 8, 40, 26, 22
+        print(f"┌{'─'*w1}┬{'─'*w2}┬{'─'*w3}┬{'─'*w4}┐")
+        print(f"│ {'MÃ':<{w1-2}} │ {'TÊN LỖI VI PHẠM':<{w2-2}} │ {'VỊ TRÍ (TỆP:DÒNG)':<{w3-2}} │ {'QUY TẮC / PHÂN LOẠI':<{w4-2}} │")
+        print(f"├{'─'*w1}┼{'─'*w2}┼{'─'*w3}┼{'─'*w4}┤")
         for v in vulns:
+            v_code = f"SAST{v['num']:02d}"
+            v_name = v.get("name", "")[:w2-2]
+            loc = f"{Path(v.get('file', '')).name}:{v.get('line', 0)}"[:w3-2]
+            cwe = v.get("cwe", "").split(":")[0][:w4-2]
+            print(f"│ {RED}{BOLD}{v_code:<{w1-2}}{RESET} │ {v_name:<{w2-2}} │ {CYAN}{loc:<{w3-2}}{RESET} │ {YELLOW}{cwe:<{w4-2}}{RESET} │")
+        if cq:
+            cq_code = "CQ-01"
+            cq_name = cq.get("name", "")[:w2-2]
+            loc = f"{Path(cq.get('file', '')).name}:{cq.get('line', 0)}"[:w3-2]
+            rule = cq.get("rule", "")[:w4-2]
+            print(f"│ {MAGENTA}{BOLD}{cq_code:<{w1-2}}{RESET} │ {cq_name:<{w2-2}} │ {CYAN}{loc:<{w3-2}}{RESET} │ {MAGENTA}{rule:<{w4-2}}{RESET} │")
+        print(f"└{'─'*w1}┴{'─'*w2}┴{'─'*w3}┴{'─'*w4}┘")
+
+        card_w = 84
+
+        # 2. PHẦN A: 4 LỖ HỔNG AN NINH VỚI SOURCE & SINK
+        print(f"\n{RED}{BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{RESET}")
+        print(f"{RED}{BOLD}🛡️  PHẦN A: CHI TIẾT 04 LỖ HỔNG AN NINH MÃ NGUỒN (SEMGREP & SONARQUBE SAST){RESET}")
+        print(f"{RED}{BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{RESET}")
+
+        for idx, v in enumerate(vulns, 1):
             sev_color = RED if "ERROR" in v.get("severity", "") else YELLOW
-            v_name = v.get("name", "")
-            pad_title = 56 - len(v_name) if len(v_name) < 56 else 1
-            print(f"  {BOLD}┌─────────────────────────────────────────────────────────────────────────────┐{RESET}")
-            print(f"  {BOLD}│ LỖ HỔNG #{v['num']}: {RED}{v_name}{RESET}{' ' * pad_title}{BOLD}│{RESET}")
-            print(f"  {BOLD}├─────────────────────────────────────────────────────────────────────────────┤{RESET}")
-            print(f"  │ 🏷️  Phân loại:  {BOLD}{v.get('cwe', '')}{RESET} | {DIM}{v.get('owasp', '')}{RESET}")
-            print(f"  │ ⚠️  Mức độ:    {sev_color}{BOLD}🔴 {v.get('severity', '')}{RESET} | Động cơ: {CYAN}{v.get('engine', '')}{RESET}")
-            print(f"  │ 📂  Vị trí:    {BOLD}{v.get('file', '')}:{v.get('line', 0)}{RESET}")
-            print(f"  │ 📜  Quy tắc:   {DIM}{v.get('rule', '')}{RESET}")
-            print(f"  │ 📥  {BOLD}Source:{RESET}    {YELLOW}{v.get('source', '')}{RESET}")
-            print(f"  │ ⚡  {BOLD}Sink:{RESET}      {RED}{v.get('sink', '')}{RESET}")
-            print(f"  │ ⚖️  Pháp lý:   {DIM}{v.get('legal', '')}{RESET}")
+            print(f"\n  {BOLD}┌{'─' * card_w}┐{RESET}")
+            print(f"  {BOLD}│ LỖ HỔNG [0{idx}/0{len(vulns)}]: {RED}{v.get('name')}{RESET}")
+            print(f"  {BOLD}├{'─' * card_w}┤{RESET}")
+            print(f"  │ 📂 {BOLD}Vị trí tệp:{RESET}       {CYAN}{v.get('file')}:{v.get('line')}{RESET}")
+            print(f"  │ 🏷️  {BOLD}Phân loại an ninh:{RESET} {YELLOW}{v.get('cwe')}{RESET}  |  {DIM}{v.get('owasp')}{RESET}")
+            print(f"  │ ⚠️  {BOLD}Mức độ rủi ro:{RESET}    {sev_color}{BOLD}🔴 {v.get('severity')}{RESET} (Động cơ: {v.get('engine')})")
+            print(f"  │ 📜 {BOLD}Quy tắc vi phạm:{RESET}   {MAGENTA}{v.get('rule')}{RESET}")
+            print(f"  │ 📥 {BOLD}Taint Source:{RESET}      {YELLOW}{v.get('source')}{RESET}")
+            print(f"  │ ⚡ {BOLD}Taint Sink:{RESET}        {RED}{BOLD}{v.get('sink')}{RESET}")
+            print(f"  │ ⚖️  {BOLD}Căn cứ pháp lý:{RESET}    {DIM}{v.get('legal')}{RESET}")
             print(f"  │")
-            print(f"  │ {BOLD}Trích xuất mã nguồn vi phạm (Vulnerable Code Context):{RESET}")
+            print(f"  │ 💻 {BOLD}Ngữ cảnh dòng mã vi phạm thực tế (Vulnerable Code Context):{RESET}")
 
             code_lines = extract_code_context(v.get("file", ""), v.get("line", 0), context_lines=2)
             for lno, text, is_target in code_lines:
-                prefix = f"  │   {RED}➔ {lno:3d} │ {text}{RESET}" if is_target else f"  │     {lno:3d} │ {DIM}{text}{RESET}"
-                print(prefix)
+                if is_target:
+                    print(f"  │     {RED}{BOLD}➔ {lno:3d} │ {text}{RESET}")
+                else:
+                    print(f"  │       {DIM}{lno:3d} │ {text}{RESET}")
+            print(f"  {BOLD}└{'─' * card_w}┘{RESET}")
 
-            print(f"  {BOLD}└─────────────────────────────────────────────────────────────────────────────┘{RESET}\n")
-
-        # PHẦN B: 1 LỖI CODE QUALITY TỪ SONARQUBE
-        cq = m_catalog.get("code_quality")
+        # 3. PHẦN B: 1 LỖI CODE QUALITY TỪ SONARQUBE
         if cq:
             cq_color = MAGENTA if cq.get("type") == "CODE_SMELL" else RED
-            cq_name = cq.get("name", "")
-            pad_cq = 60 - len(cq_name) if len(cq_name) < 60 else 1
-            print(f"  {MAGENTA}{BOLD}🧹 [B. CHẤT LƯỢNG MÃ NGUỒN] PHÁT HIỆN 01 LỖI CODE QUALITY (SONARQUBE SCANNER):{RESET}\n")
-            print(f"  {BOLD}┌─────────────────────────────────────────────────────────────────────────────┐{RESET}")
-            print(f"  {BOLD}│ LỖI CHẤT LƯỢNG: {MAGENTA}{cq_name}{RESET}{' ' * pad_cq}{BOLD}│{RESET}")
-            print(f"  {BOLD}├─────────────────────────────────────────────────────────────────────────────┤{RESET}")
-            print(f"  │ 🏷️  Phân loại:  {cq_color}{BOLD}{cq.get('type')}{RESET} (SonarQube {cq.get('type')})")
-            print(f"  │ ⚠️  Mức độ:    {BOLD}{cq.get('severity')}{RESET} (Severity Level)")
-            print(f"  │ 📂  Vị trí:    {BOLD}{cq.get('file')}:{cq.get('line')}{RESET}")
-            print(f"  │ 📜  Sonar Rule: {CYAN}{cq.get('rule')}{RESET}")
-            print(f"  │ 📝  Chi tiết:  {cq.get('desc', '')}")
+            print(f"\n{MAGENTA}{BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{RESET}")
+            print(f"{MAGENTA}{BOLD}🧹 PHẦN B: CHI TIẾT 01 LỖI CHẤT LƯỢNG MÃ NGUỒN (SONARQUBE CODE QUALITY SCANNER){RESET}")
+            print(f"{MAGENTA}{BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{RESET}")
+
+            print(f"\n  {BOLD}┌{'─' * card_w}┐{RESET}")
+            print(f"  {BOLD}│ LỖI CHẤT LƯỢNG: {MAGENTA}{cq.get('name')}{RESET}")
+            print(f"  {BOLD}├{'─' * card_w}┤{RESET}")
+            print(f"  │ 📂 {BOLD}Vị trí tệp:{RESET}       {CYAN}{cq.get('file')}:{cq.get('line')}{RESET}")
+            print(f"  │ 🏷️  {BOLD}Phân loại Sonar:{RESET}   {cq_color}{BOLD}{cq.get('type')}{RESET} (SonarQube {cq.get('type')})")
+            print(f"  │ ⚠️  {BOLD}Mức độ ảnh hưởng:{RESET} {YELLOW}{BOLD}{cq.get('severity')}{RESET} Level")
+            print(f"  │ 📜 {BOLD}Mã quy tắc Sonar:{RESET}  {CYAN}{cq.get('rule')}{RESET}")
+            print(f"  │ 📝 {BOLD}Chi tiết đánh giá:{RESET} {WHITE}{cq.get('desc')}{RESET}")
             print(f"  │")
-            print(f"  │ {BOLD}Trích xuất ngữ cảnh mã nguồn SonarQube đánh dấu:{RESET}")
+            print(f"  │ 💻 {BOLD}Ngữ cảnh dòng mã SonarQube đánh dấu:{RESET}")
 
             cq_lines = extract_code_context(cq.get("file", ""), cq.get("line", 0), context_lines=2)
             for lno, text, is_target in cq_lines:
-                prefix = f"  │   {MAGENTA}➔ {lno:3d} │ {text}{RESET}" if is_target else f"  │     {lno:3d} │ {DIM}{text}{RESET}"
-                print(prefix)
+                if is_target:
+                    print(f"  │     {MAGENTA}{BOLD}➔ {lno:3d} │ {text}{RESET}")
+                else:
+                    print(f"  │       {DIM}{lno:3d} │ {text}{RESET}")
+            print(f"  {BOLD}└{'─' * card_w}┘{RESET}")
 
-            print(f"  {BOLD}└─────────────────────────────────────────────────────────────────────────────┘{RESET}\n")
-
-        # PHẦN C: CÁC PHÁT HIỆN BỔ SUNG TRONG LẦN CHẠY CI THỰC TẾ (NẾU CÓ)
+        # 4. PHẦN C: CÁC PHÁT HIỆN BỔ SUNG TRONG LẦN CHẠY CI THỰC TẾ (NẾU CÓ)
         primary_files = {v.get("file", "").replace("\\", "/") for v in vulns}
         if cq:
             primary_files.add(cq.get("file", "").replace("\\", "/"))
@@ -358,7 +386,9 @@ def render_single_member_breakdown(
         ]
 
         if extra_semgrep:
-            print(f"  🔍 {BOLD}{CYAN}Các phát hiện bổ sung từ đợt quét CI trực tiếp ({len(extra_semgrep)} phát hiện):{RESET}")
+            print(f"\n{CYAN}{BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{RESET}")
+            print(f"🔍 {BOLD}{CYAN}PHẦN C: CÁC PHÁT HIỆN CẤU HÌNH BỔ SUNG TỪ CI CLOUD ({len(extra_semgrep)} phát hiện){RESET}")
+            print(f"{CYAN}{BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{RESET}")
             for idx, r in enumerate(extra_semgrep, 1):
                 path = r.get("path", "")
                 line = r.get("start", {}).get("line", 0)
@@ -367,16 +397,20 @@ def render_single_member_breakdown(
                 cwe = r.get("extra", {}).get("metadata", {}).get("cwe", "")
                 if isinstance(cwe, list):
                     cwe = cwe[0] if cwe else ""
-                print(f"     [{idx:02d}] 🛑 {CYAN}{path}:{line}{RESET} | {YELLOW}{cwe}{RESET}")
-                print(f"          Quy tắc: {MAGENTA}{check_id}{RESET}")
-                print(f"          Chi tiết: {WHITE}{msg[:100]}...{RESET}")
+                print(f"\n  {BOLD}┌{'─' * card_w}┐{RESET}")
+                print(f"  {BOLD}│ PHÁT HIỆN CI [{idx:02d}]: {CYAN}{path}:{line}{RESET}  |  {YELLOW}{cwe}{RESET}")
+                print(f"  {BOLD}├{'─' * card_w}┤{RESET}")
+                print(f"  │ 🛡️  {BOLD}Quy tắc vi phạm:{RESET} {MAGENTA}{check_id}{RESET}")
+                print(f"  │ 📝 {BOLD}Chi tiết đánh giá:{RESET} {WHITE}{msg[:100]}...{RESET}")
+                print(f"  │")
+                print(f"  │ 💻 {BOLD}Dòng mã phát hiện:{RESET}")
                 extra_code = extract_code_context(path, line, context_lines=1)
                 for lno, text, is_target in extra_code:
                     if is_target:
-                        print(f"          Dòng mã: {DIM}{lno:3d} │ {text}{RESET}")
+                        print(f"  │     {RED}➔ {lno:3d} │ {text}{RESET}")
+                print(f"  {BOLD}└{'─' * card_w}┘{RESET}")
             print()
     else:
-        # Fallback if catalog not available
         print(f"  {YELLOW}Không tìm thấy dữ liệu catalog cho thành viên {m_id}.{RESET}")
     print()
 
@@ -428,6 +462,30 @@ def display_detailed_failures(run_id: int, jobs: list[dict], target_member: str 
             s_errors = [r for r in semgrep_data.get("results", []) if r.get("extra", {}).get("severity") == "ERROR"]
             print(f"   • Semgrep Security Gate:  {RED}{BOLD}CHẶN ĐỨNG (BLOCKED){RESET}  ➜  {RED}Phát hiện {len(s_errors)} lỗ hổng bảo mật mức ERROR / HIGH{RESET}")
         print("-" * 88)
+
+        # BẢNG ĐIỀU HÀNH TỔNG QUAN PHÂN BỔ VI PHẠM THEO 5 THÀNH VIÊN
+        print(f"\n👥 {BOLD}BẢNG ĐIỀU HÀNH TỔNG QUAN PHÂN BỔ VI PHẠM THEO 5 THÀNH VIÊN:{RESET}")
+        ew1, ew2, ew3, ew4, ew5, ew6 = 6, 20, 38, 12, 14, 16
+        print(f"┌{'─'*ew1}┬{'─'*ew2}┬{'─'*ew3}┬{'─'*ew4}┬{'─'*ew5}┬{'─'*ew6}┐")
+        print(f"│ {'STT':<{ew1-2}} │ {'THÀNH VIÊN':<{ew2-2}} │ {'PHÂN HỆ PHỤ TRÁCH':<{ew3-2}} │ {'SAST VULN':<{ew4-2}} │ {'SONAR CQ':<{ew5-2}} │ {'TRẠNG THÁI':<{ew6-2}} │")
+        print(f"├{'─'*ew1}┼{'─'*ew2}┼{'─'*ew3}┼{'─'*ew4}┼{'─'*ew5}┼{'─'*ew6}┤")
+        exec_rows = [
+            ("01", "Nguyễn Giang Nam", "Tra cứu cảng biển & IaC Docker", "4 lỗi", "1 BUG", "CHẶN ĐỨNG"),
+            ("02", "Nguyễn Đình Hải", "Xác thực, API Vận tải & DB Fallback", "4 lỗi", "1 SMELL", "CHẶN ĐỨNG"),
+            ("03", "Đào Xuân Mạnh", "Đơn hàng, Lịch trình & Xử lý XML", "4 lỗi", "1 SMELL", "CHẶN ĐỨNG"),
+            ("04", "Lê Đức Anh", "Tin tức hàng hải & Giám sát Metrics", "4 lỗi", "1 SMELL", "CHẶN ĐỨNG"),
+            ("05", "Nguyễn Phương Mai", "Quản trị Admin & Hệ thống Bình luận", "4 lỗi", "1 BUG", "CHẶN ĐỨNG"),
+        ]
+        for stt, name, scope, sast, cq, status in exec_rows:
+            stt_fmt = f"[{stt}]"
+            print(f"│ {stt_fmt:<{ew1-2}} │ {BOLD}{name:<{ew2-2}}{RESET} │ {CYAN}{scope:<{ew3-2}}{RESET} │ {RED}{sast:<{ew4-2}}{RESET} │ {MAGENTA}{cq:<{ew5-2}}{RESET} │ {RED}{BOLD}{status:<{ew6-2}}{RESET} │")
+        print(f"└{'─'*ew1}┴{'─'*ew2}┴{'─'*ew3}┴{'─'*ew4}┴{'─'*ew5}┴{'─'*ew6}┘")
+
+        print(f"\n💡 {BOLD}MẸO XEM NHANH DỄ ĐỌC THEO TỪNG THÀNH VIÊN (KÈM DÒNG CODE VÀ SOURCE/SINK):{RESET}")
+        print(f"   Chạy lệnh kèm cờ {YELLOW}-m <1-5>{RESET} để xem riêng 1 phân hệ thay vì in toàn bộ 5 người:")
+        for m_id, info in MEMBER_SCOPE_MAP.items():
+            print(f"   • {YELLOW}python -X utf8 demo_live_ci.py --errors -m {info['order']}{RESET}  ➜  {info['name']}")
+        print("─" * 88)
 
     # Trích xuất danh sách kết quả
     semgrep_all = semgrep_data.get("results", []) if semgrep_data else []
