@@ -18,8 +18,14 @@ B. DANH MỤC 01 LỖI CHẤT LƯỢNG MÃ NGUỒN SONARQUBE (CODE QUALITY ISSUE
    (Nạp lặp tệp gây nguy cơ lỗi fatal error Cannot redeclare function/class và rò rỉ bộ nhớ)
 
 CÁC CHẾ ĐỘ THỰC THI (COMMAND LINE ARGUMENTS):
+- python demo_03_manhdx.py --real    : Thực thi trực tiếp các Engine CI thật (Policy Guard, Semgrep Gate, IaC Validator).
+- python demo_03_manhdx.py --cloud   : Kết nối GitHub CLI để kiểm tra trạng thái CI thật trên GitHub Actions.
 - python demo_03_manhdx.py           : Chạy mô phỏng có hiệu ứng trễ, phát hiện lỗi và CHẶN ĐỨNG (Exit code 1).
+- python demo_03_manhdx.py --real    : Thực thi trực tiếp các Engine CI thật (Policy Guard, Semgrep Gate, IaC Validator).
+- python demo_03_manhdx.py --cloud   : Kết nối GitHub CLI để kiểm tra trạng thái CI thật trên GitHub Actions.
 - python demo_03_manhdx.py --fast    : Chạy nhanh không chờ độ trễ hiệu ứng terminal.
+- python demo_03_manhdx.py --real    : Thực thi trực tiếp các Engine CI thật (Policy Guard, Semgrep Gate, IaC Validator).
+- python demo_03_manhdx.py --cloud   : Kết nối GitHub CLI để kiểm tra trạng thái CI thật trên GitHub Actions.
 - python demo_03_manhdx.py --fix     : Chạy kịch bản sau khi áp dụng mã an toàn đã khắc phục (Exit code 0).
 ========================================================================================
 """
@@ -50,15 +56,18 @@ def main() -> None:
     #           + 4 Lỗ hổng an ninh mã nguồn (LFI, Stream Wrapper, LOAD_FILE, DDL SQLi)
     #           + 1 Lỗi chất lượng mã nguồn SonarQube (php:S2003 - Reliability Bug)
     # - Bước 3: SonarQube Quality Gate & Semgrep Gate kích hoạt BREAK-THE-BUILD, ngắt CI với code 1.
-    exit_code = run_member_demo("manhdx", remediate=remediate, fast=fast)
+    real = "--real" in sys.argv or "--live" in sys.argv
+    cloud = "--cloud" in sys.argv
+
+    exit_code = run_member_demo("manhdx", remediate=remediate, fast=fast, real=real, cloud=cloud)
 
     # 3. Kịch bản tương tác tại buổi báo cáo:
-    if not remediate and not fast and sys.stdin.isatty():
+    if not remediate and not fast and not cloud and sys.stdin.isatty():
         try:
             prompt = input("\n💡 Bạn có muốn demo kịch bản KHẮC PHỤC (Remediation) để CI thông qua không? (y/N): ").strip().lower()
             if prompt in ("y", "yes"):
                 # Quét lại sau khi khắc phục cả lỗ hổng và lỗi chất lượng mã nguồn
-                run_member_demo("manhdx", remediate=True, fast=False)
+                run_member_demo("manhdx", remediate=True, fast=False, real=real)
         except (KeyboardInterrupt, EOFError):
             pass
 

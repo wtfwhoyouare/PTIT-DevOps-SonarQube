@@ -18,8 +18,14 @@ B. DANH MỤC 01 LỖI CHẤT LƯỢNG MÃ NGUỒN SONARQUBE (CODE QUALITY ISSUE
    (Ô tìm kiếm cảng biển thiếu ID và thẻ label gắn kết, vi phạm tiêu chuẩn trợ năng WCAG 2.1)
 
 CÁC CHẾ ĐỘ THỰC THI (COMMAND LINE ARGUMENTS):
+- python demo_01_namng.py --real    : Thực thi trực tiếp các Engine CI thật (Policy Guard, Semgrep Gate, IaC Validator).
+- python demo_01_namng.py --cloud   : Kết nối GitHub CLI để kiểm tra trạng thái CI thật trên GitHub Actions.
 - python demo_01_namng.py           : Chạy mô phỏng có hiệu ứng trễ, phát hiện lỗi và CHẶN ĐỨNG (Exit code 1).
+- python demo_01_namng.py --real    : Thực thi trực tiếp các Engine CI thật (Policy Guard, Semgrep Gate, IaC Validator).
+- python demo_01_namng.py --cloud   : Kết nối GitHub CLI để kiểm tra trạng thái CI thật trên GitHub Actions.
 - python demo_01_namng.py --fast    : Chạy nhanh không chờ độ trễ hiệu ứng terminal.
+- python demo_01_namng.py --real    : Thực thi trực tiếp các Engine CI thật (Policy Guard, Semgrep Gate, IaC Validator).
+- python demo_01_namng.py --cloud   : Kết nối GitHub CLI để kiểm tra trạng thái CI thật trên GitHub Actions.
 - python demo_01_namng.py --fix     : Chạy kịch bản sau khi áp dụng mã an toàn đã khắc phục (Exit code 0).
 ========================================================================================
 """
@@ -52,16 +58,19 @@ def main() -> None:
     #           + 4 Lỗ hổng an ninh mã nguồn (SQLi, XSS, Hardcoded Password)
     #           + 1 Lỗi chất lượng mã nguồn SonarQube (Web:InputWithoutLabelCheck)
     # - Bước 3: Đánh giá Dual Security & Quality Gate -> kích hoạt BREAK-THE-BUILD, ngắt CI với code 1.
-    exit_code = run_member_demo("namng", remediate=remediate, fast=fast)
+    real = "--real" in sys.argv or "--live" in sys.argv
+    cloud = "--cloud" in sys.argv
+
+    exit_code = run_member_demo("namng", remediate=remediate, fast=fast, real=real, cloud=cloud)
 
     # 3. Kịch bản tương tác tại buổi báo cáo:
     # Cho phép người báo cáo bấm phím 'y' để trình diễn kết quả sau khi vá lỗi ngay tại chỗ mà không cần gõ lại lệnh.
-    if not remediate and not fast and sys.stdin.isatty():
+    if not remediate and not fast and not cloud and sys.stdin.isatty():
         try:
             prompt = input("\n💡 Bạn có muốn demo kịch bản KHẮC PHỤC (Remediation) để CI thông qua không? (y/N): ").strip().lower()
             if prompt in ("y", "yes"):
                 # Quét lại sau khi khắc phục cả lỗ hổng và lỗi chất lượng mã nguồn
-                run_member_demo("namng", remediate=True, fast=False)
+                run_member_demo("namng", remediate=True, fast=False, real=real)
         except (KeyboardInterrupt, EOFError):
             pass
 
