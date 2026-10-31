@@ -80,14 +80,18 @@ def check_gh_installed() -> bool:
         return False
 
 
-def get_latest_run_id() -> int | None:
+def get_latest_run_id(completed_only: bool = False) -> int | None:
     """Lấy mã Run ID của lần chạy mới nhất trên GitHub Actions."""
-    cmd = ["gh", "run", "list", "--limit", "1", "--json", "databaseId"]
+    cmd = ["gh", "run", "list", "--limit", "10", "--json", "databaseId,status,conclusion"]
     res = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
     if res.returncode == 0 and res.stdout.strip():
         try:
             data = json.loads(res.stdout)
             if data and isinstance(data, list):
+                if completed_only:
+                    for r in data:
+                        if r.get("status") == "completed" and r.get("conclusion") in ("failure", "success"):
+                            return r.get("databaseId")
                 return data[0].get("databaseId")
         except Exception:
             pass
@@ -702,10 +706,14 @@ def interactive_menu() -> None:
         print("👉 Vui lòng cài đặt và đăng nhập bằng lệnh: gh auth login")
         return
 
+    cur_branch = get_current_git_branch()
+    cur_member = resolve_member_from_branch(cur_branch)
+
     while True:
         print_banner("HỆ THỐNG KÍCH HOẠT & THEO DÕI CI THẬT TRÊN GITHUB ACTIONS", CYAN)
+        print(f"Nhánh Git hiện tại: {BOLD}{YELLOW}{cur_branch}{RESET}" + (f" (Thành viên: {GREEN}{cur_member}{RESET})" if cur_member else ""))
         print("Vui lòng chọn chế độ hoạt động:")
-        print(f"  [1] 🚀 {BOLD}Kích hoạt luồng CI MỚI trên nhánh 'namng' (Chốt chặn Break-the-Build thật){RESET}")
+        print(f"  [1] 🚀 {BOLD}Kích hoạt luồng CI MỚI trên nhánh '{cur_branch}' (Chốt chặn Break-the-Build thật){RESET}")
         print(f"  [2] 🚀 {BOLD}Kích hoạt luồng CI MỚI trên nhánh 'dev' (Môi trường tích hợp chung){RESET}")
         print(f"  [3] 📡 {BOLD}Theo dõi lần chạy CI MỚI NHẤT gần đây{RESET}")
         print(f"  [4] 🔍 {BOLD}Nhập mã Run ID cụ thể để theo dõi chi tiết{RESET}")
@@ -719,9 +727,9 @@ def interactive_menu() -> None:
             print("\n👋 Tạm biệt!\n")
             break
         elif choice == "1":
-            run_id = trigger_real_workflow("namng", enforce=True)
+            run_id = trigger_real_workflow(cur_branch, enforce=True)
             if run_id:
-                watch_live_ci_run(run_id, target_member="namng")
+                watch_live_ci_run(run_id, target_member=cur_member)
             input("\n👉 Nhấn Enter để quay lại Menu...")
         elif choice == "2":
             run_id = trigger_real_workflow("dev", enforce=True)
@@ -731,19 +739,19 @@ def interactive_menu() -> None:
         elif choice == "3":
             run_id = get_latest_run_id()
             if run_id:
-                watch_live_ci_run(run_id)
+                watch_live_ci_run(run_id, target_member=cur_member)
             else:
                 print("❌ Không tìm thấy lần chạy nào gần đây.")
             input("\n👉 Nhấn Enter để quay lại Menu...")
         elif choice == "4":
             custom_id = input("👉 Nhập mã Run ID (ví dụ 41179854251): ").strip()
             if custom_id.isdigit():
-                watch_live_ci_run(int(custom_id))
+                watch_live_ci_run(int(custom_id), target_member=cur_member)
             else:
                 print("⚠️ Mã Run ID không hợp lệ!")
             input("\n👉 Nhấn Enter để quay lại Menu...")
         elif choice == "5":
-            run_id = get_latest_run_id()
+            run_id = get_latest_run_id(completed_only=True)
             if run_id:
                 data = fetch_run_details(run_id)
                 if data:
@@ -754,7 +762,10 @@ def interactive_menu() -> None:
                     print("  [3] Đào Xuân Mạnh (manhdx)")
                     print("  [4] Lê Đức Anh (anhld)")
                     print("  [5] Nguyễn Phương Mai (mainp)")
-                    sub_c = input("👉 Nhập lựa chọn (0-5, mặc định 0): ").strip()
+                    default_choice = str(MEMBER_SCOPE_MAP[cur_member]["order"]) if cur_member in MEMBER_SCOPE_MAP else "0"
+                    sub_c = input(f"👉 Nhập lựa chọn (0-5, mặc định [{default_choice}]): ").strip()
+                    if not sub_c:
+                        sub_c = default_choice
                     m_filter = None if sub_c in ("", "0") else sub_c
                     jobs = data.get("jobs", [])
                     display_detailed_failures(run_id, jobs, target_member=m_filter)
@@ -808,7 +819,7 @@ def main() -> None:
     # Chế độ xem báo cáo nhanh: khi có --details, --errors, -m, hoặc chỉ định branch mà không kèm action
     is_quick_view = args.details or args.member or (args.branch and not args.trigger and not args.watch and not args.latest)
     if is_quick_view:
-        run_id = get_latest_run_id()
+        run_id = get_latest_run_id(completed_only=True)
         if run_id:
             data = fetch_run_details(run_id)
             if data:
