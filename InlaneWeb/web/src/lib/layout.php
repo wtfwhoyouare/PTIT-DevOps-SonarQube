@@ -31,6 +31,7 @@ function render_header(string $title = 'IlFreight Logistics'): void
         <a href="/">Trang chủ</a>
         <a href="/ports">Cảng biển</a>
         <a href="/track">Tra cứu vận đơn</a>
+        <a href="/guide">Quy chuẩn</a>
         <a href="/news">Tin tức</a>
         <?php if ($u): ?>
             <a href="/account">Hồ sơ</a>

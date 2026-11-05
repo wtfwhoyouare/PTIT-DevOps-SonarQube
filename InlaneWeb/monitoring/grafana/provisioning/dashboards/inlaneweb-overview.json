@@ -210,6 +210,79 @@
         "wrapLogMessage": true,
         "sortOrder": "Descending"
       }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 40 },
+      "id": 9,
+      "title": "Security Telemetry by Team Members (Live Incident Rate & Highlighting)",
+      "type": "timeseries",
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "Loki" },
+          "editorMode": "code",
+          "expr": "sum(rate({container=\"ilfreight_web\"} |~ \"(?i)(member=namng|\\\\[member:\\\\s*namng\\\\]|member/namng)\"[1m]))",
+          "legendFormat": "[NAMNG] Nguyễn Giang Nam (Lead / Ports SQLi / News / XSS)",
+          "queryType": "range",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "loki", "uid": "Loki" },
+          "editorMode": "code",
+          "expr": "sum(rate({container=\"ilfreight_web\"} |~ \"(?i)(member=haind|\\\\[member:\\\\s*haind\\\\]|member/haind)\"[1m]))",
+          "legendFormat": "[HAIND] Nguyễn Đình Hải (Security / Auth Bypass / XPath / Blind)",
+          "queryType": "range",
+          "refId": "B"
+        },
+        {
+          "datasource": { "type": "loki", "uid": "Loki" },
+          "editorMode": "code",
+          "expr": "sum(rate({container=\"ilfreight_web\"} |~ \"(?i)(member=manhdx|\\\\[member:\\\\s*manhdx\\\\]|member/manhdx)\"[1m]))",
+          "legendFormat": "[MANHDX] Đào Xuân Mạnh (QA / LFI / LOAD_FILE / DDL SQLi)",
+          "queryType": "range",
+          "refId": "C"
+        },
+        {
+          "datasource": { "type": "loki", "uid": "Loki" },
+          "editorMode": "code",
+          "expr": "sum(rate({container=\"ilfreight_web\"} |~ \"(?i)(member=anhld|\\\\[member:\\\\s*anhld\\\\]|member/anhld)\"[1m]))",
+          "legendFormat": "[ANHLD] Lê Đức Anh (Infra / Order-By / UPDATE SQLi)",
+          "queryType": "range",
+          "refId": "D"
+        },
+        {
+          "datasource": { "type": "loki", "uid": "Loki" },
+          "editorMode": "code",
+          "expr": "sum(rate({container=\"ilfreight_web\"} |~ \"(?i)(member=maipn|\\\\[member:\\\\s*maipn\\\\]|member/maipn)\"[1m]))",
+          "legendFormat": "[MAIPN] Nguyễn Phương Mai (Observability / INSERT / DELETE / Stacked)",
+          "queryType": "range",
+          "refId": "E"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 40 },
+      "id": 10,
+      "title": "Member Telemetry Activity Stream (Live Logs with Highlight Labels)",
+      "type": "logs",
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "Loki" },
+          "editorMode": "code",
+          "expr": "{container=\"ilfreight_web\"} |~ \"(?i)(member=|\\\\[member:|member/|tester=)\"",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showLabels": true,
+        "wrapLogMessage": true,
+        "enableLogDetails": true,
+        "sortOrder": "Descending"
+      }
     }
   ],
   "refresh": "5s",

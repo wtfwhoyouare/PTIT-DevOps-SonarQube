@@ -6,3 +6,8 @@ __pycache__/
 .env
 .env.*
 !.env.example
+scratch/
+*.bak*
+~$*
+docs/Báo cáo bài tập lớn DevSecOps.docx
+
