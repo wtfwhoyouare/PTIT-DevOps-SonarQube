@@ -115,3 +115,69 @@ groups:
         annotations:
           summary: "Tần suất lỗi HTTP 5xx tăng cao trên Web Portal"
           description: "Phát hiện mã phản hồi 500 xuất hiện trong log container ilfreight_web."
+
+      # KHỐI 3: THEO DÕI VÀ CẢNH BÁO TELEMETRY DIỄN TẬP AN NINH THEO THÀNH VIÊN
+      - alert: MemberTelemetry_NAMNG_Activity
+        expr: |
+          sum(rate({container="ilfreight_web"} |~ "(?i)(member=namng|\\[member:\\s*namng\\]|member/namng)"[1m])) > 0
+        for: 0s
+        labels:
+          severity: info
+          category: member_telemetry
+          member: NAMNG
+          member_name: "Nguyen_Giang_Nam"
+        annotations:
+          summary: "Phát hiện lưu lượng diễn tập an ninh từ NGUYỄN GIANG NAM (NAMNG)"
+          description: "Container ilfreight_web tiếp nhận lưu lượng kiểm thử an ninh gắn nhãn NAMNG."
+
+      - alert: MemberTelemetry_HAIND_Activity
+        expr: |
+          sum(rate({container="ilfreight_web"} |~ "(?i)(member=haind|\\[member:\\s*haind\\]|member/haind)"[1m])) > 0
+        for: 0s
+        labels:
+          severity: info
+          category: member_telemetry
+          member: HAIND
+          member_name: "Nguyen_Dinh_Hai"
+        annotations:
+          summary: "Phát hiện lưu lượng diễn tập an ninh từ NGUYỄN ĐÌNH HẢI (HAIND)"
+          description: "Container ilfreight_web tiếp nhận lưu lượng kiểm thử an ninh gắn nhãn HAIND."
+
+      - alert: MemberTelemetry_MANHDX_Activity
+        expr: |
+          sum(rate({container="ilfreight_web"} |~ "(?i)(member=manhdx|\\[member:\\s*manhdx\\]|member/manhdx)"[1m])) > 0
+        for: 0s
+        labels:
+          severity: info
+          category: member_telemetry
+          member: MANHDX
+          member_name: "Dao_Xuan_Manh"
+        annotations:
+          summary: "Phát hiện lưu lượng diễn tập an ninh từ ĐÀO XUÂN MẠNH (MANHDX)"
+          description: "Container ilfreight_web tiếp nhận lưu lượng kiểm thử an ninh gắn nhãn MANHDX."
+
+      - alert: MemberTelemetry_ANHLD_Activity
+        expr: |
+          sum(rate({container="ilfreight_web"} |~ "(?i)(member=anhld|\\[member:\\s*anhld\\]|member/anhld)"[1m])) > 0
+        for: 0s
+        labels:
+          severity: info
+          category: member_telemetry
+          member: ANHLD
+          member_name: "Le_Duc_Anh"
+        annotations:
+          summary: "Phát hiện lưu lượng diễn tập an ninh từ LÊ ĐỨC ANH (ANHLD)"
+          description: "Container ilfreight_web tiếp nhận lưu lượng kiểm thử an ninh gắn nhãn ANHLD."
+
+      - alert: MemberTelemetry_MAIPN_Activity
+        expr: |
+          sum(rate({container="ilfreight_web"} |~ "(?i)(member=maipn|\\[member:\\s*maipn\\]|member/maipn)"[1m])) > 0
+        for: 0s
+        labels:
+          severity: info
+          category: member_telemetry
+          member: MAIPN
+          member_name: "Nguyen_Phuong_Mai"
+        annotations:
+          summary: "Phát hiện lưu lượng diễn tập an ninh từ NGUYỄN PHƯƠNG MAI (MAIPN)"
+          description: "Container ilfreight_web tiếp nhận lưu lượng kiểm thử an ninh gắn nhãn MAIPN."

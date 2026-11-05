@@ -104,3 +104,35 @@ scrape_configs:
                 traffic_type: error_based_leak
                 vuln_category: error_based_leak
                 level: high
+
+      # 6. Nhận diện và gán nhãn thành viên thực hiện diễn tập kiểm thử an ninh (Member Telemetry Highlight)
+      - match:
+          selector: '{container="ilfreight_web"} |~ "(?i)(member=namng|\\[member:\\s*namng\\]|member/namng|tester=nguyen_giang_nam)"'
+          stages:
+            - labels:
+                member: "NAMNG"
+                member_role: "Lead_Architect"
+      - match:
+          selector: '{container="ilfreight_web"} |~ "(?i)(member=haind|\\[member:\\s*haind\\]|member/haind|tester=nguyen_dinh_hai)"'
+          stages:
+            - labels:
+                member: "HAIND"
+                member_role: "Security_Engineer"
+      - match:
+          selector: '{container="ilfreight_web"} |~ "(?i)(member=manhdx|\\[member:\\s*manhdx\\]|member/manhdx|tester=dao_xuan_manh)"'
+          stages:
+            - labels:
+                member: "MANHDX"
+                member_role: "QA_DevSecOps"
+      - match:
+          selector: '{container="ilfreight_web"} |~ "(?i)(member=anhld|\\[member:\\s*anhld\\]|member/anhld|tester=le_duc_anh)"'
+          stages:
+            - labels:
+                member: "ANHLD"
+                member_role: "Infra_Automation"
+      - match:
+          selector: '{container="ilfreight_web"} |~ "(?i)(member=maipn|\\[member:\\s*maipn\\]|member/maipn|tester=nguyen_phuong_mai)"'
+          stages:
+            - labels:
+                member: "MAIPN"
+                member_role: "Monitoring_SecOps"
