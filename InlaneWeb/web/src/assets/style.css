@@ -507,3 +507,41 @@ table.data tr:nth-child(even) td { background:var(--panelalt); }
   flex-wrap: wrap;
 }
 
+
+/* ============================================================
+   Icon SVG va tinh chinh bo cuc trang chu
+   ============================================================ */
+.ico { display:inline-block; vertical-align:middle; flex-shrink:0; }
+.home-hero-badge .ico { color: var(--accent); }
+.btn-hero-primary, .btn-hero-secondary { display:inline-flex; align-items:center; gap:8px; }
+.home-hub-icon {
+  width:48px; height:48px; border-radius:12px;
+  display:flex; align-items:center; justify-content:center;
+  background: linear-gradient(135deg, #e6f1f8 0%, #d6e8f3 100%);
+  color: var(--deep); font-size:0; margin-bottom:16px;
+}
+.home-hub-card:hover .home-hub-icon { background: var(--deep); color:#fff; }
+.home-hub-link .ico, .home-hub-link { transition: gap .15s ease; }
+.home-service-card .svc-icon-box {
+  background: linear-gradient(135deg, #e6f1f8 0%, #d6e8f3 100%);
+  font-size:0;
+}
+.home-track-callout-text h3 { display:flex; align-items:center; gap:10px; }
+.home-track-callout-text h3 .ico { color: var(--teal); }
+.home-port-vol, .home-news-card .news-date { display:flex; align-items:center; gap:6px; }
+.home-why-title { display:flex; align-items:center; gap:10px; color:var(--deep); font-size:16px; margin:0 0 8px; }
+.home-why-title .ico { color: var(--teal); }
+
+/* Luoi can doi: 4 dich vu thanh 2x2, 6 cang thanh 3x2 */
+.home-services-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.home-ports-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 760px) {
+  .home-services-grid, .home-ports-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .home-track-callout { padding: 22px 20px; }
+  .home-track-callout-form { min-width: 0; width: 100%; max-width: none; flex-direction: column; }
+  .home-track-callout-form input { min-width: 0; }
+  .home-hero { padding: 32px 22px; }
+  .home-hero h1 { font-size: 28px; }
+}

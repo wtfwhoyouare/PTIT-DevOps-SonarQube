@@ -18,7 +18,7 @@ $topPorts = db_select("SELECT code, city, country, volume FROM ports ORDER BY vo
 <!-- 1. HERO SECTION -->
 <div class="home-hero">
     <div class="home-hero-badge">
-        <span>⚓</span> HỆ THỐNG VẬN TẢI HÀNG HẢI &amp; LOGISTICS TOÀN CẦU
+        <?= icon('anchor', 15) ?> HỆ THỐNG VẬN TẢI HÀNG HẢI &amp; LOGISTICS TOÀN CẦU
     </div>
     <h1>Dẫn Đầu Chuỗi Cung Ứng &amp;<br>Vận Tải Đa Phương Thức Tiên Tiến</h1>
     <p class="hero-lead">
@@ -27,13 +27,13 @@ $topPorts = db_select("SELECT code, city, country, volume FROM ports ORDER BY vo
 
     <div class="home-hero-actions">
         <?php if ($u): ?>
-            <a href="/shipments/new" class="btn-hero-primary">🚀 Tạo Đơn Booking Mới</a>
-            <a href="/shipments/mine" class="btn-hero-secondary">📦 Đơn Hàng Của Tôi</a>
-            <a href="/quote" class="btn-hero-secondary">📊 Tính Báo Giá Cước</a>
+            <a href="/shipments/new" class="btn-hero-primary">Tạo đơn booking mới <?= icon('arrow', 16) ?></a>
+            <a href="/shipments/mine" class="btn-hero-secondary">Đơn hàng của tôi</a>
+            <a href="/quote" class="btn-hero-secondary">Tính báo giá cước</a>
         <?php else: ?>
-            <a href="/shipments/new" class="btn-hero-primary">🚀 Đặt Chỗ Vận Tải (Booking)</a>
-            <a href="/quote" class="btn-hero-secondary">📊 Nhận Báo Giá Tức Thì</a>
-            <a href="/register" class="btn-hero-secondary">🔑 Đăng Ký Tài Khoản</a>
+            <a href="/shipments/new" class="btn-hero-primary">Đặt chỗ vận tải <?= icon('arrow', 16) ?></a>
+            <a href="/quote" class="btn-hero-secondary">Nhận báo giá</a>
+            <a href="/register" class="btn-hero-secondary">Đăng ký tài khoản</a>
             <a href="/track" class="btn-hero-ghost">Tra cứu hành trình vận đơn →</a>
         <?php endif; ?>
     </div>
@@ -69,7 +69,7 @@ $topPorts = db_select("SELECT code, city, country, volume FROM ports ORDER BY vo
 <div class="home-hub-grid">
     <div class="home-hub-card">
         <div>
-            <div class="home-hub-icon">📦</div>
+            <div class="home-hub-icon"><?= icon('package', 24) ?></div>
             <h3>Tra Cứu Vận Đơn</h3>
             <p>Theo dõi vị trí và tiến trình thông quan của lô hàng qua mã vận đơn (Tracking Number) với độ chính xác cao.</p>
         </div>
@@ -78,7 +78,7 @@ $topPorts = db_select("SELECT code, city, country, volume FROM ports ORDER BY vo
 
     <div class="home-hub-card">
         <div>
-            <div class="home-hub-icon">⚓</div>
+            <div class="home-hub-icon"><?= icon('anchor', 24) ?></div>
             <h3>Cổng Tra Cứu Cảng Biển</h3>
             <p>Tra cứu danh bạ hơn 100 thương cảng quốc tế, sản lượng bốc dỡ TEU và năng lực tiếp nhận tàu biển.</p>
         </div>
@@ -87,7 +87,7 @@ $topPorts = db_select("SELECT code, city, country, volume FROM ports ORDER BY vo
 
     <div class="home-hub-card">
         <div>
-            <div class="home-hub-icon">💰</div>
+            <div class="home-hub-icon"><?= icon('calculator', 24) ?></div>
             <h3>Dự Toán Cước Vận Tải</h3>
             <p>Công cụ ước tính tự động chi phí cước biển cho container 20GP, 40GP, 40HC kèm phụ phí minh bạch.</p>
         </div>
@@ -96,7 +96,7 @@ $topPorts = db_select("SELECT code, city, country, volume FROM ports ORDER BY vo
 
     <div class="home-hub-card">
         <div>
-            <div class="home-hub-icon">📘</div>
+            <div class="home-hub-icon"><?= icon('book', 24) ?></div>
             <h3>Quy Chuẩn &amp; Biểu Mẫu</h3>
             <p>Cẩm nang vận tải, bộ quy tắc Incoterms 2020 và hướng dẫn quy chuẩn đóng gói container quốc tế.</p>
         </div>
@@ -107,7 +107,7 @@ $topPorts = db_select("SELECT code, city, country, volume FROM ports ORDER BY vo
 <!-- 3. QUICK TRACKING CALLOUT -->
 <div class="home-track-callout">
     <div class="home-track-callout-text">
-        <h3>🔍 Bạn cần theo dõi lô hàng đang vận chuyển?</h3>
+        <h3><?= icon('search', 20) ?> Bạn cần theo dõi lô hàng đang vận chuyển?</h3>
         <p>Nhập mã vận đơn (ví dụ: <code>ILF1042CN</code>) để xem trạng thái tức thì từ hệ thống định vị vệ tinh.</p>
     </div>
     <form class="home-track-callout-form" action="/track" method="get">
@@ -125,7 +125,7 @@ $topPorts = db_select("SELECT code, city, country, volume FROM ports ORDER BY vo
 
 <div class="home-services-grid">
     <div class="home-service-card">
-        <div class="svc-icon-box">🚢</div>
+        <div class="svc-icon-box"><?= icon('ship', 24) ?></div>
         <h3>Vận Tải Đường Biển Quốc Tế</h3>
         <p>Dịch vụ gom hàng lẻ (LCL) và hàng nguyên container (FCL) tới các cảng chính tại Châu Á, Châu Âu và Bắc Mỹ với lịch tàu hàng tuần.</p>
         <ul>
@@ -137,7 +137,7 @@ $topPorts = db_select("SELECT code, city, country, volume FROM ports ORDER BY vo
     </div>
 
     <div class="home-service-card">
-        <div class="svc-icon-box">❄️</div>
+        <div class="svc-icon-box"><?= icon('snowflake', 24) ?></div>
         <h3>Chuỗi Cung Ứng Lạnh (Reefer)</h3>
         <p>Kiểm soát độ ẩm và dải nhiệt độ nghiêm ngặt từ -30°C đến +30°C cho nông sản tươi, thuỷ hải sản đông lạnh và dược phẩm y tế.</p>
         <ul>
@@ -149,7 +149,7 @@ $topPorts = db_select("SELECT code, city, country, volume FROM ports ORDER BY vo
     </div>
 
     <div class="home-service-card">
-        <div class="svc-icon-box">🏢</div>
+        <div class="svc-icon-box"><?= icon('warehouse', 24) ?></div>
         <h3>Hệ Thống Kho Bãi &amp; Ngoại Quan</h3>
         <p>Hệ thống kho CFS và kho ngoại quan phân bố tại các trung tâm logistics trọng điểm, trang bị hệ thống quản lý WMS thông minh.</p>
         <ul>
@@ -161,7 +161,7 @@ $topPorts = db_select("SELECT code, city, country, volume FROM ports ORDER BY vo
     </div>
 
     <div class="home-service-card">
-        <div class="svc-icon-box">📑</div>
+        <div class="svc-icon-box"><?= icon('file-check', 24) ?></div>
         <h3>Thủ Tục Hải Quan &amp; Bảo Hiểm</h3>
         <p>Đại lý hải quan chuyên trách hoàn tất chứng từ xuất nhập khẩu nhanh chóng, giảm thiểu tối đa rủi ro chậm trễ tại cảng.</p>
         <ul>
@@ -191,7 +191,7 @@ $topPorts = db_select("SELECT code, city, country, volume FROM ports ORDER BY vo
             <span class="home-port-code"><?= htmlspecialchars($port['code'], ENT_QUOTES, 'UTF-8') ?></span>
             <div class="home-port-city"><?= htmlspecialchars($port['city'], ENT_QUOTES, 'UTF-8') ?></div>
             <div class="home-port-country"><?= htmlspecialchars($port['country'], ENT_QUOTES, 'UTF-8') ?></div>
-            <div class="home-port-vol">📊 <?= htmlspecialchars(number_format((float)$port['volume'], 1), ENT_QUOTES, 'UTF-8') ?>M TEU/năm</div>
+            <div class="home-port-vol"><?= icon('chart', 14) ?> <?= htmlspecialchars(number_format((float)$port['volume'], 1), ENT_QUOTES, 'UTF-8') ?>M TEU/năm</div>
         </a>
     <?php endforeach; ?>
 </div>
@@ -206,19 +206,19 @@ $topPorts = db_select("SELECT code, city, country, volume FROM ports ORDER BY vo
 
     <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:20px;">
         <div>
-            <h4 style="color:var(--deep);font-size:16px;margin:0 0 8px;">🌐 Mạng Lưới Tuyến Tàu Bao Phủ</h4>
+            <h4 class="home-why-title"><?= icon('globe', 18) ?> Mạng Lưới Tuyến Tàu Bao Phủ</h4>
             <p class="muted" style="line-height:1.6;margin:0;">Liên kết chặt chẽ với các liên minh hãng tàu lớn, đảm bảo lịch khởi hành cố định hàng tuần và không bị hủy chuyến.</p>
         </div>
         <div>
-            <h4 style="color:var(--deep);font-size:16px;margin:0 0 8px;">⚡ Số Hoá Thủ Tục Toàn Diện</h4>
+            <h4 class="home-why-title"><?= icon('zap', 18) ?> Số Hoá Thủ Tục Toàn Diện</h4>
             <p class="muted" style="line-height:1.6;margin:0;">Khởi tạo vận đơn đường biển (B/L) và hoá đơn điện tử trực tiếp trên nền tảng web, tiết kiệm 70% thời gian tác nghiệp.</p>
         </div>
         <div>
-            <h4 style="color:var(--deep);font-size:16px;margin:0 0 8px;">🛡️ Minh Bạch &amp; Bảo Hiểm Toàn Phần</h4>
+            <h4 class="home-why-title"><?= icon('shield', 18) ?> Minh Bạch &amp; Bảo Hiểm Toàn Phần</h4>
             <p class="muted" style="line-height:1.6;margin:0;">Bảng giá niêm yết rõ ràng, không phụ phí ẩn. Chính sách bồi thường 100% trong trường hợp tổn thất hàng hoá.</p>
         </div>
         <div>
-            <h4 style="color:var(--deep);font-size:16px;margin:0 0 8px;">🤝 Chuyên Gia Đồng Hành 24/7</h4>
+            <h4 class="home-why-title"><?= icon('headset', 18) ?> Chuyên Gia Đồng Hành 24/7</h4>
             <p class="muted" style="line-height:1.6;margin:0;">Đội ngũ chuyên viên chứng từ và giao nhận giàu kinh nghiệm luôn túc trực hỗ trợ xử lý sự cố tại hiện trường cảng.</p>
         </div>
     </div>
@@ -241,7 +241,7 @@ $topPorts = db_select("SELECT code, city, country, volume FROM ports ORDER BY vo
         <?php foreach ($newsList as $newsItem): ?>
             <div class="home-news-card">
                 <div>
-                    <div class="news-date">📅 <?= htmlspecialchars($newsItem['published_at'], ENT_QUOTES, 'UTF-8') ?></div>
+                    <div class="news-date"><?= icon('calendar', 14) ?> <?= htmlspecialchars($newsItem['published_at'], ENT_QUOTES, 'UTF-8') ?></div>
                     <h3><?= htmlspecialchars($newsItem['title'], ENT_QUOTES, 'UTF-8') ?></h3>
                     <p><?= htmlspecialchars(mb_substr($newsItem['body'], 0, 140), ENT_QUOTES, 'UTF-8') ?>...</p>
                 </div>
