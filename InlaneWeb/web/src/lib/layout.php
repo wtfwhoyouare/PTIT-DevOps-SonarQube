@@ -1,6 +1,8 @@
 <?php
 /** layout.php — Header / nav / footer dung chung (UI giong app that). */
 
+require_once __DIR__ . '/icons.php';
+
 function current_user(): ?array
 {
     if (!empty($_SESSION['uid'])) {
@@ -31,10 +33,9 @@ function render_header(string $title = 'IlFreight Logistics'): void
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= htmlspecialchars($title) ?> — IlFreight Logistics</title>
-    <link rel="stylesheet" href="/assets/style.css">
+    <link rel="stylesheet" href="/assets/style.css?v=<?= (int) @filemtime(__DIR__ . '/../assets/style.css') ?>">
 </head>
 <body>
-<div class="lab-banner">⚠ INTENTIONALLY VULNERABLE — TRAINING ONLY · Lab SQL Injection</div>
 <header class="topbar">
     <a class="brand" href="/">
         <span class="brand-mark">◆</span> IlFreight <span class="brand-sub">Logistics</span>
