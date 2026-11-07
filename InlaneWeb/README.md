@@ -32,6 +32,12 @@ Reset toàn bộ dữ liệu (sau khi học viên phá bằng DELETE/UPDATE/DROP
 docker compose down -v && docker compose up -d --build
 ```
 
+### Áp dụng migration cơ sở dữ liệu (cho môi trường đã có volume cũ)
+
+```bash
+docker exec -i ilfreight_db mariadb -uroot -p"$MYSQL_ROOT_PASSWORD" < db/migrations/001_business_features.sql
+```
+
 ---
 
 ## Tài khoản mẫu

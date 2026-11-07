@@ -7,7 +7,9 @@ session_start();
 
 require_once __DIR__ . '/lib/logger.php';
 require_once __DIR__ . '/lib/db.php';
+require_once __DIR__ . '/lib/db_safe.php';
 require_once __DIR__ . '/lib/layout.php';
+require_once __DIR__ . '/lib/auth.php';
 
 // 1. Kích hoạt cơ chế bắt trọn vẹn Cause Exceptions & Mọi lỗi hệ thống (Application Logging)
 set_exception_handler(function (\Throwable $e): void {
@@ -90,13 +92,20 @@ if ($path === '/health' || $path === '/api/health') {
 }
 
 // Auth
-if ($path === '/login')  { page('login.php'); }
-if ($path === '/logout') { page('logout.php'); }
+if ($path === '/login')           { page('login.php'); }
+if ($path === '/logout')          { page('logout.php'); }
+if ($path === '/register')        { page('register.php'); }
+if ($path === '/forgot-password') { page('forgot_password.php'); }
+if ($path === '/reset-password')  { page('reset_password.php'); }
 
 // Trang chu & noi dung
-if ($path === '/')      { page('home.php'); }
-if ($path === '/news')  { page('news.php'); }
-if ($path === '/guide') { page('guide.php'); }                       // ?doc= -> LFI / Path Traversal
+if ($path === '/')         { page('home.php'); }
+if ($path === '/about')    { page('about.php'); }
+if ($path === '/services') { page('services.php'); }
+if ($path === '/contact')  { page('contact.php'); }
+if ($path === '/quote')    { page('quote.php'); }
+if ($path === '/news')     { page('news.php'); }
+if ($path === '/guide')    { page('guide.php'); }                       // ?doc= -> LFI / Path Traversal
 
 // Cang bien
 if ($path === '/ports') { page('ports.php'); }                       // ?q=  -> UNION
@@ -110,8 +119,38 @@ if ($path === '/track')     { page('track.php'); }
 if ($path === '/api/track') { page('track_api.php'); }
 
 // Tai khoan
-if ($path === '/account')        { page('account.php'); }            // Error-based
-if ($path === '/account/update') { page('account_update.php'); }     // UPDATE inject
+if ($path === '/account')          { page('account.php'); }            // Error-based
+if ($path === '/account/update')   { page('account_update.php'); }     // UPDATE inject
+if ($path === '/account/password') { page('account_password.php'); }
+if ($path === '/account/profile')  { page('account_profile.php'); }
+
+// Van don & Lo hang nghiep vu moi (DAT TRUOC cac route shipment cu)
+if ($path === '/shipments/new')  { page('shipment_new.php'); }
+if ($path === '/shipments/mine') { page('shipments_mine.php'); }
+if (preg_match('#^/shipments/(\d+)/info$#', $path, $m)) {
+    $_GET['id'] = $m[1];
+    page('shipment_info.php');
+}
+if (preg_match('#^/shipments/(\d+)/edit$#', $path, $m)) {
+    $_GET['id'] = $m[1];
+    page('shipment_edit.php');
+}
+if (preg_match('#^/shipments/(\d+)/cancel$#', $path, $m)) {
+    $_GET['id'] = $m[1];
+    page('shipment_cancel.php');
+}
+if (preg_match('#^/shipments/(\d+)/documents/bill-of-lading$#', $path, $m)) {
+    $_GET['id'] = $m[1];
+    page('shipment_bol.php');
+}
+if (preg_match('#^/shipments/(\d+)/documents/invoice$#', $path, $m)) {
+    $_GET['id'] = $m[1];
+    page('shipment_invoice.php');
+}
+
+// Thong bao
+if ($path === '/notifications')      { page('notifications.php'); }
+if ($path === '/notifications/read') { page('notifications_read.php'); }
 
 // Binh luan don hang
 if (preg_match('#^/shipments/(\d+)/comments$#', $path, $m)) {        // INSERT inject
@@ -129,6 +168,16 @@ if (preg_match('#^/comments/(.+)/delete$#', $path, $m)) {            // DELETE i
 
 // Khu quan tri
 if ($path === '/admin')                 { page('admin_dashboard.php'); }
+if ($path === '/admin/users')           { page('admin_users.php'); }
+if ($path === '/admin/shipments')       { page('admin_shipments.php'); }
+if (preg_match('#^/admin/shipments/(\d+)/status$#', $path, $m)) {
+    $_GET['id'] = $m[1];
+    page('admin_shipment_status.php');
+}
+if ($path === '/admin/ports')           { page('admin_ports.php'); }
+if ($path === '/admin/news')            { page('admin_news.php'); }
+if ($path === '/admin/mail-outbox')     { page('admin_mail_outbox.php'); }
+if ($path === '/admin/messages')        { page('admin_messages.php'); }
 if ($path === '/admin/reports/export')  { page('admin_report_export.php'); } // CREATE inject
 if ($path === '/admin/console')         { page('admin_console.php'); }       // Stacked
 
