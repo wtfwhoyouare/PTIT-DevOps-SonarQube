@@ -99,9 +99,13 @@ if ($path === '/forgot-password') { page('forgot_password.php'); }
 if ($path === '/reset-password')  { page('reset_password.php'); }
 
 // Trang chu & noi dung
-if ($path === '/')      { page('home.php'); }
-if ($path === '/news')  { page('news.php'); }
-if ($path === '/guide') { page('guide.php'); }                       // ?doc= -> LFI / Path Traversal
+if ($path === '/')         { page('home.php'); }
+if ($path === '/about')    { page('about.php'); }
+if ($path === '/services') { page('services.php'); }
+if ($path === '/contact')  { page('contact.php'); }
+if ($path === '/quote')    { page('quote.php'); }
+if ($path === '/news')     { page('news.php'); }
+if ($path === '/guide')    { page('guide.php'); }                       // ?doc= -> LFI / Path Traversal
 
 // Cang bien
 if ($path === '/ports') { page('ports.php'); }                       // ?q=  -> UNION
