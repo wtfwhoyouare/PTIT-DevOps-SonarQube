@@ -7,7 +7,9 @@ session_start();
 
 require_once __DIR__ . '/lib/logger.php';
 require_once __DIR__ . '/lib/db.php';
+require_once __DIR__ . '/lib/db_safe.php';
 require_once __DIR__ . '/lib/layout.php';
+require_once __DIR__ . '/lib/auth.php';
 
 // 1. Kích hoạt cơ chế bắt trọn vẹn Cause Exceptions & Mọi lỗi hệ thống (Application Logging)
 set_exception_handler(function (\Throwable $e): void {
@@ -90,8 +92,11 @@ if ($path === '/health' || $path === '/api/health') {
 }
 
 // Auth
-if ($path === '/login')  { page('login.php'); }
-if ($path === '/logout') { page('logout.php'); }
+if ($path === '/login')           { page('login.php'); }
+if ($path === '/logout')          { page('logout.php'); }
+if ($path === '/register')        { page('register.php'); }
+if ($path === '/forgot-password') { page('forgot_password.php'); }
+if ($path === '/reset-password')  { page('reset_password.php'); }
 
 // Trang chu & noi dung
 if ($path === '/')      { page('home.php'); }
@@ -110,8 +115,10 @@ if ($path === '/track')     { page('track.php'); }
 if ($path === '/api/track') { page('track_api.php'); }
 
 // Tai khoan
-if ($path === '/account')        { page('account.php'); }            // Error-based
-if ($path === '/account/update') { page('account_update.php'); }     // UPDATE inject
+if ($path === '/account')          { page('account.php'); }            // Error-based
+if ($path === '/account/update')   { page('account_update.php'); }     // UPDATE inject
+if ($path === '/account/password') { page('account_password.php'); }
+if ($path === '/account/profile')  { page('account_profile.php'); }
 
 // Binh luan don hang
 if (preg_match('#^/shipments/(\d+)/comments$#', $path, $m)) {        // INSERT inject

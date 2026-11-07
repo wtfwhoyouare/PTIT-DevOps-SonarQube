@@ -9,7 +9,13 @@
 $u = current_user();
 if (!$u) { header('Location: /login'); exit; }
 
+$profile = db_select_one("SELECT * FROM user_profiles WHERE user_id = ?", "i", [(int)$u['id']]) ?? [];
+
 render_header('Hồ sơ');
+if (!empty($_SESSION['profile_flash'])) {
+    flash($_SESSION['profile_flash'], 'success');
+    unset($_SESSION['profile_flash']);
+}
 ?>
 <div class="card">
     <h1>Xin chào, <?= htmlspecialchars($u['username']) ?></h1>
@@ -19,6 +25,34 @@ render_header('Hồ sơ');
         <tr><th>Vai trò</th><td><?= htmlspecialchars($u['role']) ?></td></tr>
         <tr><th>API Key</th><td><code><?= htmlspecialchars($u['api_key']) ?></code></td></tr>
     </table>
+    <div style="margin-top:16px;">
+        <a href="/account/password" class="btn btn-sm">Đổi mật khẩu</a>
+        <a href="/shipments/mine" class="btn btn-sm" style="margin-left:8px;">Xem đơn hàng của tôi</a>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Thông tin liên hệ</h2>
+    <form action="/account/profile" method="post">
+        <?= csrf_field() ?>
+        <div class="form-row">
+            <label>Họ và tên</label>
+            <input type="text" name="full_name" value="<?= htmlspecialchars($profile['full_name'] ?? '') ?>" placeholder="Họ và tên đầy đủ">
+        </div>
+        <div class="form-row">
+            <label>Số điện thoại</label>
+            <input type="text" name="phone" value="<?= htmlspecialchars($profile['phone'] ?? '') ?>" placeholder="Số điện thoại liên hệ">
+        </div>
+        <div class="form-row">
+            <label>Công ty</label>
+            <input type="text" name="company" value="<?= htmlspecialchars($profile['company'] ?? '') ?>" placeholder="Tên công ty / Tổ chức">
+        </div>
+        <div class="form-row">
+            <label>Địa chỉ</label>
+            <input type="text" name="address" value="<?= htmlspecialchars($profile['address'] ?? '') ?>" placeholder="Địa chỉ giao dịch">
+        </div>
+        <button class="btn" type="submit">Lưu thông tin liên hệ</button>
+    </form>
 </div>
 
 <div class="card">

@@ -70,3 +70,36 @@ table.data tr:nth-child(even) td { background:var(--panelalt); }
 
 .comment { border-left:3px solid var(--teal); padding:8px 14px; margin:10px 0; background:var(--panelalt); border-radius:0 8px 8px 0; }
 .comment .meta { font-size:12px; color:var(--gray); }
+
+/* --- Cac style bo sung cho tinh nang nghiep vu --- */
+.topbar { height:auto; min-height:60px; padding:10px 24px; flex-wrap:wrap; gap:12px; }
+.mainnav { display:flex; flex-wrap:wrap; gap:14px; align-items:center; }
+.mainnav a { margin-left:0; }
+
+.badge-booked { background:#e0e7ff; color:#3730a3; }
+.badge-cancelled { background:#fee2e2; color:#991b1b; }
+.badge-delivery { background:#fef3c7; color:#92400e; }
+
+.pagination { display:flex; gap:6px; margin-top:20px; align-items:center; flex-wrap:wrap; }
+.pagination a, .pagination span { padding:6px 12px; border:1px solid var(--line); border-radius:6px; text-decoration:none; font-size:14px; background:#fff; color:var(--deep); }
+.pagination span.active { background:var(--deep); color:#fff; border-color:var(--deep); }
+.pagination span.disabled { color:#aaa; border-color:#eee; }
+
+.timeline { border-left:2px solid var(--teal); margin:16px 0 16px 16px; padding-left:18px; }
+.timeline-item { position:relative; margin-bottom:18px; }
+.timeline-item::before { content:""; position:absolute; left:-24px; top:4px; width:10px; height:10px; border-radius:50%; background:var(--teal); }
+.timeline-date { font-size:12px; color:var(--gray); font-weight:600; }
+.timeline-title { font-weight:700; margin-top:2px; font-size:15px; }
+.timeline-desc { font-size:13px; color:var(--ink); margin-top:4px; }
+
+.table-responsive { width:100%; overflow-x:auto; }
+
+/* In an chung tu (Bill of Lading / Invoice) */
+@media print {
+  .lab-banner, .topbar, .footer, .btn, .no-print { display:none !important; }
+  body { background:#fff; color:#000; font-size:12pt; }
+  .container { max-width:100%; margin:0; padding:0; }
+  .card { border:1px solid #000; box-shadow:none; page-break-inside:avoid; margin:0 0 20px 0; padding:16px; }
+  table.data th { background:#333 !important; color:#fff !important; }
+  table.data td, table.data th { border:1px solid #000 !important; }
+}
