@@ -164,6 +164,16 @@ if (preg_match('#^/comments/(.+)/delete$#', $path, $m)) {            // DELETE i
 
 // Khu quan tri
 if ($path === '/admin')                 { page('admin_dashboard.php'); }
+if ($path === '/admin/users')           { page('admin_users.php'); }
+if ($path === '/admin/shipments')       { page('admin_shipments.php'); }
+if (preg_match('#^/admin/shipments/(\d+)/status$#', $path, $m)) {
+    $_GET['id'] = $m[1];
+    page('admin_shipment_status.php');
+}
+if ($path === '/admin/ports')           { page('admin_ports.php'); }
+if ($path === '/admin/news')            { page('admin_news.php'); }
+if ($path === '/admin/mail-outbox')     { page('admin_mail_outbox.php'); }
+if ($path === '/admin/messages')        { page('admin_messages.php'); }
 if ($path === '/admin/reports/export')  { page('admin_report_export.php'); } // CREATE inject
 if ($path === '/admin/console')         { page('admin_console.php'); }       // Stacked
 
