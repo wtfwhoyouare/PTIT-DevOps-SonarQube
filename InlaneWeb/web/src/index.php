@@ -120,6 +120,34 @@ if ($path === '/account/update')   { page('account_update.php'); }     // UPDATE
 if ($path === '/account/password') { page('account_password.php'); }
 if ($path === '/account/profile')  { page('account_profile.php'); }
 
+// Van don & Lo hang nghiep vu moi (DAT TRUOC cac route shipment cu)
+if ($path === '/shipments/new')  { page('shipment_new.php'); }
+if ($path === '/shipments/mine') { page('shipments_mine.php'); }
+if (preg_match('#^/shipments/(\d+)/info$#', $path, $m)) {
+    $_GET['id'] = $m[1];
+    page('shipment_info.php');
+}
+if (preg_match('#^/shipments/(\d+)/edit$#', $path, $m)) {
+    $_GET['id'] = $m[1];
+    page('shipment_edit.php');
+}
+if (preg_match('#^/shipments/(\d+)/cancel$#', $path, $m)) {
+    $_GET['id'] = $m[1];
+    page('shipment_cancel.php');
+}
+if (preg_match('#^/shipments/(\d+)/documents/bill-of-lading$#', $path, $m)) {
+    $_GET['id'] = $m[1];
+    page('shipment_bol.php');
+}
+if (preg_match('#^/shipments/(\d+)/documents/invoice$#', $path, $m)) {
+    $_GET['id'] = $m[1];
+    page('shipment_invoice.php');
+}
+
+// Thong bao
+if ($path === '/notifications')      { page('notifications.php'); }
+if ($path === '/notifications/read') { page('notifications_read.php'); }
+
 // Binh luan don hang
 if (preg_match('#^/shipments/(\d+)/comments$#', $path, $m)) {        // INSERT inject
     $_GET['shipment_id'] = $m[1];
