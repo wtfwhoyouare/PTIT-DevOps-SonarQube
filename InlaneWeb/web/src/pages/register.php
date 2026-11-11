@@ -19,16 +19,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!preg_match('/^[a-zA-Z0-9_]{3,30}$/', $username)) {
         $error = 'Tên đăng nhập phải từ 3 đến 30 ký tự (chỉ bao gồm chữ, số và dấu gạch dưới).';
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $error = 'Địa chỉ email không đúng định dạng.';
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL) || mb_strlen($email) > 150) {
+        $error = 'Địa chỉ email không đúng định dạng hoặc vượt quá 150 ký tự.';
     } elseif (mb_strlen($password) < 8) {
         $error = 'Mật khẩu phải có độ dài tối thiểu 8 ký tự.';
     } elseif ($password !== $password_confirm) {
         $error = 'Mật khẩu nhập lại không khớp.';
-    } elseif (empty($full_name)) {
-        $error = 'Vui lòng nhập họ và tên.';
-    } elseif (empty($phone)) {
-        $error = 'Vui lòng nhập số điện thoại liên hệ.';
+    } elseif (empty($full_name) || mb_strlen($full_name) > 100) {
+        $error = 'Vui lòng nhập họ và tên hợp lệ (tối đa 100 ký tự).';
+    } elseif (empty($phone) || mb_strlen($phone) > 20) {
+        $error = 'Vui lòng nhập số điện thoại liên hệ hợp lệ (tối đa 20 ký tự).';
+    } elseif (mb_strlen($company) > 100 || mb_strlen($address) > 255) {
+        $error = 'Tên công ty (tối đa 100 ký tự) hoặc địa chỉ (tối đa 255 ký tự) quá dài.';
     } elseif (!$agree_terms) {
         $error = 'Bạn cần đồng ý với điều khoản dịch vụ để tiếp tục.';
     } else {
@@ -69,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         . "- Tên đăng nhập: {$username}\n"
                         . "- Email: {$email}\n"
                         . "- API Key: {$api_key}\n\n"
-                        . "Bạn có thể đăng nhập ngay tại: http://127.0.0.1:8088/login\n\n"
+                        . "Bạn có thể đăng nhập ngay tại: " . app_base_url() . "/login\n\n"
                         . "Trân trọng,\nĐội ngũ IlFreight Logistics";
 
                     db_insert(

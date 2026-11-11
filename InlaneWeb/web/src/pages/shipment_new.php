@@ -142,7 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 . "- Hàng hoá: {$cargo_desc} ({$weight_kg} kg)\n"
                 . "- Loại container: {$container_qty} x {$container_type}\n"
                 . "- Ngày dự kiến khởi hành (ETD): {$etd}\n\n"
-                . "Bạn có thể theo dõi tiến trình đơn hàng tại: http://127.0.0.1:8088/shipments/{$shipmentId}/info\n\n"
+                . "Bạn có thể theo dõi tiến trình đơn hàng tại: " . app_base_url() . "/shipments/{$shipmentId}/info\n\n"
                 . "Trân trọng,\nIlFreight Logistics";
 
             db_insert(
