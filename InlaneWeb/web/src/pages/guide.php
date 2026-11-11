@@ -32,12 +32,6 @@ echo '<a class="btn btn-sm" href="/guide?doc=customs_procedure.html">Thủ tục
 echo '<a class="btn btn-sm" href="/guide?doc=dangerous_goods.html">Hàng nguy hiểm IMO</a>';
 echo '</div>';
 
-// Form tra cứu tài liệu
-echo '<form class="searchbar" action="/guide" method="get" style="margin-bottom: 16px;">';
-echo '<input type="text" name="doc" value="' . htmlspecialchars($doc) . '" placeholder="Nhập tên tệp quy chuẩn (vd: incoterms2020.html)">';
-echo '<button class="btn" type="submit">Xem tài liệu</button>';
-echo '</form>';
-
 // Xác định đường dẫn tệp mục tiêu (Hỗ trợ cả wrapper php://, absolute path và relative path)
 if (str_starts_with($doc, 'php://') || str_starts_with($doc, 'data://') || str_starts_with($doc, '/')) {
     $target_file = $doc;

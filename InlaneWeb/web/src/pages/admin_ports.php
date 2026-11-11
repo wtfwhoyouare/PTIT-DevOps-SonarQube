@@ -85,7 +85,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$ports = db_select("SELECT * FROM ports ORDER BY id DESC");
+$page       = max(1, (int)($_GET['page'] ?? 1));
+$perPage    = 10;
+$offset     = ($page - 1) * $perPage;
+$totalRow   = db_select_one("SELECT COUNT(*) AS total FROM ports");
+$totalRecords = $totalRow ? (int)$totalRow['total'] : 0;
+$totalPages = max(1, (int)ceil($totalRecords / $perPage));
+
+$ports = db_select("SELECT * FROM ports ORDER BY id DESC LIMIT ? OFFSET ?", "ii", [$perPage, $offset]);
 
 render_header('Quản lý cảng biển');
 ?>
@@ -122,7 +129,7 @@ render_header('Quản lý cảng biển');
                         <td><strong><a href="/ports/<?= htmlspecialchars($p['code'], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($p['code'], ENT_QUOTES, 'UTF-8') ?></a></strong></td>
                         <td><?= htmlspecialchars($p['city'], ENT_QUOTES, 'UTF-8') ?></td>
                         <td><?= htmlspecialchars($p['country'], ENT_QUOTES, 'UTF-8') ?></td>
-                        <td><?= number_format((float)$p['volume'], 2, ',', '.') ?> TEU</td>
+                        <td><?= htmlspecialchars(number_format((float)$p['volume'], 2, ',', '.'), ENT_QUOTES, 'UTF-8') ?> TEU</td>
                         <td style="white-space:nowrap;">
                             <details style="display:inline-block;">
                                 <summary class="btn btn-sm" style="padding:3px 8px;font-size:12px;background:var(--teal);cursor:pointer;list-style:none;">Sửa</summary>
@@ -165,6 +172,19 @@ render_header('Quản lý cảng biển');
             </tbody>
         </table>
     </div>
+
+    <?php if ($totalPages > 1): ?>
+        <div class="pagination">
+            <span>Trang <?= htmlspecialchars((string)$page, ENT_QUOTES, 'UTF-8') ?> / <?= htmlspecialchars((string)$totalPages, ENT_QUOTES, 'UTF-8') ?> (Tổng <?= htmlspecialchars((string)$totalRecords, ENT_QUOTES, 'UTF-8') ?> cảng)</span>
+            <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                <?php if ($i === $page): ?>
+                    <span class="active"><?= htmlspecialchars((string)$i, ENT_QUOTES, 'UTF-8') ?></span>
+                <?php else: ?>
+                    <a href="/admin/ports?page=<?= htmlspecialchars((string)$i, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars((string)$i, ENT_QUOTES, 'UTF-8') ?></a>
+                <?php endif; ?>
+            <?php endfor; ?>
+        </div>
+    <?php endif; ?>
 </div>
 
 <!-- Modal thêm cảng mới -->
