@@ -78,7 +78,7 @@ if ($owner) {
         . "- Trạng thái mới: {$newStatus}\n"
         . "- Địa điểm: " . ($location ?: 'Hệ thống') . "\n"
         . "- Ghi chú: " . ($note ?: 'Không có ghi chú thêm') . "\n\n"
-        . "Tra cứu tiến trình trực tiếp tại: http://127.0.0.1:8088/shipments/{$id}/info\n\n"
+        . "Tra cứu tiến trình trực tiếp tại: " . app_base_url() . "/shipments/{$id}/info\n\n"
         . "Trân trọng,\nIlFreight Logistics Operations";
 
     db_insert(

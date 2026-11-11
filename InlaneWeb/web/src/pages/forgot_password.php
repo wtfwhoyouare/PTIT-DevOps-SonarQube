@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
 
             // Ghi email vào mail_outbox
-            $resetUrl = 'http://127.0.0.1:8088/reset-password?token=' . urlencode($token);
+            $resetUrl = app_base_url() . '/reset-password?token=' . urlencode($token);
             $subject = 'Khôi phục mật khẩu tài khoản IlFreight Logistics';
             $body = "Xin chào {$user['username']},\n\n"
                 . "Hệ thống nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn.\n"
