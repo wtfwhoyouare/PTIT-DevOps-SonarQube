@@ -83,3 +83,22 @@ function csrf_verify(): void
         exit;
     }
 }
+
+/**
+ * app_base_url() — Xac dinh base URL an toan theo domain hien tai.
+ */
+function app_base_url(): string
+{
+    $proto = 'http';
+    if (
+        (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower((string)$_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https')
+        || (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off')
+    ) {
+        $proto = 'https';
+    }
+    $rawHost = (string)($_SERVER['HTTP_HOST'] ?? '');
+    if (preg_match('/^[a-zA-Z0-9.-]+(?::\d{1,5})?$/', $rawHost)) {
+        return $proto . '://' . $rawHost;
+    }
+    return 'http://127.0.0.1:8088';
+}

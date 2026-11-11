@@ -11,10 +11,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 csrf_verify();
 
-$full_name = trim($_POST['full_name'] ?? '');
-$phone     = trim($_POST['phone'] ?? '');
-$company   = trim($_POST['company'] ?? '');
-$address   = trim($_POST['address'] ?? '');
+$full_name = mb_substr(trim($_POST['full_name'] ?? ''), 0, 100);
+$phone     = mb_substr(trim($_POST['phone'] ?? ''), 0, 20);
+$company   = mb_substr(trim($_POST['company'] ?? ''), 0, 100);
+$address   = mb_substr(trim($_POST['address'] ?? ''), 0, 255);
 
 $userId = (int)$u['id'];
 $existing = db_select_one("SELECT user_id FROM user_profiles WHERE user_id = ?", "i", [$userId]);
