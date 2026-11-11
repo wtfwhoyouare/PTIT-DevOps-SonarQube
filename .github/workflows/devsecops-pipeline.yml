@@ -217,7 +217,9 @@ jobs:
   production_smoke_test:
     name: "[STAGE 3: Production Gate] Docker Build & Monitoring Smoke Test"
     needs: [branch_policy_guard, analyze, semgrep]
-    if: always() && needs.branch_policy_guard.result == 'success' && ((github.event_name == 'pull_request' && github.base_ref == 'main') || github.ref == 'refs/heads/main')
+    if: always() && needs.branch_policy_guard.result == 'success'
+      && needs.analyze.result != 'failure' && needs.semgrep.result != 'failure'
+      && ((github.event_name == 'pull_request' && github.base_ref == 'main') || github.ref == 'refs/heads/main')
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
