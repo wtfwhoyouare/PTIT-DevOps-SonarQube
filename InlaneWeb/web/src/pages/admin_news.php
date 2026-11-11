@@ -38,7 +38,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$newsList = db_select("SELECT * FROM news ORDER BY published_at DESC, id DESC");
+$page       = max(1, (int)($_GET['page'] ?? 1));
+$perPage    = 10;
+$offset     = ($page - 1) * $perPage;
+$totalRow   = db_select_one("SELECT COUNT(*) AS total FROM news");
+$totalRecords = $totalRow ? (int)$totalRow['total'] : 0;
+$totalPages = max(1, (int)ceil($totalRecords / $perPage));
+
+$newsList = db_select("SELECT * FROM news ORDER BY published_at DESC, id DESC LIMIT ? OFFSET ?", "ii", [$perPage, $offset]);
 
 render_header('Quản lý tin tức');
 ?>
@@ -104,6 +111,19 @@ render_header('Quản lý tin tức');
             <?php endforeach; ?>
         <?php endif; ?>
     </div>
+
+    <?php if ($totalPages > 1): ?>
+        <div class="pagination">
+            <span>Trang <?= htmlspecialchars((string)$page, ENT_QUOTES, 'UTF-8') ?> / <?= htmlspecialchars((string)$totalPages, ENT_QUOTES, 'UTF-8') ?> (Tổng <?= htmlspecialchars((string)$totalRecords, ENT_QUOTES, 'UTF-8') ?> bài viết)</span>
+            <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                <?php if ($i === $page): ?>
+                    <span class="active"><?= htmlspecialchars((string)$i, ENT_QUOTES, 'UTF-8') ?></span>
+                <?php else: ?>
+                    <a href="/admin/news?page=<?= htmlspecialchars((string)$i, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars((string)$i, ENT_QUOTES, 'UTF-8') ?></a>
+                <?php endif; ?>
+            <?php endfor; ?>
+        </div>
+    <?php endif; ?>
 </div>
 
 <!-- Modal thêm tin tức -->

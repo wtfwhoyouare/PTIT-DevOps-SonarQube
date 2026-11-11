@@ -545,3 +545,30 @@ table.data tr:nth-child(even) td { background:var(--panelalt); }
   .home-hero { padding: 32px 22px; }
   .home-hero h1 { font-size: 28px; }
 }
+
+/* Thanh dieu huong quan tri nhanh cho staff/admin */
+.admin-subnav {
+  background: #142033;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 8px 24px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  font-size: 13px;
+}
+.admin-subnav-label {
+  color: var(--accent);
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.6px;
+}
+.admin-subnav a {
+  color: #CADCFC;
+  font-weight: 500;
+}
+.admin-subnav a:hover {
+  color: #ffffff;
+  text-decoration: none;
+}
