@@ -217,7 +217,9 @@ jobs:
   production_smoke_test:
     name: "[STAGE 3: Production Gate] Docker Build & Monitoring Smoke Test"
     needs: [branch_policy_guard, analyze, semgrep]
-    if: always() && needs.branch_policy_guard.result == 'success' && ((github.event_name == 'pull_request' && github.base_ref == 'main') || github.ref == 'refs/heads/main')
+    if: always() && needs.branch_policy_guard.result == 'success'
+      && needs.analyze.result != 'failure' && needs.semgrep.result != 'failure'
+      && ((github.event_name == 'pull_request' && github.base_ref == 'main') || github.ref == 'refs/heads/main')
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
@@ -444,7 +446,7 @@ jobs:
   production_deploy_monitoring:
     name: "[STAGE 4: Production CD] Deploy Observability Platform"
     needs: [production_smoke_test]
-    if: always() && needs.production_smoke_test.result == 'success' && github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: always() && needs.production_smoke_test.result == 'success' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -599,7 +601,7 @@ jobs:
   production_deploy_web:
     name: "[STAGE 4: Production CD] Deploy Web Workload"
     needs: [production_smoke_test]
-    if: always() && needs.production_smoke_test.result == 'success' && github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: always() && needs.production_smoke_test.result == 'success' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
