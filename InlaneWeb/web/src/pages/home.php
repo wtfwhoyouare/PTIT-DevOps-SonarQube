@@ -246,7 +246,7 @@ $topPorts = db_select("SELECT code, city, country, volume FROM ports ORDER BY vo
                     <p><?= htmlspecialchars(mb_substr($newsItem['body'], 0, 140), ENT_QUOTES, 'UTF-8') ?>...</p>
                 </div>
                 <div>
-                    <a href="/news" style="font-weight:700;font-size:13px;color:var(--deep);">Đọc chi tiết bản tin &rarr;</a>
+                    <a href="/news?id=<?= (int)$newsItem['id'] ?>" style="font-weight:700;font-size:13px;color:var(--deep);">Đọc chi tiết bản tin &rarr;</a>
                 </div>
             </div>
         <?php endforeach; ?>

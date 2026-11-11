@@ -202,8 +202,9 @@ render_header('Quản lý vận đơn');
                                     </div>
                                 </details>
                             </td>
-                            <td>
+                            <td style="white-space:nowrap;">
                                 <a href="/shipments/<?= htmlspecialchars((string)$sh['id'], ENT_QUOTES, 'UTF-8') ?>/info" class="btn btn-sm" style="padding:4px 8px;font-size:12px;">Xem</a>
+                                <a href="/shipments/<?= htmlspecialchars((string)$sh['id'], ENT_QUOTES, 'UTF-8') ?>" class="btn btn-sm" style="padding:4px 8px;font-size:12px;background:#5B6B7B;">Bình luận</a>
                             </td>
                         </tr>
                     <?php endforeach; ?>

@@ -134,7 +134,7 @@ render_header('Đăng ký tài khoản');
         </div>
         <div class="form-row" style="margin-top:16px;">
             <label style="display:flex;align-items:center;gap:8px;font-weight:normal;cursor:pointer;">
-                <input type="checkbox" name="agree_terms" value="1" style="width:auto;margin:0;" required>
+                <input type="checkbox" name="agree_terms" value="1" style="width:auto;margin:0;" <?= !empty($_POST['agree_terms']) ? 'checked' : '' ?> required>
                 <span>Tôi đồng ý với <a href="/guide" target="_blank">Điều khoản dịch vụ và Quy chuẩn an toàn</a> của IlFreight.</span>
             </label>
         </div>

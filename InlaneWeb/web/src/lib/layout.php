@@ -64,6 +64,20 @@ function render_header(string $title = 'IlFreight Logistics'): void
         <?php endif; ?>
     </nav>
 </header>
+<?php if ($u && in_array($u['role'], ['admin', 'staff'], true)): ?>
+<nav class="admin-subnav no-print" aria-label="Menu quản trị">
+    <span class="admin-subnav-label">Quản trị:</span>
+    <a href="/admin">Tổng quan</a>
+    <a href="/admin/shipments">Quản lý vận đơn</a>
+    <a href="/admin/ports">Quản lý cảng</a>
+    <a href="/admin/news">Quản lý tin tức</a>
+    <a href="/admin/messages">Hộp thư liên hệ</a>
+    <a href="/admin/mail-outbox">Mail Outbox</a>
+    <?php if ($u['role'] === 'admin'): ?>
+        <a href="/admin/users">Quản lý người dùng</a>
+    <?php endif; ?>
+</nav>
+<?php endif; ?>
 <main class="container">
 <?php
 }

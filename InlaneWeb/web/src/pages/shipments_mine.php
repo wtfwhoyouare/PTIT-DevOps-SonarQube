@@ -140,6 +140,7 @@ render_header('Đơn hàng của tôi');
                             </td>
                             <td style="white-space:nowrap;">
                                 <a href="/shipments/<?= (int)$sh['id'] ?>/info" class="btn btn-sm" style="padding:4px 8px;font-size:12px;">Xem</a>
+                                <a href="/shipments/<?= (int)$sh['id'] ?>" class="btn btn-sm" style="padding:4px 8px;font-size:12px;background:#5B6B7B;">Bình luận</a>
 
                                 <?php if ($sh['status'] === 'Booked'): ?>
                                     <a href="/shipments/<?= (int)$sh['id'] ?>/edit" class="btn btn-sm" style="padding:4px 8px;font-size:12px;background:var(--teal);">Sửa</a>

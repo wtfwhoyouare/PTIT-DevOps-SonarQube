@@ -21,9 +21,11 @@ if (!$resetRecord) {
     $error = 'Liên kết đặt lại mật khẩu không hợp lệ, đã được sử dụng hoặc đã hết hạn (quá 30 phút).';
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $resetRecord) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
+}
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $resetRecord) {
     $new_password = $_POST['new_password'] ?? '';
     $new_password_confirm = $_POST['new_password_confirm'] ?? '';
 
