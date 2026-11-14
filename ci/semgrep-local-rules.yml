@@ -1,4 +1,7 @@
 rules:
+  # ==============================================================================
+  # NHÓM 1: QUẢN LÝ BÍ MẬT & THÔNG TIN XÁC THỰC (SECRETS & CREDENTIALS - CWE-798)
+  # ==============================================================================
   - id: php-hardcoded-db-password-fallback
     languages: [php]
     severity: ERROR
@@ -34,6 +37,47 @@ rules:
       owasp: "A07:2021 Identification and Authentication Failures"
       presentation: configuration
 
+  - id: php-hardcoded-api-key-or-secret
+    languages: [php]
+    severity: ERROR
+    message: "Hardcoded API key, bearer token, or secret string detected in application source code. Store secrets in environment variables."
+    patterns:
+      - pattern-either:
+          - pattern: '$KEY = "ILF-$TYPE-$HEX";'
+          - pattern: '$TOKEN = "$HEX";'
+      - metavariable-regex:
+          metavariable: $HEX
+          regex: '^[A-Fa-f0-9]{16,64}$'
+    metadata:
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+      owasp: "A07:2021 Identification and Authentication Failures"
+      presentation: code
+
+  # ==============================================================================
+  # NHÓM 2: LỖ HỔNG TIÊM LỆNH SQL (SQL INJECTION - CWE-89)
+  # ==============================================================================
+  - id: php-concat-sql-in-query
+    languages: [php]
+    severity: ERROR
+    message: "Potential SQL Injection detected: User or dynamic variable is concatenated into a raw SQL query string. Use prepared statements with parameter binding instead."
+    patterns:
+      - pattern-either:
+          - pattern: 'query("..." . $VAR . "...");'
+          - pattern: 'query("..." . $VAR);'
+          - pattern: 'exec_write("..." . $VAR . "...");'
+          - pattern: 'exec_write("..." . $VAR);'
+          - pattern: 'exec_multi("..." . $VAR . "...");'
+          - pattern: 'exec_multi("..." . $VAR);'
+          - pattern: 'mysqli_query($CONN, "..." . $VAR . "...");'
+          - pattern: 'mysqli_query($CONN, "..." . $VAR);'
+    metadata:
+      cwe: "CWE-89: Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')"
+      owasp: "A03:2021 - Injection"
+      presentation: code
+
+  # ==============================================================================
+  # NHÓM 3: NẠP TỆP ĐỘNG & ĐỌC ĐƯỜNG DẪN TRÁI PHÉP (LFI & PATH TRAVERSAL - CWE-98 / CWE-22)
+  # ==============================================================================
   - id: php-dynamic-file-inclusion
     languages: [php]
     severity: ERROR
@@ -52,3 +96,133 @@ rules:
       cwe: "CWE-98: Improper Control of Generation of Code ('PHP Remote File Inclusion')"
       owasp: "A03:2021 - Injection"
       presentation: code
+
+  # ==============================================================================
+  # NHÓM 4: XUẤT DỮ LIỆU KHÔNG AN TOÀN (CROSS-SITE SCRIPTING XSS - CWE-79)
+  # ==============================================================================
+  - id: php-reflected-xss-direct-echo
+    languages: [php]
+    severity: ERROR
+    message: "Directly echoing HTTP request parameters ($_GET, $_POST, $_REQUEST, $_COOKIE) without sanitization creates Reflected Cross-Site Scripting (XSS). Use htmlspecialchars() with ENT_QUOTES."
+    patterns:
+      - pattern-either:
+          - pattern: echo '...' . $_GET[...] . '...';
+          - pattern: echo $_GET[...];
+          - pattern: echo '...' . $_POST[...] . '...';
+          - pattern: echo $_POST[...];
+          - pattern: echo '...' . $_REQUEST[...] . '...';
+          - pattern: echo $_REQUEST[...];
+          - pattern: print($_GET[...]);
+          - pattern: print($_POST[...]);
+          - pattern: print($_REQUEST[...]);
+    metadata:
+      cwe: "CWE-79: Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')"
+      owasp: "A03:2021 - Injection"
+      presentation: code
+
+  # ==============================================================================
+  # NHÓM 5: THỰC THI LỆNH HỆ THỐNG NGUY HIỂM (COMMAND INJECTION - CWE-78)
+  # ==============================================================================
+  - id: php-dangerous-system-exec
+    languages: [php]
+    severity: ERROR
+    message: "Dangerous system command execution function called. Untrusted user input reaching system commands can lead to Remote Code Execution (RCE). Validate inputs with escapeshellcmd/escapeshellarg or avoid shell execution."
+    patterns:
+      - pattern-either:
+          - pattern: exec($CMD, ...);
+          - pattern: shell_exec($CMD);
+          - pattern: system($CMD, ...);
+          - pattern: passthru($CMD, ...);
+          - pattern: popen($CMD, ...);
+          - pattern: proc_open($CMD, ...);
+    metadata:
+      cwe: "CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"
+      owasp: "A03:2021 - Injection"
+      presentation: code
+
+  # ==============================================================================
+  # NHÓM 6: THUẬT TOÁN MÃ HÓA & HÀM BĂM YẾU (WEAK CRYPTOGRAPHY - CWE-328 / CWE-327)
+  # ==============================================================================
+  - id: php-weak-password-hashing
+    languages: [php]
+    severity: WARNING
+    message: "Weak hash algorithm (MD5 or SHA1) detected. Do not use MD5/SHA1 for passwords or secure tokens; use password_hash() with PASSWORD_BCRYPT/ARGON2ID or hash('sha256', ...)."
+    patterns:
+      - pattern-either:
+          - pattern: md5($PASS)
+          - pattern: sha1($PASS)
+    metadata:
+      cwe: "CWE-328: Use of Weak Hash"
+      owasp: "A02:2021 - Cryptographic Failures"
+      presentation: code
+
+  # ==============================================================================
+  # NHÓM 7: BẢO MẬT COOKIE & PHIÊN LÀM VIỆC (INSECURE COOKIE FLAGS - CWE-1004 / CWE-614)
+  # ==============================================================================
+  - id: php-insecure-cookie-flags
+    languages: [php]
+    severity: WARNING
+    message: "setcookie() should set the 'httponly' and 'secure' flags to prevent cookie theft via XSS and eavesdropping."
+    patterns:
+      - pattern-either:
+          - pattern: setcookie($NAME, $VALUE, $EXPIRE, $PATH, $DOMAIN, false, ...)
+          - pattern: setcookie($NAME, $VALUE, $EXPIRE, $PATH, $DOMAIN, $SECURE, false)
+    metadata:
+      cwe: "CWE-1004: Sensitive Cookie Without 'HttpOnly' Flag"
+      owasp: "A05:2021 - Security Misconfiguration"
+      presentation: code
+
+  # ==============================================================================
+  # NHÓM 8: RÒ RỈ THÔNG TIN & HÀM DEBUG TỒN DƯ (INFORMATION DISCLOSURE - CWE-200 / CWE-489)
+  # ==============================================================================
+  - id: php-exposed-debug-info
+    languages: [php]
+    severity: WARNING
+    message: "Debug diagnostic functions (phpinfo, var_dump, print_r on superglobals) must not be present in production code as they leak server environment details, credentials, and PHP configurations."
+    patterns:
+      - pattern-either:
+          - pattern: phpinfo(...);
+          - pattern: var_dump($_SERVER);
+          - pattern: var_dump($_ENV);
+          - pattern: print_r($_SERVER);
+          - pattern: print_r($_ENV);
+    metadata:
+      cwe: "CWE-200: Exposure of Sensitive Information to an Unauthorized Actor"
+      owasp: "A05:2021 - Security Misconfiguration"
+      presentation: code
+
+  # ==============================================================================
+  # NHÓM 9: GIẢI MÃ ĐỐI TƯỢNG KHÔNG AN TOÀN (INSECURE DESERIALIZATION - CWE-502)
+  # ==============================================================================
+  - id: php-insecure-unserialize
+    languages: [php]
+    severity: ERROR
+    message: "Unserializing untrusted user input can lead to object injection and remote code execution. Pass ['allowed_classes' => false] or use json_decode() instead."
+    patterns:
+      - pattern: unserialize($DATA)
+      - pattern-not: unserialize($DATA, ['allowed_classes' => false])
+    metadata:
+      cwe: "CWE-502: Deserialization of Untrusted Data"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      presentation: code
+
+  # ==============================================================================
+  # NHÓM 10: AN TOÀN HẠ TẦNG COMPOSE (CONTAINER SECURITY & PRIVILEGES - CWE-250)
+  # ==============================================================================
+  - id: compose-privileged-container
+    languages: [yaml]
+    severity: ERROR
+    message: "Container runs with 'privileged: true', disabling Linux capabilities boundaries and giving root-level host access. Remove privileged mode unless strictly necessary."
+    patterns:
+      - pattern: |
+          privileged: true
+    paths:
+      include:
+        - "**/docker-compose*.yml"
+        - "**/docker-compose*.yaml"
+        - "**/compose*.yml"
+        - "**/compose*.yaml"
+    metadata:
+      cwe: "CWE-250: Execution with Unnecessary Privileges"
+      owasp: "A05:2021 - Security Misconfiguration"
+      presentation: configuration
